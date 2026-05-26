@@ -1,0 +1,85 @@
+{
+    "map_width":3,
+    "map_height":3,
+    "special_tags":["stacked_bag"],
+    "bag_size":2,
+    "map_grid":[
+        ["start","chest_1","monster_1"],
+        ["clue_1","chest_2","#"],
+        [".","monster_2","boss"]
+    ],
+    "clue_count":1,
+    "clues":{
+        "clue_1":"\t\tcout<<*func1(x);"
+    },
+    "chest_count":2,
+    "chests":{
+        "chest_1":{
+            "forced_pick":true,
+            "repeat":true,
+            "block_count":2,
+            "blocks":{
+                "block_add1":"a+=1;",
+                "block_mul2":"a*=2;"
+            }
+        },
+        "chest_2":{
+            "forced_pick":true,
+            "repeat":false,
+            "block_count":2,
+            "blocks":{
+                "block_ret_val":"return a;",
+                "block_ret_loc":"return &a;"
+            }
+        }
+    },
+    "monster_count":2,
+    "monsters":{
+        "monster_1":{
+            "pic":"pics\\002.png",
+            "nickname":"绫地宁宁的起爆器",
+            "name":"func_ret",
+            "type":"function",
+            "code":"int* func1(int& a){\n\ta++;\n\t$space1$\n}",
+            "spaces":{
+                "space1":{
+                    "type":"regex",
+                    "val":"^block.*"
+                }
+            }
+        },
+        "monster_2":{
+            "pic":"pics\\001.png",
+            "nickname":"红色史莱姆",
+            "name":"class_calc",
+            "type":"class",
+            "code":"class A{\npublic:\n\tint x;\n\tA(int a=0){\n\t\t$space1$\n\t\t$space2$\n\t\tx=a;}\n\tvoid print(){\n$clue_1$\n\t}\n};",
+            "spaces":{
+                "space1":{
+                    "type":"prefix",
+                    "val":"block"
+                },
+                "space2":{
+                    "type":"find",
+                    "val":"block"
+                }
+            }
+        }
+    },
+    "boss":{
+        "code":"$space1$\n$space2$\nint main(){\n\tint a;\n\tcin>>a;\n\tA obj(a);\n\tobj.print();\n\treturn 0;\n}",
+        "input":"1",
+        "output":"5",
+        "spaces":{
+            "space1":{
+                "type":"match",
+                "val":["func_ret[block_ret_loc]"]
+            },
+            "space2":{
+                "type":"match",
+                "val":["class_calc[block_add1,block_mul2]"]
+            }
+        }
+    },
+    "end_text":"&是取地址,*是解引用"
+}
