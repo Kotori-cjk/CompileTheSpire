@@ -6,6 +6,7 @@
 #include<QJsonDocument>
 #include<QJsonObject>
 #include<QJsonArray>
+#include<QDir>
 
 struct Space{
     QString spaceId;
@@ -62,5 +63,7 @@ public:
     bool LoadFromJson(const QString& filePath,QString* errorMessage=nullptr);
     //从Json中读入，filePath为读取路径，errorMessage为可选的传出报错信息的指针
 };
+
+QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors=nullptr);
 
 #endif // LEVELDATA_H
