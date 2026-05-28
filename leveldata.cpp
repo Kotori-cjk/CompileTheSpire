@@ -6,6 +6,7 @@
 #include<QJsonObject>
 #include<QJsonArray>
 #include<QFile>
+#include<QDir>
 
 LevelData::LevelData() {}
 
@@ -58,6 +59,7 @@ QMap<QString,Monster> LevelData::parseMonsters(const QJsonObject &monstersObj){
         tmp.pic=item["pic"].toString();
         tmp.spaces=parseSpaces(item["spaces"].toObject());
         tmp.codeTemplate=item["code"].toString();
+        tmp.type=item["type"].toString();
         QString s=tmp.codeTemplate;
         for(int i=0;i<tmp.codeTemplate.length();i++){
             if(s[i]=='$'&&i+1<s.length()&&s[i+1]=='c'){
@@ -135,4 +137,24 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
         this->mapGrid.push_back(row_v);
     }
     return true;
+}
+
+QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors){
+    QVector<LevelData>levels;
+    QDir dir(dirPath);
+    dir.setNameFilters({"*.json"});
+    dir.setSorting(QDir::Name);
+    const auto& files=dir.entryList(QDir::Files);
+    for (const auto& file:files){
+        QString filePath=dir.absoluteFilePath(file);
+        QString errorMsg;
+        LevelData data;
+        if(data.LoadFromJson(filePath,&errorMsg)){
+            levels.append(std::move(data));
+        }
+        else if(errors){
+            errors->append(QString("%1: %2").arg(file,errorMsg));
+        }
+    }
+    return levels;
 }
