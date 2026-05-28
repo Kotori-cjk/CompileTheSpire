@@ -412,7 +412,7 @@ function setCell(r, c, type) {
     state.cells[k] = Object.assign(base, { value: '' });
   } else if (type === 'boss') {
     state.cells[k] = Object.assign(base, {
-      nickname: '', code: '', input: '', output: '', spaces: {}
+      pic: '', nickname: '', code: '', input: '', output: '', spaces: {}
     });
   } else {
     state.cells[k] = Object.assign(base, {});
@@ -769,6 +769,7 @@ function clueFields(cell) {
 function bossFields(cell) {
   let h = '';
   h += `<label>昵称</label><input type="text" value="${esc(cell.nickname || '')}" onchange="updateCellProp('nickname', this.value);saveState()" placeholder="Boss昵称">`;
+  h += `<label>图片路径</label><input type="text" value="${esc(cell.pic || '')}" onchange="updateCellProp('pic', this.value);saveState()" placeholder="pics\\boss.png">`;
   h += `<label>代码模板 <span style="font-size:10px;color:#e0c060">(点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','code',this.value)" onchange="updateCellProp('code', this.value);saveState()" onkeydown="handleCodeKeydown(event)" placeholder="$space1$\n$space2$\nint main(){...}">${esc(cell.code || '')}</textarea>`;
   h += `<label>测试输入</label><input type="text" value="${esc(cell.input || '')}" onchange="updateCellProp('input', this.value);saveState()" placeholder="1">`;
   h += `<label>预期输出</label><input type="text" value="${esc(cell.output || '')}" onchange="updateCellProp('output', this.value);saveState()" placeholder="5">`;
@@ -1727,6 +1728,7 @@ function exportJson() {
   Object.entries(entityCells).forEach(([name, cell]) => {
     if (cell.type === 'boss') {
       root.boss = {
+        pic: cell.pic || '',
         nickname: cell.nickname || '',
         code: cell.code || '',
         input: cell.input || '',
@@ -1915,6 +1917,7 @@ function importFromJson(data) {
   if (data.boss) {
     for (const k in state.cells) {
       if (state.cells[k].name === 'boss') {
+        state.cells[k].pic = data.boss.pic || '';
         state.cells[k].nickname = data.boss.nickname || '';
         state.cells[k].code = data.boss.code || '';
         state.cells[k].input = data.boss.input || '';
