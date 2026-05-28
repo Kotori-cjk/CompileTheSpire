@@ -65,5 +65,7 @@ public:
 };
 
 QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors=nullptr);
+//参数1:string形式的文件夹路径 参数2:errorMsg指针
+//从文件夹中读入若干个json,输出一个关卡列表
 
 #endif // LEVELDATA_H
