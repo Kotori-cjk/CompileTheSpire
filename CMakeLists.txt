@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
         resources.qrc
         leveldata.cpp
         leveldata.h
+        inventory.cpp
+        inventory.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
