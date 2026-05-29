@@ -19,6 +19,12 @@ struct node{
     QVector<QPoint>moves;
     node(int x,int y);
 };
+
+struct monsterClueDetail{
+    QString codeTemplate;
+    QMap<QString,bool>clueUnlockStates;
+};
+
 int dx[4]={0,0,1,-1};
 int dy[4]={1,-1,0,0};
 
@@ -26,6 +32,8 @@ class GameMap
 {
 public:
     GameMap(const LevelData* ptr);
+    QVector<QVector<int>>cleared;
+
     QString currentId(int tarX,int tarY);
     QString currentId(QPoint target);
     bool canGoIn(int tarX,int tarY);
@@ -43,7 +51,8 @@ public:
     MoveResult moveTo(QPoint target,bool* success=nullptr);
     void Clear(int tarX,int tarY);
     void Clear(QPoint target);
-    QVector<QVector<int>>cleared;
+    bool clueRevealed(QString clue);
+    monsterClueDetail getMonsterClueDetail(QString monsterId);
 
 private:
     const LevelData* levelData;
