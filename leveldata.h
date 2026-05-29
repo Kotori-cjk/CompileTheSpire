@@ -69,6 +69,7 @@ public:
     Boss boss;
     QString endText;
     QPoint startpos;
+    QString levelType;
     bool LoadFromJson(const QString& filePath,QString* errorMessage=nullptr);
     //从Json中读入，filePath为读取路径，errorMessage为可选的传出报错信息的指针
 };
