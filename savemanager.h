@@ -15,6 +15,10 @@ public:
     bool isUnlocked(int levelIndex)const;
     void Unlock(int levelIndex);
     void UnlockAll();
+    int levelCount();
+    void deleteSave();
+    void hardReset();
+
 private:
     int totalLevelCount;
     QVector<int>unlockState;
