@@ -140,6 +140,7 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
         this->mapGrid.push_back(row_v);
     }
     QJsonArray startpos=root["start"].toArray();
+    levelType=root["level_type"].toString();
     this->startpos=QPoint(startpos[0].toInt(),startpos[1].toInt());
     for(int i=0;i<mapHeight;i++){
         for(int j=0;j<mapWidth;j++){
