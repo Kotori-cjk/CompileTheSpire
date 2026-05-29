@@ -137,6 +137,16 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QLabel" name="mainMenuBackgroundLabel">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item alignment="Qt::AlignmentFlag::AlignHCenter">
          <widget class="QPushButton" name="exitButton">
           <property name="minimumSize">
@@ -164,6 +174,12 @@
          </spacer>
         </item>
        </layout>
+       <zorder>mainMenuBackgroundLabel</zorder>
+       <zorder>titleLabel</zorder>
+       <zorder>menuSubtitleLabel</zorder>
+       <zorder>startGameButton</zorder>
+       <zorder>settingsButton</zorder>
+       <zorder>exitButton</zorder>
       </widget>
       <widget class="QWidget" name="settingsPage">
        <layout class="QVBoxLayout" name="settingsLayout">
@@ -867,7 +883,7 @@
              <property name="readOnly">
               <bool>true</bool>
              </property>
-             <property name="text">
+             <property name="text" stdset="0">
               <string>Fill the blank:
 
 int total = 0;
