@@ -1,5 +1,6 @@
 #include "gamemap.h"
 
+
 GameMap::GameMap(const LevelData* ptr){
     levelData=ptr;
     if(ptr==nullptr){
@@ -45,11 +46,110 @@ bool GameMap::moveAccessibility(int tarX,int tarY){
         Chest c=levelData->chests[s];
         return cleared[c.pos.x()][c.pos.y()]||(!c.forcedPick);
     }
+    return false;
 }
 bool GameMap::moveAccessibility(QPoint target){
     return moveAccessibility(target.x(),target.y());
 }
+QString GameMap::getEvent(int tarX,int tarY){
+    QString s=levelData->mapGrid[tarX][tarY];
+    int stat=cleared[tarX][tarY];
+    if(s=="."||s=="#"||s=="start")return "empty";
+    QString op=s.mid(0,3);
+    if(op=="clu"&&!stat){
+        return "clue";
+    }
+    if(op=="che"&&!stat){
+        return "chest";
+    }
+    if(op=="mon"&&!stat){
+        return "monster";
+    }
+    return "boss";
+}
+QString GameMap::getEvent(QPoint target){
+    return getEvent(target.x(),target.y());
+}
+
+node::node(int x,int y){
+    this->x=x,this->y=y;
+    moves=QVector<QPoint>(1,QPoint(x,y));
+}
 
 QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
-    //wip
+    QVector<QVector<int>> vis(levelData->mapHeight,QVector<int>(levelData->mapWidth,0));
+    node st(playerX,playerY);
+    vis[playerX][playerY]=1;
+    QQueue<node>q;
+    q.push_back(st);
+    while(!q.empty()){
+        const auto& u=q.front();
+        q.pop_front();
+        if(u.x==tarX&&u.y==tarY){
+            if(success!=nullptr)*success=true;
+            return u.moves;
+        }
+        for(int i=0;i<4;i++){
+            int xx=u.x+dx[i],yy=u.y+dy[i];
+            if(xx>=0&&xx<=levelData->mapHeight&&yy>=0&&yy<=levelData->mapWidth&&moveAccessibility(u.x,u.y)&&canGoIn(xx,yy)&&!vis[xx][yy]){
+                vis[xx][yy]=1;
+                node nxt(xx,yy);
+                nxt.moves=u.moves;
+                nxt.moves.push_back(QPoint(xx,yy));
+                q.push_back(nxt);
+                if(xx==tarX&&yy==tarY){
+                    if(success!=nullptr)*success=true;
+                    return nxt.moves;
+                }
+            }
+        }
+    }
+    if(success!=nullptr)*success=false;
+    return QVector<QPoint>();
+}
+QVector<QPoint> GameMap::findPath(QPoint target,bool* success){
+    return findPath(target.x(),target.y(),success);
+}
+bool GameMap::canReach(int tarX,int tarY){
+    bool* p=new bool(false);
+    findPath(tarX,tarY,p);
+    bool f=*p;
+    delete p;
+    return f;
+}
+bool GameMap::canReach(QPoint target){
+    return canReach(target.x(),target.y());
+}
+MoveResult GameMap::moveTo(int tarX,int tarY,bool* success){
+    MoveResult res;
+    bool* p=new bool(false);
+    auto path=findPath(tarX,tarY,p);
+    res.success=*p;
+    res.movePath=path;
+    if(success!=nullptr)*success=*p;
+    if(!*p){
+        res.event="empty";
+        res.eventId="";
+        delete p;
+        return res;
+    }
+    res.event=getEvent(tarX,tarY);
+    res.eventId=levelData->mapGrid[tarX][tarY];
+    playerX=tarX,playerY=tarY;
+    int len=res.movePath.size();
+    if(len>1){
+        prevX=res.movePath[len-2].x();
+        prevY=res.movePath[len-2].y();
+    }
+    delete p;
+    return res;
+}
+MoveResult GameMap::moveTo(QPoint target,bool* success){
+    return moveTo(target.x(),target.y(),success);
+}
+void GameMap::Clear(int tarX,int tarY){
+    cleared[tarX][tarY]=1;
+}
+void GameMap::Clear(QPoint target){
+    Clear(target.x(),target.y());
 }
