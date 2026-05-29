@@ -6,14 +6,15 @@ Inventory::Inventory(const LevelData* ptr){
     if(ptr == nullptr){
         return;
     }
+    leveldata = ptr;
     m_capacity = ptr->bagSize;
     bagBlocks = QVector<CodeBlock>();
     for(auto it = ptr->chests.constBegin(); it != ptr->chests.constEnd(); ++it){
         auto chestId = it.key();
         auto chest = it.value();
-        leftBlocks[chestId] = QSet<CodeBlock>();
+        leftBlocks[chestId] = QSet<QString>();
         for(auto it2 = chest.blocks.constBegin(); it2 != chest.blocks.constEnd(); ++it2){
-            leftBlocks[chestId].insert(it2.value());
+            leftBlocks[chestId].insert(it2.key());
         }
     }
 }
@@ -63,17 +64,6 @@ bool Inventory::bagContains(const QString &blockId)const {
     return false;
 }
 
-CodeBlock Inventory::bagGet(const QString& blockId,bool* success)const{
-    for(const auto& i:bagBlocks){
-        if(blockId==i.blockId){
-            if(success!=nullptr)*success=true;
-            return i;
-        }
-    }
-    if(success!=nullptr)*success=false;
-    return CodeBlock();
-}
-
 QVector<CodeBlock> Inventory::bag()const {
     return bagBlocks;
 }
@@ -90,6 +80,17 @@ void Inventory::clearBag() {
     bagBlocks.clear();
 }
 
+CodeBlock Inventory::bagGet(const QString& blockId,bool* success)const{
+    for(const auto& i:bagBlocks){
+        if(blockId==i.blockId){
+            if(success!=nullptr)*success=true;
+            return i;
+        }
+    }
+    if(success!=nullptr)*success=false;
+    return CodeBlock();
+}
+
 //---chest state---
 
 bool Inventory::addBlockFromChest(const QString &blockId, const QString &chestId, QString* errorMsg) {
@@ -99,10 +100,10 @@ bool Inventory::addBlockFromChest(const QString &blockId, const QString &chestId
         }
         return false;
     }
-    for(const auto &block : leftBlocks[chestId]){
-        if(block.blockId == blockId){
-            bagAdd(block);
-            leftBlocks[chestId].remove(block);
+    for(const auto &id : leftBlocks[chestId]){
+        if(id == blockId){
+            bagAdd(leveldata->chests[chestId].blocks[blockId]);
+            leftBlocks[chestId].remove(id);
             return true;
         }
     }
@@ -116,14 +117,18 @@ bool Inventory::chestIsEmpty(const QString &chestId)const {
     return leftBlocks[chestId].empty();
 }
 
-QSet<CodeBlock> Inventory::blocksRemaining(const QString &chestId) {
-    return leftBlocks[chestId];
+QVector<CodeBlock> Inventory::blocksRemaining(const QString &chestId) {
+    QVector<CodeBlock> res = QVector<CodeBlock>();
+    for(const auto &id : leftBlocks[chestId]){
+        res.append(leveldata->chests[chestId].blocks[id]);
+    }
+    return res;
 }
 
 QStringList Inventory::remainingIds(const QString &chestId){
     QStringList ids;
-    for(const auto &block : leftBlocks[chestId]){
-        ids.append(block.blockId);
+    for(const auto &id : leftBlocks[chestId]){
+        ids.append(id);
     }
     return ids;
 }
