@@ -2,40 +2,54 @@
 #define GAMEMAP_H
 #include<QString>
 #include<QVector>
+#include<QQueue>
 #include"leveldata.h"
 
 struct MoveResult{
     bool success;
     QString event;
+    //"clue" "chest" "monster" "boss" "empty"
     QString eventId;
+    //equal to mapString
     QVector<QPoint>movePath;
 };
+
+struct node{
+    int x,y;
+    QVector<QPoint>moves;
+    node(int x,int y);
+};
+int dx[4]={0,0,1,-1};
+int dy[4]={1,-1,0,0};
 
 class GameMap
 {
 public:
     GameMap(const LevelData* ptr);
+    QString currentId(int tarX,int tarY);
+    QString currentId(QPoint target);
     bool canGoIn(int tarX,int tarY);
     bool canGoIn(QPoint target);
     bool moveAccessibility(int tarX,int tarY);
     bool moveAccessibility(QPoint target);
     //返回能否从此格子走向非来路的其他格子
-    bool canReach(int tarX,int tarY);
-    bool canReach(QPoint target);
-    QString currentRoomState(int tarX,int tarY);
-    QString currentRoomState(QPoint target);
+    QString getEvent(int tarX,int tarY);
+    QString getEvent(QPoint target);
     QVector<QPoint> findPath(int tarX,int tarY,bool* success=nullptr);
     QVector<QPoint> findPath(QPoint target,bool* success=nullptr);
-    MoveResult moveTo(int tarX,int tarY);
-    MoveResult moveTo(QPoint target);
+    bool canReach(int tarX,int tarY);
+    bool canReach(QPoint target);
+    MoveResult moveTo(int tarX,int tarY,bool* success=nullptr);
+    MoveResult moveTo(QPoint target,bool* success=nullptr);
     void Clear(int tarX,int tarY);
     void Clear(QPoint target);
+    QVector<QVector<int>>cleared;
 
 private:
     const LevelData* levelData;
     int prevX,prevY;
     int playerX,playerY;
-    QVector<QVector<int>>cleared;
+
 
 };
 
