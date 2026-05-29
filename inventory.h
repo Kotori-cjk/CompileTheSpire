@@ -12,33 +12,33 @@
 class Inventory
 {
 public:
-    Inventory() = default;
+    Inventory(const LevelData* ptr);
 
     // --- bag state ---
-    int capacity() const;
-    void setCapacity(int capacity);
-    int size() const;
-    bool isEmpty() const;
-    bool isFull() const;
+    int bagCapacity() const;
+    int bagSize() const;
+    bool bagIsEmpty() const;
+    bool bagIsFull() const;
 
-    bool add(const CodeBlock &block);
-    bool remove(const QString &blockId);
-    bool contains(const QString &blockId) const;
-    CodeBlock get(const QString &blockId) const;
+    bool bagAdd(const CodeBlock &block);
+    bool bagRemove(const QString &blockId);
+    bool bagContains(const QString &blockId) const;
 
-    QVector<CodeBlock> all() const;
-    QStringList ids() const;
-    void clearBlocks();
+    QVector<CodeBlock> bag() const;
+    QStringList bagIds() const;
+    void clearBag();
 
     // --- chests state ---
     bool addBlockFromChest(const QString &blockId, const QString &chestId, QString* errorMsg = nullptr);
     bool chestIsEmpty(const QString &chestId) const;
+    QSet<CodeBlock> blocksRemaining(const QString &chestId);
+    QStringList remainingIds(const QString &chestId);
 
 
 private:
     int m_capacity = 0;
-    QVector<CodeBlock> m_blocks;
-    QMap<QString, QSet<QString>> leftBlocks;
+    QVector<CodeBlock> bagBlocks;
+    QMap<QString, QSet<CodeBlock>> leftBlocks;
 };
 
 
