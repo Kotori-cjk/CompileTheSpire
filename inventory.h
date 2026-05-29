@@ -30,22 +30,16 @@ public:
     QStringList ids() const;
     void clearBlocks();
 
-    // --- chest state ---
-    bool isChestOpened(const QString &chestId) const;
-    void markChestOpened(const QString &chestId);
-    bool isBlockEverTaken(const QString &chestId, const QString &blockId) const;
-    void markBlockTaken(const QString &chestId, const QString &blockId);
-    void clearChestStates();
-
-    // clear all
-    void clear();
+    // --- chests state ---
+    bool addBlockFromChest(const QString &blockId, const QString &chestId, QString* errorMsg = nullptr);
+    bool chestIsEmpty(const QString &chestId) const;
 
 
 private:
     int m_capacity = 0;
     QVector<CodeBlock> m_blocks;
-    QSet<QString> openedChests;
-    QMap<QString, QSet<QString>> takenBlocks;
+    QMap<QString, QSet<QString>> leftBlocks;
 };
+
 
 #endif // INVENTORY_H

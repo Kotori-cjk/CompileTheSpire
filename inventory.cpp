@@ -29,9 +29,6 @@ bool Inventory::isFull() const
 
 bool Inventory::add(const CodeBlock &block)
 {
-    if (contains(block.blockId)) {
-        return false;
-    }
     if (isFull()) {
         return false;
     }
@@ -91,27 +88,24 @@ void Inventory::clearBlocks()
 
 // --- Chest state ---
 
-bool Inventory::isChestOpened(const QString &chestId) const
+bool Inventory::addBlockFromChest(const QString &blockId, const QString &chestId, QString* errorMsg)
 {
-    return openedChests.contains(chestId);
+    bool success = add(this->get(blockId));
+    if(success == false){
+        if(errorMsg!=nullptr)*errorMsg="Bag is full";
+        return false;
+
+    }
+    if(this->chestIsEmpty(chestId)){
+        if(errorMsg!=nullptr)*errorMsg="Chest is empty";
+        return false;
+    }
+    leftBlocks[chestId].remove(blockId);
+    return true;
 }
 
-void Inventory::markChestOpened(const QString &chestId)
+bool Inventory::chestIsEmpty(const QString &chestId) const
 {
-    openedChests.insert(chestId);
+    return leftBlocks[chestId].empty();
 }
 
-bool Inventory::isBlockEverTaken(const QString &chestId, const QString &blockId) const
-{
-    return takenBlocks.value(chestId).contains(blockId);
-}
-
-void Inventory::markBlockTaken(const QString &chestId, const QString &blockId)
-{
-    takenBlocks[chestId].insert(blockId);
-}
-
-void Inventory::clear(){
-    Inventory::clearBlocks();
-    Inventory::clearChestStates();
-}
