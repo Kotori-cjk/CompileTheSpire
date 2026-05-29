@@ -35,16 +35,17 @@ public:
     void markChestOpened(const QString &chestId);
     bool isBlockEverTaken(const QString &chestId, const QString &blockId) const;
     void markBlockTaken(const QString &chestId, const QString &blockId);
-    QSet<QString> blocksTakenFrom(const QString &chestId) const;
     void clearChestStates();
 
+    // clear all
     void clear();
+
 
 private:
     int m_capacity = 0;
     QVector<CodeBlock> m_blocks;
-    QSet<QString> m_openedChests;
-    QMap<QString, QSet<QString>> m_takenBlocks;   // chestId → set of block IDs taken from it
+    QSet<QString> openedChests;
+    QMap<QString, QSet<QString>> takenBlocks;
 };
 
 #endif // INVENTORY_H

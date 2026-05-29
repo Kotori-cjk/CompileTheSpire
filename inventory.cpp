@@ -1,5 +1,7 @@
 #include "inventory.h"
 
+// --- Code blocks (bag) ---
+
 int Inventory::capacity() const
 {
     return m_capacity;
@@ -82,7 +84,34 @@ QStringList Inventory::ids() const
     return result;
 }
 
-void Inventory::clear()
+void Inventory::clearBlocks()
 {
     m_blocks.clear();
+}
+
+// --- Chest state ---
+
+bool Inventory::isChestOpened(const QString &chestId) const
+{
+    return openedChests.contains(chestId);
+}
+
+void Inventory::markChestOpened(const QString &chestId)
+{
+    openedChests.insert(chestId);
+}
+
+bool Inventory::isBlockEverTaken(const QString &chestId, const QString &blockId) const
+{
+    return takenBlocks.value(chestId).contains(blockId);
+}
+
+void Inventory::markBlockTaken(const QString &chestId, const QString &blockId)
+{
+    takenBlocks[chestId].insert(blockId);
+}
+
+void Inventory::clear(){
+    Inventory::clearBlocks();
+    Inventory::clearChestStates();
 }
