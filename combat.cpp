@@ -53,13 +53,56 @@ QMap<QString,CodeBlock> Combat::filledCodes()const{
     return filledCodesMap;
 }
 bool Combat::submitBlock(const Space& space,CodeBlock& block){
+    if(!spaceIds().contains(space.spaceId)){
+        return false;
+    }
+    filledCodesMap[space.spaceId]=block;
+    return true;
+}
+bool Combat::isFilled(const QString& spaceId){
+    return filledCodesMap.contains(spaceId);
+}
+bool Combat::isFilled(const Space& space){
+    return isFilled(space.spaceId);
+}
+CombatResult Combat::submitCombat(){
+    CombatResult ret;
+    if(!canSynthesize()){
+        ret.resultType="count_error";
+        return ret;
+    }
+    for(const auto& spaceId:filledCodesMap.keys()){
+        if(!spaceValid(id2Space(spaceId))){
+            ret.resultType="space_error";
+            ret.errorSpaces.append(spaceId);
+        }
+    }
+    if(ret.resultType=="space_error"){
+        return ret;
+    }
+    ret.resultType="success";
+    ret.synthesizedBlock=synthesize(ret.usedBlocks);
+    return ret;
+}
+Space Combat::id2Space(const QString& spaceId,bool* success){
+    for(const auto& i:monster->spaces){
+        if(spaceId==i.spaceId){
+            if(success!=nullptr)*success=true;
+            return i;
+        }
+    }
+    if(success!=nullptr)*success=false;
+    return Space();
+}
+bool Combat::spaceValid(const Space& space){
+    if(!isFilled(space))return false;
     QString type=space.type;
+    CodeBlock block=filledCodesMap[space.spaceId];
     QString blockCode=block.blockId;
     if(type=="regex"){
         for(const QString& pattern:space.values){
             QRegularExpression re(pattern);
             if(re.match(blockCode).hasMatch()){
-                filledCodesMap[space.spaceId]=block;
                 return true;
             }
         }
@@ -68,7 +111,6 @@ bool Combat::submitBlock(const Space& space,CodeBlock& block){
     if(type=="prefix"){
         for(const QString& prefix:space.values){
             if(blockCode.startsWith(prefix)){
-                filledCodesMap[space.spaceId]=block;
                 return true;
             }
         }
@@ -77,7 +119,6 @@ bool Combat::submitBlock(const Space& space,CodeBlock& block){
     if(type=="find"){
         for(const QString& substr:space.values){
             if(blockCode.contains(substr)){
-                filledCodesMap[space.spaceId]=block;
                 return true;
             }
         }
@@ -86,23 +127,12 @@ bool Combat::submitBlock(const Space& space,CodeBlock& block){
     if(type=="match"){
         for(const QString& match:space.values){
             if(blockCode==match){
-                filledCodesMap[space.spaceId]=block;
                 return true;
             }
         }
         return false;
     }
     return false;
-}
-CombatResult Combat::submitCombat(bool* success){
-    if(!canSynthesize()){
-        if(success!=nullptr)*success=false;
-        return CombatResult();
-    }
-    CombatResult ret;
-    ret.synthesizedBlock=synthesize(ret.usedBlocks);
-    if(success!=nullptr)*success=true;
-    return ret;
 }
 bool Combat::canSynthesize()const{
     return unfilledSpaces().size()==0;
