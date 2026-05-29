@@ -63,6 +63,17 @@ bool Inventory::bagContains(const QString &blockId)const {
     return false;
 }
 
+CodeBlock Inventory::bagGet(const QString& blockId,bool* success)const{
+    for(const auto& i:bagBlocks){
+        if(blockId==i.blockId){
+            if(success!=nullptr)*success=true;
+            return i;
+        }
+    }
+    if(success!=nullptr)*success=false;
+    return CodeBlock();
+}
+
 QVector<CodeBlock> Inventory::bag()const {
     return bagBlocks;
 }
