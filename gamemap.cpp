@@ -45,6 +45,7 @@ bool GameMap::moveAccessibility(int tarX,int tarY){
         Chest c=levelData->chests[s];
         return cleared[c.pos.x()][c.pos.y()]||(!c.forcedPick);
     }
+    return false;
 }
 bool GameMap::moveAccessibility(QPoint target){
     return moveAccessibility(target.x(),target.y());
@@ -52,4 +53,10 @@ bool GameMap::moveAccessibility(QPoint target){
 
 QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
     //wip
+    Q_UNUSED(tarX);
+    Q_UNUSED(tarY);
+    if (success) {
+        *success = false;
+    }
+    return {};
 }
