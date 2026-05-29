@@ -11,6 +11,13 @@ GameMap::GameMap(const LevelData* ptr){
     prevX=prevY=-1;
     cleared=QVector<QVector<int>>(ptr->mapHeight,QVector<int>(ptr->mapWidth,0));
 }
+QString GameMap::currentId(int tarX,int tarY){
+    if(cleared[tarX][tarY])return "space";
+    return levelData->mapGrid[tarX][tarY];
+}
+QString GameMap::currentId(QPoint target){
+    return currentId(target.x(),target.y());
+}
 bool GameMap::canGoIn(int tarX,int tarY){
     return levelData->mapGrid[tarX][tarY]!="#";
 }

@@ -26,6 +26,8 @@ class GameMap
 {
 public:
     GameMap(const LevelData* ptr);
+    QString currentId(int tarX,int tarY);
+    QString currentId(QPoint target);
     bool canGoIn(int tarX,int tarY);
     bool canGoIn(QPoint target);
     bool moveAccessibility(int tarX,int tarY);
@@ -41,12 +43,13 @@ public:
     MoveResult moveTo(QPoint target,bool* success=nullptr);
     void Clear(int tarX,int tarY);
     void Clear(QPoint target);
+    QVector<QVector<int>>cleared;
 
 private:
     const LevelData* levelData;
     int prevX,prevY;
     int playerX,playerY;
-    QVector<QVector<int>>cleared;
+
 
 };
 
