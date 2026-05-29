@@ -23,6 +23,7 @@ public:
     bool bagAdd(const CodeBlock &block);
     bool bagRemove(const QString &blockId);
     bool bagContains(const QString &blockId) const;
+    CodeBlock bagGet(const QString& blockId,bool* success=nullptr)const;
 
     QVector<CodeBlock> bag() const;
     QStringList bagIds() const;
