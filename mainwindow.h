@@ -1,16 +1,32 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include "challengerepository.h"
+#include "leveldata.h"
 
+#include <QGridLayout>
+#include <QLabel>
 #include <QMainWindow>
+#include <QPushButton>
+#include <QSet>
 #include <QString>
+#include <QStringList>
+#include <QVector>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+
+struct GameSnapshot
+{
+    int row = 0;
+    int column = 0;
+    QStringList bagBlocks;
+    QSet<QString> openedChests;
+    QSet<QString> defeatedMonsters;
+    QSet<QString> seenMonsters;
+};
 
 class MainWindow : public QMainWindow
 {
@@ -20,21 +36,57 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
+
 private:
     void applyDefaultSettings();
     void applyVisualStyle();
+    void buildRuntimeGameUi();
+    void loadLevels();
+    void refreshLevelSelectUi();
+    void startLevel(int levelIndex);
+    void resetLevel();
+    void pushUndoState();
+    void undo();
+
     void refreshGameUi();
-    void resetRun();
-    void loadChallenges();
-    void refreshMapUi();
-    void startChallenge(int challengeIndex);
-    void submitAnswer();
+    void refreshMapGrid();
+    void refreshSidePanel();
+    void refreshBagPage();
+    void refreshManualPage();
+
+    void movePlayer(int rowDelta, int columnDelta);
+    void movePlayerTo(int targetRow, int targetColumn);
+    bool canEnter(int row, int column) const;
+    QString tileAt(int row, int column) const;
+    QString describeTile(const QString &tileId) const;
+    void interactWithCurrentTile();
+    void handleChest(const QString &chestId);
+    void handleMonster(const QString &monsterId);
+    void submitFill();
+
+    QString renderMonsterCode(const Monster &monster) const;
+    bool blockMatchesSpace(const QString &blockId, const Space &space) const;
+    QStringList splitAnswerBlocks(const QString &text) const;
+    Monster monsterByTile(const QString &tileId) const;
 
     Ui::MainWindow *ui;
-    ChallengeRepository challengeRepository;
-    int gold = 99;
-    int floor = 1;
-    int currentChallengeIndex = 0;
-    bool challengeSolved = false;
+    QVector<LevelData> levels;
+    int currentLevelIndex = -1;
+    int playerRow = 0;
+    int playerColumn = 0;
+    QStringList bagBlocks;
+    QSet<QString> openedChests;
+    QSet<QString> defeatedMonsters;
+    QSet<QString> seenMonsters;
+    QVector<GameSnapshot> history;
+
+    QGridLayout *worldGridLayout = nullptr;
+    QVector<QVector<QPushButton *>> mapButtons;
+    QLabel *tileInfoLabel = nullptr;
+    QPushButton *resetRunButton = nullptr;
+    QPushButton *handbookButton = nullptr;
 };
+
 #endif // MAINWINDOW_H

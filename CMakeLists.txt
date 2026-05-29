@@ -17,8 +17,7 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-        challengerepository.cpp
-        challengerepository.h
+        resources.qrc
         leveldata.cpp
         leveldata.h
 )
