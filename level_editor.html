@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CompileTheSpire 关卡编辑器</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; overflow-x: hidden; }
+#app { width: 100%; padding: 10px; max-width: 1600px; margin: 0 auto; }
+
+/* 顶部控制栏 */
+#topbar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  background: #16213e; padding: 12px 18px; border-radius: 10px; margin-bottom: 10px;
+}
+#topbar label { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+#topbar input[type=number] { width: 60px; padding: 5px 8px; background: #0f3460; border: 1px solid #533483; color: #eee; border-radius: 5px; }
+#topbar input[type=text] { padding: 5px 10px; background: #0f3460; border: 1px solid #533483; color: #eee; border-radius: 5px; }
+#topbar button { padding: 6px 16px; background: #533483; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; }
+#topbar button:hover { background: #6a3f9e; }
+#tags-area { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.tag-chip { display: inline-flex; align-items: center; gap: 4px; background: #0f3460; padding: 3px 10px; border-radius: 12px; font-size: 12px; cursor: pointer; }
+.tag-chip.active { background: #533483; }
+.tag-chip input { width: 70px; }
+
+/* 主区域四栏 */
+#main { display: flex; gap: 10px; height: calc(100vh - 220px); min-height: 480px; }
+#grid-panel { flex: 0 0 auto; background: #16213e; border-radius: 10px; padding: 14px; overflow: auto; display: flex; align-items: center; justify-content: center; }
+#prop-panel { flex: 1 1 270px; background: #16213e; border-radius: 10px; padding: 14px; overflow-y: auto; min-width: 210px; }
+#idx-panel { flex: 0 0 140px; background: #16213e; border-radius: 10px; padding: 8px; display: flex; flex-direction: column; overflow-y: auto; gap: 4px; }
+.idx-block { padding: 6px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; background: #0a0a1a; border-left: 3px solid #533483; transition: background 0.15s; }
+.idx-block:hover { background: #1e1e4e; }
+.idx-block.orphan { border-left-color: #e94560; }
+.idx-block .ik { color: #8be0e0; font-family: Consolas,monospace; font-size: 12px; }
+.idx-block .is { color: #777; font-size: 10px; }
+.idx-clue { padding: 6px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; background: #0a0a1a; border-left: 3px solid #2471a3; transition: background 0.15s; }
+.idx-clue:hover { background: #1e1e4e; }
+.idx-clue.orphan { border-left-color: #e94560; }
+.idx-clue .ik { color: #8be0e0; font-family: Consolas,monospace; font-size: 12px; }
+.idx-clue .is { color: #777; font-size: 10px; }
+#code-panel { flex: 2 1 380px; background: #16213e; border-radius: 10px; padding: 10px; overflow-y: auto; min-width: 320px; display: flex; flex-direction: column; }
+#code-panel h3 { font-size: 14px; margin-bottom: 6px; color: #e94560; }
+#code-panel .code-hint { font-size: 11px; color: #888; margin-bottom: 8px; }
+/* Tabs in code panel */
+#code-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+#code-tabs .tab-btn { padding: 6px 16px; font-size: 13px; border: none; border-radius: 5px 5px 0 0; cursor: pointer; background: #0f3460; color: #888; }
+#code-tabs .tab-btn.active { background: #533483; color: #fff; }
+.tab-content { flex: 1; display: none; flex-direction: column; overflow-y: auto; }
+.tab-content.active { display: flex; }
+#code-editor {
+  flex: 1; width: 100%; min-height: 240px;
+  background: #0a0a1a; color: #8be0e0;
+  border: 1px solid #533483; border-radius: 6px; padding: 10px;
+  font-family: 'Consolas', 'Courier New', monospace; font-size: 13px;
+  resize: none; tab-size: 4; -moz-tab-size: 4; line-height: 1.5;
+}
+#code-editor:focus { border-color: #e94560; outline: none; }
+.code-field-indicator { font-size: 12px; color: #e0c060; margin-bottom: 6px; }
+/* 编辑器 subtabs */
+#editor-tab-bar { display: flex; gap: 2px; flex-wrap: wrap; padding-bottom: 2px; min-height: 26px; align-items: flex-end; }
+.editor-tab {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; font-size: 11px;
+  background: #0a0a1a; color: #777; border-radius: 4px 4px 0 0;
+  cursor: pointer; white-space: nowrap; user-select: none;
+  border: 1px solid transparent; border-bottom: none;
+  transition: background 0.1s, color 0.1s;
+}
+.editor-tab:hover { background: #1a1a3a; color: #aaa; }
+.editor-tab.active { background: #533483; color: #fff; border-color: #6a3f9e; }
+.editor-tab-close {
+  background: none; border: none; color: #666; cursor: pointer;
+  font-size: 13px; padding: 0 1px; line-height: 1; margin-left: 2px;
+}
+.editor-tab.active .editor-tab-close { color: #bbb; }
+.editor-tab-close:hover { color: #e94560; }
+
+/* $clue$ 气泡提示 (display areas) */
+.clue-tip {
+  cursor: help;
+  background: rgba(36,113,163,0.22); border-bottom: 1px dashed #2471a3;
+  padding: 1px 4px; border-radius: 3px; font-weight: bold;
+}
+#clue-tooltip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  background: #12122e; color: #ddd; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid #533483; font-size: 12px; white-space: pre-wrap;
+  max-width: 420px; word-break: break-all; font-weight: normal;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.7); display: none;
+  font-family: 'Consolas', 'Courier New', monospace; line-height: 1.4;
+}
+
+/* idx-panel 即时 tooltip */
+#idx-tooltip {
+  position: fixed; z-index: 9999; pointer-events: none;
+  background: #0d0d1a; color: #eee; padding: 10px 14px; border-radius: 8px;
+  border: 2px solid #e94560; font-size: 12px; white-space: pre-wrap;
+  max-width: 440px; min-width: 200px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.85), 0 0 0 1px rgba(233,69,96,0.3);
+  display: none; line-height: 1.5;
+}
+#idx-tooltip .tt-key { color: #e0c060; font-weight: bold; font-size: 13px; font-family: Consolas, monospace; }
+#idx-tooltip .tt-src  { color: #888; font-size: 11px; margin-bottom: 6px; }
+#idx-tooltip .tt-code {
+  display: block; margin: 6px 0; padding: 8px 10px;
+  background: #050510; color: #8be0e0;
+  border-left: 3px solid #533483; border-radius: 4px;
+  font-family: Consolas, monospace; font-size: 12px; line-height: 1.5;
+  max-height: 160px; overflow-y: auto;
+}
+#idx-tooltip .tt-refs { color: #7c7; font-size: 11px; }
+#idx-tooltip .tt-refs .warn { color: #e94560; font-weight: bold; }
+#idx-tooltip .tt-arrow { color: #e94560; font-size: 11px; }
+
+/* 转义字符高亮 */
+.esc-seq {
+  background: rgba(233,69,96,0.18); border-radius: 3px; padding: 1px 3px;
+  border: 1px solid rgba(233,69,96,0.25); cursor: help; font-weight: bold;
+  transition: background 0.15s;
+}
+.esc-seq:hover { background: rgba(233,69,96,0.35); }
+
+/* 网格 */
+#grid-container { display: grid; gap: 2px; }
+.cell {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; background: #0f3460;
+  border: 2px solid transparent; border-radius: 4px; cursor: pointer;
+  font-size: 11px; transition: all 0.15s; user-select: none;
+  min-width: 40px; min-height: 40px;
+  max-width: 70px; max-height: 70px;
+}
+.cell.type-start { background: #2d6a4f; }
+.cell.type-chest { background: #b8860b; }
+.cell.type-monster { background: #c0392b; }
+.cell.type-clue { background: #2471a3; }
+.cell.type-boss { background: #7d3c98; }
+.cell.type-wall { background: #2c2c2c; cursor: default; }
+.cell.type-empty { background: #1b1b2f; }
+.cell.selected { border-color: #e94560; box-shadow: 0 0 8px rgba(233,69,96,0.6); transform: scale(1.08); z-index: 1; }
+
+/* 属性面板 */
+#prop-panel h3 { font-size: 14px; margin-bottom: 8px; color: #e94560; }
+#prop-panel select, #prop-panel input[type=text], #prop-panel input[type=number] {
+  width: 100%; padding: 5px 8px; margin: 3px 0 8px; background: #0f3460;
+  border: 1px solid #533483; color: #eee; border-radius: 4px; font-size: 13px;
+}
+#prop-panel textarea {
+  width: 100%; padding: 6px 8px; margin: 3px 0 8px; background: #0f3460;
+  border: 1px solid #533483; color: #eee; border-radius: 4px; font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace; resize: vertical; min-height: 60px;
+}
+#prop-panel label { font-size: 12px; color: #aaa; }
+#prop-panel .chk-row { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+#prop-panel .chk-row input[type=checkbox] { width: auto; margin: 0; }
+#prop-panel button { padding: 4px 10px; font-size: 12px; background: #533483; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+#prop-panel button:hover { background: #6a3f9e; }
+#prop-panel button.danger { background: #922; }
+#prop-panel button.danger:hover { background: #b33; }
+.block-row, .space-row {
+  display: flex; gap: 4px; align-items: center; margin: 3px 0;
+  padding: 4px; background: #0a0a1a; border-radius: 4px;
+}
+.block-row input, .block-row textarea, .space-row input, .space-row select { flex: 1; min-width: 0; margin: 0 !important; }
+.space-row { flex-wrap: wrap; }
+
+.block-meta {
+  background: #0a0a1a; border-radius: 8px; padding: 10px 12px; margin: 5px 0;
+  border-left: 4px solid #533483; font-size: 12px; line-height: 1.5;
+}
+.block-meta.orphan { border-left-color: #e94560; }
+.block-meta .bname { font-weight: bold; color: #e0c060; font-size: 13px; }
+.block-meta .bcode { font-family: Consolas, monospace; color: #8be0e0; display: block; margin: 4px 0; line-height: 1.6; }
+.block-meta .bsource { color: #888; }
+.block-meta .brefs { color: #7c7; line-height: 1.5; }
+.block-meta .brefs .warn { color: #e94560; font-weight: bold; }
+
+/* 底部 JSON 区 */
+#bottom { margin-top: 10px; }
+#bottom button { padding: 6px 16px; background: #533483; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-right: 8px; }
+#bottom button:hover { background: #6a3f9e; }
+#json-out { width: 100%; height: 260px; margin-top: 6px; background: #0a0a1a; color: #8be0e0; border: 1px solid #533483; border-radius: 6px; padding: 10px; font-family: Consolas, monospace; font-size: 12px; resize: vertical; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <label>宽度 <input type="number" id="map_w" value="3" min="1" max="10"></label>
+    <label>高度 <input type="number" id="map_h" value="3" min="1" max="10"></label>
+    <button onclick="updateGrid()">更新网格</button>
+    <label>背包 <input type="number" id="bag_size" value="2" min="1" max="99"></label>
+    <label>关卡类型 <select id="level_type" onchange="state.level_type=this.value;saveState()">
+      <option value="simple">simple</option>
+      <option value="extra">extra</option>
+    </select></label>
+    <span style="font-size:12px">标签:</span>
+    <div id="tags-area"></div>
+    <label style="margin-left:8px">结束语 <input type="text" id="end_text" placeholder="通关提示文字" style="width:200px" onfocus="focusCodeField(null,'end_text',this.value)" onchange="state.end_text=this.value;saveState()"></label>
+    <button onclick="manualSave(this)" title="手动保存到浏览器本地存储">💾 保存</button>
+    <button onclick="loadExample()" title="粘贴 JSON 导入关卡数据">导入 JSON</button>
+    <button onclick="resetEditor()" title="清空所有数据重新开始" style="background:#922">重置</button>
+  </div>
+
+  <div id="main">
+    <div id="grid-panel"><div id="grid-container"></div></div>
+    <div id="prop-panel"><h3>属性编辑器</h3><p style="color:#666;font-size:12px">点击左侧格子编辑属性</p></div>
+    <div id="idx-panel">
+      <div id="idx-count">0块</div>
+      <div id="idx-orphan" style="color:#e94560;font-size:11px"></div>
+    </div>
+    <div id="code-panel">
+      <div id="code-tabs">
+        <button class="tab-btn active" onclick="switchCodeTab('editor',this)">代码编辑器</button>
+        <button class="tab-btn" onclick="switchCodeTab('blocks',this)">块管理</button>
+        <button class="tab-btn" onclick="switchCodeTab('killchain',this)">击杀链条</button>
+      </div>
+      <div class="tab-content active" id="tab-editor">
+        <p class="code-hint">点击代码字段/块在此编辑 | Tab缩进 Enter保留缩进 | {}()[]""自动配对</p>
+        <div class="code-field-indicator" id="code-field-label"></div>
+        <div id="editor-tab-bar"></div>
+        <textarea id="code-editor" placeholder="点击代码字段或左侧块开始编辑..." onkeydown="handleCodeKeydown(event)" oninput="onCodeEditorInput()" onfocus="switchCodeTab('editor',document.querySelector('#code-tabs .tab-btn:first-child'))"></textarea>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <button id="preview-btn" onmousedown="showResolvedPreview()" onmouseup="hideResolvedPreview()" onmouseleave="hideResolvedPreview()" style="font-size:12px;padding:4px 12px;background:#533483;color:#fff;border:none;border-radius:4px;cursor:pointer">🔍 按住预览 $clue$</button>
+          <span style="font-size:11px;color:#888">按住按钮将 $clue_N$ 临时替换为线索代码</span>
+        </div>
+      </div>
+      <div class="tab-content" id="tab-blocks">
+        <p style="color:#666;font-size:12px">块引用关系自动分析</p>
+      </div>
+      <div class="tab-content" id="tab-killchain">
+        <p style="color:#666;font-size:12px">分层击杀链条生成器</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom">
+    <button onclick="exportJson()">导出 JSON</button>
+    <button onclick="copyJson()">复制</button>
+    <button onclick="downloadJson()">下载 .json</button>
+    <textarea id="json-out" readonly placeholder="点击「导出JSON」生成..."></textarea>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const CELL_TYPES = ['empty', 'start', 'wall', 'chest', 'monster', 'clue', 'boss'];
+const TYPE_ICONS = { start: '🏁', chest: '📦', monster: '👾', clue: '📋', boss: '💀', wall: '🧱', empty: '·' };
+const TYPE_LABELS = { start: '起点', chest: '宝箱', monster: '怪物', clue: '线索', boss: 'Boss', wall: '墙', empty: '空' };
+const SPACE_TYPES = ['regex', 'prefix', 'find', 'match'];
+
+let state = {
+  map_width: 3,
+  map_height: 3,
+  special_tags: [],
+  bag_size: 2,
+  end_text: '',
+  level_type: 'simple',
+  cells: {}  // key: "row,col" -> cellData
+};
+
+let selectedRow = -1, selectedCol = -1;
+let selectedBlockKey = null; // for index panel → blocks tab detail
+// Predefined tags – user can add custom
+let knownTags = ['stacked_bag'];
+
+const LS_KEY = 'compilethespire_level_editor';
+
+function saveState() {
+  // Sync UI values to state before saving
+  state.map_width = parseInt(document.getElementById('map_w').value) || state.map_width;
+  state.map_height = parseInt(document.getElementById('map_h').value) || state.map_height;
+  state.bag_size = parseInt(document.getElementById('bag_size').value) || state.bag_size;
+  state.end_text = document.getElementById('end_text').value;
+  const toSave = {
+    map_width: state.map_width,
+    map_height: state.map_height,
+    special_tags: state.special_tags,
+    bag_size: state.bag_size,
+    end_text: state.end_text,
+    level_type: state.level_type,
+    cells: state.cells,
+    knownTags: knownTags
+  };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(toSave)); } catch(e) {}
+}
+
+function manualSave(btn) {
+  if (codeTarget) {
+    syncCodeTargetValue(codeTarget, document.getElementById('code-editor').value);
+  }
+  saveState();
+  if (btn) {
+    btn.textContent = '✓ 已保存';
+    setTimeout(() => { btn.textContent = '💾 保存'; }, 1500);
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      state.map_width = saved.map_width || 3;
+      state.map_height = saved.map_height || 3;
+      state.special_tags = saved.special_tags || [];
+      state.bag_size = saved.bag_size || 2;
+      state.end_text = saved.end_text || '';
+      state.level_type = saved.level_type || 'simple';
+      state.cells = saved.cells || {};
+      if (saved.knownTags) knownTags = saved.knownTags;
+      document.getElementById('map_w').value = state.map_width;
+      document.getElementById('map_h').value = state.map_height;
+      document.getElementById('bag_size').value = state.bag_size;
+      document.getElementById('end_text').value = state.end_text;
+      document.getElementById('level_type').value = state.level_type;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function resetEditor() {
+  if (!confirm('确定要重置所有数据吗？此操作不可恢复。')) return;
+  try { localStorage.removeItem(LS_KEY); } catch(e) {}
+  state = { map_width: 3, map_height: 3, special_tags: [], bag_size: 2, end_text: '', level_type: 'simple', cells: {} };
+  selectedRow = -1; selectedCol = -1;
+  selectedBlockKey = null;
+  codeTarget = null; editorTabs = []; activeEditorTabId = null;
+  killChainLayers = [];
+  document.getElementById('map_w').value = 3;
+  document.getElementById('map_h').value = 3;
+  document.getElementById('bag_size').value = 2;
+  document.getElementById('end_text').value = '';
+  document.getElementById('code-editor').value = '';
+  document.getElementById('code-field-label').textContent = '';
+  document.getElementById('editor-tab-bar').innerHTML = '';
+  setCell(0, 0, 'start');
+  for (let r = 0; r < state.map_height; r++)
+    for (let c = 0; c < state.map_width; c++)
+      if (!(r === 0 && c === 0)) setCell(r, c, 'empty');
+  renderTags();
+  renderGrid();
+  renderPropPanel();
+  renderBlockPanel();
+  renderEditorTabs();
+}
+
+function initState() {
+  if (loadState()) return;
+  state.map_width = parseInt(document.getElementById('map_w').value) || 3;
+  state.map_height = parseInt(document.getElementById('map_h').value) || 3;
+  state.bag_size = parseInt(document.getElementById('bag_size').value) || 2;
+  state.special_tags = [];
+  state.end_text = '';
+  state.cells = {};
+  setCell(0, 0, 'start');
+  for (let r = 0; r < state.map_height; r++)
+    for (let c = 0; c < state.map_width; c++)
+      if (!(r === 0 && c === 0)) setCell(r, c, 'empty');
+}
+
+function renderTags() {
+  const area = document.getElementById('tags-area');
+  area.innerHTML = '';
+  knownTags.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip' + (state.special_tags.includes(t) ? ' active' : '');
+    chip.textContent = t;
+    chip.onclick = () => {
+      const idx = state.special_tags.indexOf(t);
+      if (idx >= 0) state.special_tags.splice(idx, 1);
+      else state.special_tags.push(t);
+      renderTags();
+      saveState();
+    };
+    area.appendChild(chip);
+  });
+  // custom tag input
+  const inp = document.createElement('input');
+  inp.placeholder = '+新标签';
+  inp.style.width = '70px';  inp.style.fontSize = '11px';
+  inp.onkeydown = e => {
+    if (e.key === 'Enter' && inp.value.trim()) {
+      const v = inp.value.trim();
+      if (!knownTags.includes(v)) knownTags.push(v);
+      if (!state.special_tags.includes(v)) state.special_tags.push(v);
+      inp.value = '';
+      renderTags();
+    }
+  };
+  area.appendChild(inp);
+}
+
+// ==================== GRID ====================
+function cellKey(r, c) { return r + ',' + c; }
+
+function ensureCell(r, c) {
+  const k = cellKey(r, c);
+  if (!state.cells[k]) setCell(r, c, 'empty');
+}
+
+function setCell(r, c, type) {
+  const k = cellKey(r, c);
+  const old = state.cells[k];
+  const name = generateName(type, old ? old.name : null);
+  const base = {
+    type: type,
+    name: name,
+  };
+  if (type === 'chest') {
+    state.cells[k] = Object.assign(base, {
+      forced_pick: true, repeat: false, blocks: {}
+    });
+  } else if (type === 'monster') {
+    state.cells[k] = Object.assign(base, {
+      pic: '', nickname: '', refName: '', refType: 'function', code: '', spaces: {}
+    });
+  } else if (type === 'clue') {
+    state.cells[k] = Object.assign(base, { value: '' });
+  } else if (type === 'boss') {
+    state.cells[k] = Object.assign(base, {
+      pic: '', nickname: '', code: '', input: '', output: '', spaces: {}
+    });
+  } else {
+    state.cells[k] = Object.assign(base, {});
+  }
+}
+
+function generateName(type, keepName) {
+  if (type === 'start') return 'start';
+  if (type === 'boss') return 'boss';
+  if (type === 'empty' || type === 'wall') return type;
+  if (keepName && keepName.startsWith(type + '_')) return keepName;
+  // Count existing of this type (exclude current position)
+  let count = 0;
+  const curKey = cellKey(selectedRow, selectedCol);
+  Object.entries(state.cells).forEach(([k, c]) => {
+    if (k !== curKey && c.type === type) count++;
+  });
+  return type + '_' + (count + 1);
+}
+
+function renumberAll() {
+  const counters = {};
+  for (const k in state.cells) {
+    const c = state.cells[k];
+    if (['chest', 'monster', 'clue'].includes(c.type)) {
+      counters[c.type] = (counters[c.type] || 0) + 1;
+      c.name = c.type + '_' + counters[c.type];
+    }
+  }
+}
+
+function cellDisplay(cell) {
+  if (cell.type === 'empty') return { icon: '·', label: '' };
+  if (cell.type === 'wall') return { icon: '🧱', label: '' };
+  if (cell.type === 'start') return { icon: '🏁', label: 'S' };
+  if (cell.type === 'boss') return { icon: '💀', label: 'B' };
+  // chest, monster, clue: show number
+  const num = cell.name ? cell.name.split('_')[1] : '?';
+  return { icon: TYPE_ICONS[cell.type], label: num };
+}
+
+function renderGrid() {
+  const container = document.getElementById('grid-container');
+  container.innerHTML = '';
+  // Dynamic cell size: fit grid into available space, clamp between 40-70px
+  const maxDim = Math.max(state.map_width, state.map_height);
+  const cellSize = Math.max(40, Math.min(70, Math.floor(500 / maxDim)));
+  const iconSize = Math.floor(cellSize * 0.38);
+  const lblSize = Math.max(10, Math.floor(cellSize * 0.22));
+  container.style.gridTemplateColumns = `repeat(${state.map_width}, ${cellSize}px)`;
+  container.style.gridTemplateRows = `repeat(${state.map_height}, ${cellSize}px)`;
+  window._cellIconSize = iconSize;
+  window._cellLblSize = lblSize;
+
+  for (let r = 0; r < state.map_height; r++) {
+    for (let c = 0; c < state.map_width; c++) {
+      ensureCell(r, c);
+      const cell = state.cells[cellKey(r, c)];
+      const d = cellDisplay(cell);
+      const div = document.createElement('div');
+      div.className = 'cell type-' + cell.type;
+      if (r === selectedRow && c === selectedCol) div.classList.add('selected');
+      div.innerHTML = `<span style="font-size:${window._cellIconSize||22}px">${d.icon}</span><span style="font-size:${window._cellLblSize||11}px;color:#fff;font-weight:bold;margin-top:2px">${d.label}</span>`;
+      div.onclick = () => selectCell(r, c);
+      container.appendChild(div);
+    }
+  }
+}
+
+function updateGrid() {
+  const w = parseInt(document.getElementById('map_w').value) || 3;
+  const h = parseInt(document.getElementById('map_h').value) || 3;
+  // Completely rebuild: trim cells outside bounds, create fresh empties
+  const newCells = {};
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      const k = cellKey(r, c);
+      if (state.cells[k]) {
+        newCells[k] = state.cells[k];
+      } else {
+        newCells[k] = { type: 'empty', name: 'empty' };
+      }
+    }
+  }
+  state.cells = newCells;
+  state.map_width = w;
+  state.map_height = h;
+  selectedRow = -1;
+  selectedCol = -1;
+  renumberAll();
+  renderGrid();
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+// ==================== SELECTION ====================
+function selectCell(r, c) {
+  selectedRow = r;
+  selectedCol = c;
+  renderGrid();
+  renderPropPanel();
+}
+
+// ==================== PROPERTY PANEL ====================
+function renderPropPanel() {
+  const panel = document.getElementById('prop-panel');
+  if (selectedRow < 0 || selectedCol < 0) {
+    panel.innerHTML = '<h3>属性编辑器</h3><p style="color:#666;font-size:12px">点击左侧格子编辑属性</p>';
+    return;
+  }
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell) return;
+
+  let html = `<h3>编辑 (${selectedRow},${selectedCol})</h3>`;
+
+  // Type selector
+  html += `<label>类型</label><select onchange="onCellTypeChange(this.value)">`;
+  CELL_TYPES.forEach(t => {
+    html += `<option value="${t}" ${cell.type === t ? 'selected' : ''}>${TYPE_LABELS[t] || t}</option>`;
+  });
+  html += `</select>`;
+
+  // Name (readonly for most, auto-generated)
+  if (!['empty', 'wall', 'start', 'boss'].includes(cell.type)) {
+    html += `<label>标识名</label><input type="text" value="${esc(cell.name || '')}" onchange="updateCellProp('name', this.value)" placeholder="自动生成">`;
+  }
+
+  // Type-specific fields
+  if (cell.type === 'chest') {
+    html += chestFields(cell);
+  } else if (cell.type === 'monster') {
+    html += monsterFields(cell);
+  } else if (cell.type === 'clue') {
+    html += clueFields(cell);
+  } else if (cell.type === 'boss') {
+    html += bossFields(cell);
+  }
+
+  panel.innerHTML = html;
+  if (cell.type === 'monster' || cell.type === 'boss') bindSpaceEvents();
+  if (cell.type === 'chest') bindBlockEvents();
+}
+
+function onCellTypeChange(newType) {
+  if (selectedRow < 0 || selectedCol < 0) return;
+  if (newType === 'start') {
+    // Only one start allowed: clear any existing start
+    for (const k in state.cells) {
+      if (state.cells[k].type === 'start') {
+        state.cells[k] = { type: 'empty', name: 'empty' };
+      }
+    }
+  }
+  setCell(selectedRow, selectedCol, newType);
+  renumberAll();
+  renderGrid();
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function updateCellProp(key, value) {
+  if (selectedRow < 0 || selectedCol < 0) return;
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell) return;
+  // Handle boolean from checkbox
+  if (typeof cell[key] === 'boolean') cell[key] = (value === 'true' || value === true);
+  else if (typeof cell[key] === 'number') cell[key] = parseInt(value) || 0;
+  else cell[key] = value;
+}
+
+// ---- Chest ----
+function chestFields(cell) {
+  let h = '';
+  h += `<div class="chk-row"><label>强制拾取</label><input type="checkbox" ${cell.forced_pick ? 'checked' : ''}
+    onchange="updateCellProp('forced_pick', this.checked)"></div>`;
+  h += `<div class="chk-row"><label>可重复拾取</label><input type="checkbox" ${cell.repeat ? 'checked' : ''}
+    onchange="updateCellProp('repeat', this.checked)"></div>`;
+
+  h += `<label>代码块 (key → 代码)</label>`;
+  h += `<div id="blocks-container">`;
+  const keys = Object.keys(cell.blocks || {});
+  keys.forEach((k, i) => {
+    h += blockRowHtml(k, cell.blocks[k], i, cell.name);
+  });
+  h += `</div>`;
+  h += `<button onclick="addBlock()" style="margin-top:4px">+ 添加代码块</button>`;
+  return h;
+}
+
+function blockRowHtml(key, val, idx, chestName) {
+  return `<div class="block-row">
+    <input value="${esc(key)}" placeholder="key" onchange="updateBlock(${idx},'key',this.value)" style="flex:1;min-width:50px">
+    <textarea onfocus="focusBlockCode('${esc(chestName)}','${esc(key)}')" onchange="updateBlock(${idx},'val',this.value)" onkeydown="handleBlockTextareaKeydown(event)" placeholder="代码" style="flex:2;height:32px;font-family:Consolas,monospace;font-size:12px;background:#0f3460;color:#8be0e0;border:1px solid #533483;border-radius:3px;padding:4px 6px;resize:vertical;margin:0">${esc(val)}</textarea>
+    <button class="danger" onclick="removeBlock(${idx})">×</button>
+  </div>`;
+}
+
+function addBlock() {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.blocks) return;
+  let i = 1;
+  while (cell.blocks['block_' + i]) i++;
+  cell.blocks['block_' + i] = '';
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function updateBlock(idx, field, value) {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.blocks) return;
+  const keys = Object.keys(cell.blocks);
+  if (idx >= keys.length) return;
+  const oldKey = keys[idx];
+  if (field === 'key' && value !== oldKey) {
+    cell.blocks[value] = cell.blocks[oldKey];
+    delete cell.blocks[oldKey];
+  } else {
+    cell.blocks[oldKey] = value;
+  }
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function removeBlock(idx) {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.blocks) return;
+  const keys = Object.keys(cell.blocks);
+  if (idx >= keys.length) return;
+  delete cell.blocks[keys[idx]];
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function handleBlockTextareaKeydown(event) {
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    const ta = event.target;
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '\t' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+  }
+}
+
+function bindBlockEvents() {
+  // Handled by inline handlers in the HTML strings
+}
+
+// ---- Monster ----
+function monsterFields(cell) {
+  let h = '';
+  h += `<label>图片路径</label><input type="text" value="${esc(cell.pic || '')}" onchange="updateCellProp('pic', this.value)" placeholder="pics\\001.png">`;
+  h += `<label>昵称</label><input type="text" value="${esc(cell.nickname || '')}" onchange="updateCellProp('nickname', this.value)" placeholder="红色史莱姆">`;
+  h += `<label>引用名 (name)</label><input type="text" value="${esc(cell.refName || '')}" onchange="updateCellProp('refName', this.value)" placeholder="func_ret">`;
+  h += `<label>类型</label><select onchange="updateCellProp('refType', this.value)">`;
+  ['function', 'class'].forEach(t => {
+    h += `<option value="${t}" ${cell.refType === t ? 'selected' : ''}>${t}</option>`;
+  });
+  h += `</select>`;
+  h += `<label>代码模板 <span style="font-size:10px;color:#e0c060">(点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','code',this.value)" onchange="updateCellProp('code', this.value);saveState()" onkeydown="handleCodeKeydown(event)" placeholder="int* func1(int& a){\n\ta++;\n\t$space1$\n}">${esc(cell.code || '')}</textarea>`;
+  h += `<label>Spaces (占位符定义)</label>`;
+  h += `<div id="spaces-container">`;
+  const spKeys = Object.keys(cell.spaces || {});
+  spKeys.forEach((k, i) => {
+    h += spaceRowHtml(cell, k, cell.spaces[k], i);
+  });
+  h += `</div>`;
+  h += `<button onclick="addSpace()" style="margin-top:4px">+ 添加 space</button>`;
+  return h;
+}
+
+function spaceRowHtml(cell, spaceKey, spaceVal, idx) {
+  const valStr = Array.isArray(spaceVal.val) ? spaceVal.val.join(', ') : (spaceVal.val || '');
+  let h = `<div class="space-row">
+    <input value="${esc(spaceKey)}" placeholder="名称 (space1)" onchange="updateSpace(${idx},'key',this.value)" style="flex:1;min-width:60px">
+    <select onchange="updateSpace(${idx},'type',this.value)" style="width:80px">`;
+  SPACE_TYPES.forEach(t => {
+    h += `<option value="${t}" ${spaceVal.type === t ? 'selected' : ''}>${t}</option>`;
+  });
+  h += `</select>
+    <textarea onchange="updateSpace(${idx},'val',this.value)" onkeydown="handleSpaceTab(event,${idx})" placeholder="匹配值${spaceVal.type==='match'?' (格式: refName[blockKey,...])':''}" style="flex:1;min-width:120px;height:36px;font-family:Consolas,monospace;font-size:12px;background:#0a0a1a;color:#8be0e0;border:1px solid #533483;border-radius:3px;padding:3px 5px;resize:vertical;margin:0">${esc(valStr)}</textarea>
+    <button class="danger" onclick="removeSpace(${idx})">×</button></div>`;
+  return h;
+}
+
+function addSpace() {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.spaces) return;
+  let i = 1;
+  while (cell.spaces['space' + i]) i++;
+  cell.spaces['space' + i] = { type: 'regex', val: '' };
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function updateSpace(idx, field, value, skipRender) {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.spaces) return;
+  const keys = Object.keys(cell.spaces);
+  if (idx >= keys.length) return;
+  const oldKey = keys[idx];
+  if (field === 'key' && value !== oldKey) {
+    cell.spaces[value] = cell.spaces[oldKey];
+    delete cell.spaces[oldKey];
+  } else {
+    cell.spaces[oldKey][field] = value;
+  }
+  if (!skipRender) {
+    renderPropPanel();
+    renderBlockPanel();
+  }
+  saveState();
+}
+
+function handleSpaceTab(event, idx) {
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    const ta = event.target;
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '\t' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    updateSpace(idx, 'val', ta.value, true);
+  }
+}
+
+function removeSpace(idx) {
+  const cell = state.cells[cellKey(selectedRow, selectedCol)];
+  if (!cell || !cell.spaces) return;
+  const keys = Object.keys(cell.spaces);
+  if (idx >= keys.length) return;
+  delete cell.spaces[keys[idx]];
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+function bindSpaceEvents() {
+  // Inline handlers take care of this
+}
+
+// ---- Clue ----
+function clueFields(cell) {
+  let h = '';
+  h += `<label>代码片段 <span style="font-size:10px;color:#e0c060">(点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','value',this.value)" onchange="updateCellProp('value', this.value);saveState()" onkeydown="handleCodeKeydown(event)">${esc(cell.value || '')}</textarea>`;
+  return h;
+}
+
+// ---- Boss ----
+function bossFields(cell) {
+  let h = '';
+  h += `<label>昵称</label><input type="text" value="${esc(cell.nickname || '')}" onchange="updateCellProp('nickname', this.value);saveState()" placeholder="Boss昵称">`;
+  h += `<label>图片路径</label><input type="text" value="${esc(cell.pic || '')}" onchange="updateCellProp('pic', this.value);saveState()" placeholder="pics\\boss.png">`;
+  h += `<label>代码模板 <span style="font-size:10px;color:#e0c060">(点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','code',this.value)" onchange="updateCellProp('code', this.value);saveState()" onkeydown="handleCodeKeydown(event)" placeholder="$space1$\n$space2$\nint main(){...}">${esc(cell.code || '')}</textarea>`;
+  h += `<label>测试输入</label><input type="text" value="${esc(cell.input || '')}" onchange="updateCellProp('input', this.value);saveState()" placeholder="1">`;
+  h += `<label>预期输出</label><input type="text" value="${esc(cell.output || '')}" onchange="updateCellProp('output', this.value);saveState()" placeholder="5">`;
+  h += `<label>Spaces (与 monster 的 space 格式一致，match 类型用 refName[blockKey,...])</label>`;
+  h += `<div id="spaces-container">`;
+  const spKeys = Object.keys(cell.spaces || {});
+  spKeys.forEach((k, i) => {
+    h += spaceRowHtml(cell, k, cell.spaces[k], i);
+  });
+  h += `</div>`;
+  h += `<button onclick="addSpace()" style="margin-top:4px">+ 添加 space</button>`;
+  return h;
+}
+
+// ==================== BLOCK MANAGER PANEL ====================
+function renderBlockPanel() {
+  const panel = document.getElementById('tab-blocks');
+  if (!panel) return;
+
+  // Collect all blocks from all chests
+  const allBlocks = [];
+  const blockByKey = {};
+
+  Object.values(state.cells).forEach(cell => {
+    if (cell.type === 'chest' && cell.blocks) {
+      Object.entries(cell.blocks).forEach(([k, v]) => {
+        const info = { key: k, value: v, source: cell.name, refs: [] };
+        allBlocks.push(info);
+        blockByKey[k] = info;
+      });
+    }
+  });
+
+  // Build refName -> {cellName, nickname, cell} lookup
+  const refNameLookup = {};
+  const allMonsterCells = [];
+  Object.values(state.cells).forEach(cell => {
+    if (cell.type === 'monster' && cell.refName) {
+      refNameLookup[cell.refName] = { cellName: cell.name, nickname: cell.nickname || '', cell: cell };
+      allMonsterCells.push(cell);
+    }
+  });
+
+  // Helper: build label for a cell
+  function cellLabel(c) {
+    const nn = c.nickname ? `(${c.nickname})` : '';
+    return c.name + nn;
+  }
+
+  // Helper: check if a block key matches a space
+  function blockMatchesSpace(bk, sp, chestName) {
+    if (!sp.type) return false;
+    const vals = Array.isArray(sp.val) ? sp.val : (sp.val ? [sp.val] : []);
+    if (vals.length === 0) return false;
+    return vals.some(v => {
+      try {
+        if (sp.type === 'regex') return new RegExp(v).test(bk);
+        if (sp.type === 'prefix') return bk.startsWith(v);
+        if (sp.type === 'find') return bk.includes(v);
+        if (sp.type === 'match') {
+          const mm = v.match(/^(\w+)\[(.+)\]$/);
+          if (mm) return mm[2].split(',').map(s => s.trim()).includes(bk);
+        }
+      } catch(e) {}
+      return false;
+    });
+  }
+
+  // Forward scan: each monster/boss space → check which blocks match
+  Object.values(state.cells).forEach(cell => {
+    if ((cell.type === 'monster' || cell.type === 'boss') && cell.spaces) {
+      const callerLabel = cellLabel(cell);
+
+      Object.entries(cell.spaces).forEach(([spName, sp]) => {
+        const raw = Array.isArray(sp.val) ? sp.val.join('\n') : (sp.val || '');
+        const vals = raw ? raw.split('\n').map(s => s.trim()).filter(Boolean) : [];
+
+        if (sp.type === 'match') {
+          vals.forEach(v => {
+            const m = v.match(/^(\w+)\[(.+)\]$/);
+            if (m) {
+              const mRefName = m[1];
+              const bKeys = m[2].split(',').map(s => s.trim());
+              const target = refNameLookup[mRefName];
+
+              // One-level deep scan: find target monster's spaces that match these blocks
+              let viaChain = '';
+              if (target && target.cell.spaces) {
+                const matchedSpaces = [];
+                Object.entries(target.cell.spaces).forEach(([tSpName, tSp]) => {
+                  const blockChest = target.cellName || '';
+                  const anyMatch = bKeys.some(bk => blockMatchesSpace(bk, tSp, blockChest));
+                  if (anyMatch && !matchedSpaces.includes(tSpName)) matchedSpaces.push(tSpName);
+                });
+                const tLabel = cellLabel(target.cell);
+                viaChain = matchedSpaces.length > 0
+                  ? `via ${tLabel}.${matchedSpaces.join(',')}`
+                  : `via ${tLabel}`;
+              } else {
+                viaChain = 'via ' + mRefName;
+              }
+
+              bKeys.forEach(bk => {
+                if (blockByKey[bk]) {
+                  const refStr = `${callerLabel}.${spName} ` + viaChain;
+                  if (!blockByKey[bk].refs.includes(refStr))
+                    blockByKey[bk].refs.push(refStr);
+                }
+              });
+            } else {
+              if (blockByKey[v]) {
+                blockByKey[v].refs.push(callerLabel + '.' + spName);
+              }
+            }
+          });
+        } else if (sp.type && vals.length > 0) {
+          vals.forEach(pattern => {
+            allBlocks.forEach(b => {
+              try {
+                let matches = false;
+                if (sp.type === 'regex') matches = new RegExp(pattern).test(b.key);
+                else if (sp.type === 'prefix') matches = b.key.startsWith(pattern);
+                else if (sp.type === 'find') matches = b.key.includes(pattern);
+                if (matches) {
+                  const refStr = callerLabel + '.' + spName;
+                  if (!b.refs.includes(refStr)) b.refs.push(refStr);
+                }
+              } catch (e) {}
+            });
+          });
+        }
+      });
+    }
+  });
+
+  // Update index panel with clickable block list
+  const idxPanel = document.getElementById('idx-panel');
+  const orphanCount = allBlocks.filter(b => b.refs.length === 0).length;
+  let idxHtml = `<div style="font-size:11px;color:#aaa;margin-bottom:2px">${allBlocks.length}块 / ${orphanCount}孤立</div>`;
+  allBlocks.forEach(b => {
+    const orphan = b.refs.length === 0;
+    const sel = selectedBlockKey === b.key ? ' style="background:#1e1e4e;border-left-color:#e94560"' : '';
+    idxHtml += `<div class="idx-block${orphan ? ' orphan' : ''}"${sel} onclick="event.stopPropagation();selectIndexBlock('${esc(b.key)}')" data-key="${esc(b.key)}" data-source="${esc(b.source)}" data-val="${esc(b.value)}" data-refs="${esc(b.refs.join('|'))}" data-orphan="${orphan ? '1' : '0'}">
+      <div class="ik">${esc(b.key)}</div>
+      <div class="is">${esc(b.source)}${orphan ? ' ⚠' : ''}</div>
+    </div>`;
+  });
+  if (allBlocks.length === 0) idxHtml += '<div style="color:#666;font-size:10px">无块</div>';
+
+  // Add clues to index panel
+  const idxClues = Object.values(state.cells).filter(c => c.type === 'clue');
+  if (idxClues.length > 0) {
+    idxHtml += `<div style="font-size:11px;color:#aaa;margin:8px 0 2px">线索 ${idxClues.length}</div>`;
+    idxClues.forEach(clue => {
+      const refs = [];
+      Object.values(state.cells).forEach(cell => {
+        if ((cell.type === 'monster' || cell.type === 'boss') && cell.code && cell.code.includes('$' + clue.name + '$')) {
+          refs.push(cell.nickname ? `${cell.name}(${cell.nickname})` : cell.name);
+        }
+      });
+      const orphan = refs.length === 0;
+      idxHtml += `<div class="idx-block idx-clue${orphan ? ' orphan' : ''}" onclick="event.stopPropagation();focusClueCode('${esc(clue.name)}')" data-clue="${esc(clue.name)}" data-val="${esc(clue.value || '')}" data-refs="${esc(refs.join('|'))}" data-orphan="${orphan ? '1' : '0'}">
+        <div class="ik">📋 ${esc(clue.name)}</div>
+        <div class="is">${orphan ? '⚠ 未被引用' : esc(refs.join(', '))}</div>
+      </div>`;
+    });
+  }
+
+  idxPanel.innerHTML = idxHtml;
+
+  // Render detail HTML
+  let html = '<h3>代码块全局管理</h3>';
+  if (allBlocks.length === 0) {
+    html += '<p style="color:#666;font-size:12px">暂无代码块（在宝箱中添加）</p>';
+  } else if (selectedBlockKey && blockByKey[selectedBlockKey]) {
+    // Focused detail view for selected block
+    const b = blockByKey[selectedBlockKey];
+    const orphan = b.refs.length === 0;
+    html += `<div class="block-meta${orphan ? ' orphan' : ''}" style="margin-bottom:8px">`;
+    html += `<div style="margin-bottom:4px;display:flex;gap:6px"><button onclick="selectedBlockKey=null;renderBlockPanel()" style="font-size:10px;padding:1px 6px">← 返回列表</button><button onclick="focusBlockCode('${esc(b.source)}','${esc(b.key)}')" style="font-size:10px;padding:1px 8px;background:#533483;color:#fff;border:none;border-radius:3px;cursor:pointer">在编辑器中打开</button></div>`;
+    html += `<span class="bname">${esc(b.source)}.${esc(b.key)}</span>`;
+    html += `<span class="bcode" style="display:block;margin:4px 0">${highlightCodeDisplay(b.value)}</span>`;
+    html += `<span class="bsource">来源: ${esc(b.source)}</span>`;
+    html += `<div style="margin-top:4px;font-size:11px;color:#aaa">引用路径:</div>`;
+    if (b.refs.length > 0) {
+      html += `<div class="brefs" style="margin-left:8px">`;
+      b.refs.forEach(r => {
+        html += `<div style="margin:2px 0">→ ${esc(r)}</div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="brefs" style="margin-left:8px"><span class="warn">未被引用</span></div>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<p style="font-size:11px;color:#888">共 ${allBlocks.length} 个代码块，${orphanCount} 个未被引用（红框）</p>`;
+    allBlocks.forEach(b => {
+      const orphan = b.refs.length === 0;
+      const cls = orphan ? 'block-meta orphan' : 'block-meta';
+      html += `<div class="${cls}" style="cursor:pointer" onclick="selectIndexBlock('${esc(b.key)}')">`;
+      html += `<span class="bname">${esc(b.source)}.${esc(b.key)}</span>`;
+      html += `<span class="bcode">${highlightCodeDisplay(b.value)}</span>`;
+      html += `<span class="bsource">来源: ${esc(b.source)}</span>`;
+      if (b.refs.length > 0) {
+        html += ` → <span class="brefs">`;
+        b.refs.forEach((r, i) => {
+          if (i > 0) html += '<br>  &nbsp;&nbsp;';
+          html += `${esc(r)}`;
+        });
+        html += `</span>`;
+      } else {
+        html += ` → <span class="brefs"><span class="warn">未被引用</span></span>`;
+      }
+      html += `</div>`;
+    });
+  }
+
+  // Clue references
+  html += '<h4 style="margin-top:12px;font-size:13px;color:#aaa">线索引用</h4>';
+  const clues = Object.values(state.cells).filter(c => c.type === 'clue');
+  if (clues.length === 0) {
+    html += '<p style="color:#666;font-size:12px">无线索</p>';
+  } else {
+    clues.forEach(clue => {
+      const refs = [];
+      Object.values(state.cells).forEach(cell => {
+        if ((cell.type === 'monster' || cell.type === 'boss') && cell.code) {
+          if (cell.code.includes('$' + clue.name + '$')) {
+            const label = cell.nickname ? `${cell.name}(${cell.nickname})` : cell.name;
+            refs.push(label);
+          }
+        }
+      });
+      html += `<div class="block-meta">`;
+      html += `<span class="bname">${esc(clue.name)}</span>`;
+      html += `<span class="bcode">${highlightCodeDisplay(clue.value)}</span>`;
+      if (refs.length > 0) {
+        html += ` → <span class="brefs">ref: ${refs.map(r => esc(r)).join(', ')}</span>`;
+      } else {
+        html += ` → <span class="brefs"><span class="warn">未被引用</span></span>`;
+      }
+      html += `</div>`;
+    });
+  }
+
+  // Stats
+  html += '<h4 style="margin-top:12px;font-size:13px;color:#aaa">关卡统计</h4>';
+  const counts = {};
+  Object.values(state.cells).forEach(c => { counts[c.type] = (counts[c.type] || 0) + 1; });
+  html += `<p style="font-size:11px;color:#888">宝箱: ${counts.chest||0} | 怪物: ${counts.monster||0} | 线索: ${counts.clue||0} | Boss: ${counts.boss||0}</p>`;
+
+  panel.innerHTML = html;
+}
+
+// ==================== LAYERED KILL CHAIN BUILDER ====================
+let killChainLayers = []; // [{ monsterRefName, selectedBlocks: [] }]  selectedBlocks order matters
+
+function getPoolForLayer(targetIdx) {
+  // Compute available blocks at a given layer index
+  const pool = [];
+  // All chest blocks
+  Object.values(state.cells).forEach(c => {
+    if (c.type === 'chest' && c.blocks) {
+      Object.entries(c.blocks).forEach(([k, v]) => {
+        if (k) pool.push({ key: k, value: v, source: c.name, gen: false });
+      });
+    }
+  });
+  // Collect blocks selected in ALL OTHER layers (global uniqueness)
+  const usedBlocks = new Set();
+  killChainLayers.forEach((l, i) => {
+    if (i !== targetIdx && l.selectedBlocks.length > 0) {
+      l.selectedBlocks.forEach(bk => usedBlocks.add(bk));
+    }
+  });
+  // Remove used blocks from pool
+  for (let i = pool.length - 1; i >= 0; i--) {
+    if (usedBlocks.has(pool[i].key)) pool.splice(i, 1);
+  }
+  // Add outputs from previous layers (0..targetIdx-1), skip if used by any other layer
+  for (let i = 0; i < targetIdx; i++) {
+    const l = killChainLayers[i];
+    if (!l.monsterRefName || l.selectedBlocks.length === 0) continue;
+    const outKey = l.monsterRefName + '[' + l.selectedBlocks.join(',') + ']';
+    if (!usedBlocks.has(outKey)) {
+      pool.push({ key: outKey, value: '(击杀产物)', source: l.monsterRefName, gen: true });
+    }
+  }
+  return pool;
+}
+
+function generateKillChainOutput() {
+  if (killChainLayers.length === 0) return '';
+  const last = killChainLayers[killChainLayers.length - 1];
+  if (!last.monsterRefName || last.selectedBlocks.length === 0) return '';
+  return last.monsterRefName + '[' + last.selectedBlocks.join(',') + ']';
+}
+
+function renderKillChainPanel() {
+  const panel = document.getElementById('tab-killchain');
+  if (!panel) return;
+
+  // Include both monsters (with refName) and boss
+  const fighters = [];
+  Object.values(state.cells).forEach(c => {
+    if (c.type === 'monster' && c.refName) fighters.push({ refName: c.refName, nickname: c.nickname, name: c.name, type: 'monster' });
+    if (c.type === 'boss') fighters.push({ refName: 'boss', nickname: c.nickname, name: 'boss', type: 'boss' });
+  });
+
+  let html = '<div style="display:flex;gap:8px;height:100%">';
+
+  // Left: layers
+  html += '<div style="flex:1.2;overflow-y:auto">';
+  html += '<h4 style="font-size:13px;color:#aaa;margin-bottom:4px">击杀层级 (按顺序，上层产物供下层使用)</h4>';
+
+  if (killChainLayers.length === 0) {
+    html += '<p style="font-size:11px;color:#666">点击底部按钮添加第一层</p>';
+  } else {
+    killChainLayers.forEach((layer, idx) => {
+      const pool = getPoolForLayer(idx);
+      const fighter = fighters.find(f => f.refName === layer.monsterRefName);
+      const label = fighter ? `${fighter.refName}(${fighter.nickname||fighter.name})` : (layer.monsterRefName || '未选择');
+      const outKey = layer.monsterRefName && layer.selectedBlocks.length > 0
+        ? layer.monsterRefName + '[' + layer.selectedBlocks.join(',') + ']' : '';
+
+      html += `<div style="background:#0a0a1a;border-radius:4px;padding:6px;margin:3px 0;border-left:3px solid ${layer.monsterRefName?'#6a3f9e':'#444'}">
+        <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px">
+          <span style="font-size:11px;color:#e0c060;flex:1">${idx+1}. ${esc(label)}</span>
+          <button onclick="moveKillLayer(${idx},-1)" ${idx===0?'disabled':''} style="font-size:10px;padding:1px 4px">▲</button>
+          <button onclick="moveKillLayer(${idx},1)" ${idx===killChainLayers.length-1?'disabled':''} style="font-size:10px;padding:1px 4px">▼</button>
+          <button class="danger" onclick="removeKillLayer(${idx})" style="font-size:10px;padding:1px 4px">×</button>
+        </div>
+        <select onchange="updateKillLayer(${idx},'monsterRefName',this.value)" style="width:100%;font-size:11px;background:#0f3460;color:#eee;border:1px solid #533483;border-radius:3px;padding:3px;margin-bottom:3px">
+          <option value="">选择怪物/Boss...</option>`;
+      fighters.forEach(f => {
+        html += `<option value="${esc(f.refName)}" ${layer.monsterRefName===f.refName?'selected':''}>${esc(f.refName)}(${esc(f.nickname||f.name)})</option>`;
+      });
+      html += `</select>`;
+
+      if (outKey) {
+        html += `<div style="font-size:10px;color:#8be0e0;margin:3px 0;word-break:break-all">产出: ${esc(outKey)}</div>`;
+      }
+
+      // Block pool for this layer
+      html += '<div style="font-size:10px;color:#888;margin:3px 0">可用块池:</div>';
+      html += '<div style="max-height:140px;overflow-y:auto;background:#050510;border-radius:3px;padding:3px">';
+      if (pool.length === 0) {
+        html += '<span style="color:#666;font-size:10px">块池为空</span>';
+      }
+      pool.forEach(b => {
+        const cid = `kcl_${idx}_${b.key.replace(/[^a-zA-Z0-9_]/g,'_')}`;
+        const isSel = layer.selectedBlocks.includes(b.key);
+        html += `<label style="display:flex;align-items:center;gap:3px;font-size:10px;cursor:pointer;padding:2px 3px;${isSel?'background:#1a3a1a;border-radius:2px':''}">
+          <input type="checkbox" id="${cid}" ${isSel?'checked':''} onchange="toggleKillBlock(${idx},'${esc(b.key)}',this.checked)">
+          <span style="color:${b.gen?'#e0c060':'#8be0e0'}">${esc(b.key)}</span>
+          <span style="color:#666">${highlightCodeDisplay(b.value)}</span>
+          ${b.gen?'<span style="color:#888;font-size:9px">[产物]</span>':''}
+        </label>`;
+      });
+      html += '</div>';
+
+      // Selected blocks reorder
+      if (layer.selectedBlocks.length > 1) {
+        html += '<div style="font-size:10px;color:#aaa;margin-top:3px">选中顺序 (拖拽调整):</div>';
+        layer.selectedBlocks.forEach((bk, si) => {
+          html += `<div style="display:flex;align-items:center;gap:2px;font-size:10px;padding:1px 3px">
+            <button onclick="moveKillBlock(${idx},${si},-1)" ${si===0?'disabled':''} style="font-size:9px;padding:0 3px">▲</button>
+            <button onclick="moveKillBlock(${idx},${si},1)" ${si===layer.selectedBlocks.length-1?'disabled':''} style="font-size:9px;padding:0 3px">▼</button>
+            <span style="color:#8be0e0">${esc(bk)}</span>
+          </div>`;
+        });
+      }
+
+      html += '</div>';
+    });
+  }
+
+  html += '<button onclick="addKillLayer()" style="margin-top:6px;font-size:11px;padding:4px 12px;background:#533483;color:#fff;border:none;border-radius:3px;cursor:pointer">+ 添加层级</button>';
+  html += '</div>';
+
+  // Right: output
+  html += '<div style="flex:1;display:flex;flex-direction:column">';
+  html += '<h4 style="font-size:13px;color:#aaa;margin-bottom:4px">最终产出 (单行嵌套，无空格)</h4>';
+  html += '<p style="font-size:10px;color:#666;margin-bottom:4px">每层选中的块从池中消耗，层级产物加入下层池</p>';
+  html += '<textarea id="killchain-output" readonly style="flex:1;background:#0a0a1a;color:#8be0e0;border:1px solid #533483;border-radius:4px;padding:8px;font-family:Consolas,monospace;font-size:12px;resize:none">';
+  html += esc(generateKillChainOutput());
+  html += '</textarea>';
+  html += '<button onclick="copyKillChain()" style="margin-top:4px;font-size:11px;padding:4px 12px">复制</button>';
+  // Also show per-layer outputs
+  html += '<h4 style="font-size:12px;color:#aaa;margin-top:8px">各层产出</h4>';
+  html += '<div style="max-height:160px;overflow-y:auto;font-size:10px;color:#888">';
+  killChainLayers.forEach((l, i) => {
+    if (l.monsterRefName && l.selectedBlocks.length > 0) {
+      html += `<div style="margin:2px 0">${i+1}. ${esc(l.monsterRefName+'['+l.selectedBlocks.join(',')+']')}</div>`;
+    }
+  });
+  html += '</div>';
+  html += '</div>';
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function addKillLayer() {
+  killChainLayers.push({ monsterRefName: '', selectedBlocks: [] });
+  renderKillChainPanel();
+}
+
+function removeKillLayer(idx) {
+  killChainLayers.splice(idx, 1);
+  renderKillChainPanel();
+}
+
+function moveKillLayer(idx, dir) {
+  const ni = idx + dir;
+  if (ni < 0 || ni >= killChainLayers.length) return;
+  [killChainLayers[idx], killChainLayers[ni]] = [killChainLayers[ni], killChainLayers[idx]];
+  renderKillChainPanel();
+}
+
+function updateKillLayer(idx, field, value) {
+  const layer = killChainLayers[idx];
+  const oldRefName = layer.monsterRefName;
+  layer[field] = value;
+  if (field === 'monsterRefName' && oldRefName && value && layer.selectedBlocks.length > 0) {
+    const oldKey = oldRefName + '[' + layer.selectedBlocks.join(',') + ']';
+    const newKey = value + '[' + layer.selectedBlocks.join(',') + ']';
+    for (let i = idx + 1; i < killChainLayers.length; i++) {
+      const sel = killChainLayers[i].selectedBlocks;
+      const pos = sel.indexOf(oldKey);
+      if (pos >= 0) sel[pos] = newKey;
+    }
+  }
+  renderKillChainPanel();
+}
+
+function toggleKillBlock(idx, blockKey, checked) {
+  const layer = killChainLayers[idx];
+  const hasOldKey = layer.monsterRefName && layer.selectedBlocks.length > 0;
+  const oldKey = hasOldKey ? layer.monsterRefName + '[' + layer.selectedBlocks.join(',') + ']' : null;
+
+  if (checked) {
+    if (!layer.selectedBlocks.includes(blockKey))
+      layer.selectedBlocks.push(blockKey);
+  } else {
+    layer.selectedBlocks = layer.selectedBlocks.filter(b => b !== blockKey);
+  }
+
+  if (oldKey) {
+    const hasNewKey = layer.monsterRefName && layer.selectedBlocks.length > 0;
+    const newKey = hasNewKey ? layer.monsterRefName + '[' + layer.selectedBlocks.join(',') + ']' : null;
+    for (let i = idx + 1; i < killChainLayers.length; i++) {
+      const sel = killChainLayers[i].selectedBlocks;
+      const pos = sel.indexOf(oldKey);
+      if (pos >= 0) {
+        if (newKey) sel[pos] = newKey;
+        else sel.splice(pos, 1);
+      }
+    }
+  }
+
+  renderKillChainPanel();
+}
+
+function moveKillBlock(idx, si, dir) {
+  const blocks = killChainLayers[idx].selectedBlocks;
+  const ni = si + dir;
+  if (ni < 0 || ni >= blocks.length) return;
+  const layer = killChainLayers[idx];
+  const hasOldKey = layer.monsterRefName && blocks.length > 0;
+  const oldKey = hasOldKey ? layer.monsterRefName + '[' + blocks.join(',') + ']' : null;
+  [blocks[si], blocks[ni]] = [blocks[ni], blocks[si]];
+  if (oldKey) {
+    const newKey = layer.monsterRefName + '[' + blocks.join(',') + ']';
+    // Update downstream layers that reference the old generated key
+    for (let i = idx + 1; i < killChainLayers.length; i++) {
+      const sel = killChainLayers[i].selectedBlocks;
+      const pos = sel.indexOf(oldKey);
+      if (pos >= 0) sel[pos] = newKey;
+    }
+  }
+  renderKillChainPanel();
+}
+
+function copyKillChain() {
+  const output = generateKillChainOutput();
+  if (!output) { alert('请先完成至少一层击杀链'); return; }
+  navigator.clipboard.writeText(output).then(() => alert('已复制:\n' + output));
+}
+
+// ==================== CODE PANEL TABS ====================
+function switchCodeTab(tab, btn) {
+  document.querySelectorAll('#code-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  // Highlight the matching tab button
+  const tabBtns = document.querySelectorAll('#code-tabs .tab-btn');
+  tabBtns.forEach(b => { if (b.textContent.includes(tab === 'editor' ? '代码' : tab === 'blocks' ? '块管理' : '击杀')) b.classList.add('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'blocks') renderBlockPanel();
+  if (tab === 'killchain') renderKillChainPanel();
+}
+
+function focusClueCode(clueName) {
+  for (const k in state.cells) {
+    const c = state.cells[k];
+    if (c.type === 'clue' && c.name === clueName) {
+      focusCodeField(k, 'value', c.value || '');
+      return;
+    }
+  }
+}
+
+function selectIndexBlock(blockKey) {
+  selectedBlockKey = blockKey;
+  let chestName = '';
+  for (const k in state.cells) {
+    const c = state.cells[k];
+    if (c.type === 'chest' && c.blocks && c.blocks[blockKey] !== undefined) {
+      chestName = c.name;
+      break;
+    }
+  }
+  focusBlockCode(chestName, blockKey);
+}
+
+// ==================== CODE PANEL (4th column) ====================
+let codeTarget = null; // { cellKey, field } | { global: 'end_text' } | { type:'block', chestName, blockKey }
+let editorTabs = []; // [{ id, label, target }]
+let activeEditorTabId = null;
+
+function makeEditorTabId(target) {
+  if (target.type === 'block') return 'block|' + target.chestName + '|' + target.blockKey;
+  if (target.global) return 'global|' + target.global;
+  if (target.cellKey) return 'cell|' + target.cellKey + '|' + target.field;
+  return '';
+}
+function makeEditorTabLabel(target) {
+  if (target.type === 'block') return target.blockKey;
+  if (target.global === 'end_text') return '结束语';
+  if (target.cellKey) {
+    const cell = state.cells[target.cellKey];
+    const name = cell ? (cell.name || cell.type) : target.cellKey;
+    return name + ' → ' + target.field;
+  }
+  return '';
+}
+function getTargetValue(target) {
+  if (target.type === 'block') {
+    for (const k in state.cells) {
+      const c = state.cells[k];
+      if (c.name === target.chestName && c.blocks && c.blocks[target.blockKey] !== undefined)
+        return c.blocks[target.blockKey] || '';
+    }
+    return '';
+  }
+  if (target.global) return state[target.global] || '';
+  if (target.cellKey) {
+    const cell = state.cells[target.cellKey];
+    return cell ? (cell[target.field] || '') : '';
+  }
+  return '';
+}
+
+function renderEditorTabs() {
+  const bar = document.getElementById('editor-tab-bar');
+  if (!bar) return;
+  let h = '';
+  editorTabs.forEach(t => {
+    const cls = t.id === activeEditorTabId ? 'editor-tab active' : 'editor-tab';
+    h += `<span class="${cls}" onclick="activateEditorTab('${esc(t.id)}')">
+      ${esc(t.label)}
+      <button class="editor-tab-close" onclick="event.stopPropagation();closeEditorTab('${esc(t.id)}')">×</button>
+    </span>`;
+  });
+  bar.innerHTML = h;
+}
+
+function openEditorTab(target, label, value) {
+  // Save current tab's content to state before switching
+  if (activeEditorTabId && codeTarget) {
+    const val = document.getElementById('code-editor').value;
+    syncCodeTargetValue(codeTarget, val);
+  }
+  const tabId = makeEditorTabId(target);
+  const existing = editorTabs.find(t => t.id === tabId);
+  if (existing) {
+    activateEditorTab(tabId);
+    return;
+  }
+  editorTabs.push({ id: tabId, label: label || makeEditorTabLabel(target), target: target });
+  activateEditorTab(tabId);
+  renderEditorTabs();
+}
+
+function activateEditorTab(tabId) {
+  activeEditorTabId = tabId;
+  const tab = editorTabs.find(t => t.id === tabId);
+  if (!tab) return;
+  codeTarget = tab.target;
+  document.getElementById('code-editor').value = getTargetValue(tab.target);
+  document.getElementById('code-field-label').textContent = '编辑: ' + tab.label;
+  renderEditorTabs();
+  switchCodeTab('editor', document.querySelector('#code-tabs .tab-btn:first-child'));
+}
+
+function closeEditorTab(tabId) {
+  const idx = editorTabs.findIndex(t => t.id === tabId);
+  if (idx < 0) return;
+  editorTabs.splice(idx, 1);
+  if (editorTabs.length === 0) {
+    activeEditorTabId = null;
+    codeTarget = null;
+    document.getElementById('code-editor').value = '';
+    document.getElementById('code-field-label').textContent = '';
+  } else if (activeEditorTabId === tabId) {
+    const newIdx = Math.min(idx, editorTabs.length - 1);
+    activateEditorTab(editorTabs[newIdx].id);
+  }
+  renderEditorTabs();
+}
+
+function syncCodeTargetValue(target, val) {
+  if (target.type === 'block') {
+    for (const k in state.cells) {
+      const c = state.cells[k];
+      if (c.name === target.chestName && c.blocks && c.blocks[target.blockKey] !== undefined) {
+        c.blocks[target.blockKey] = val; break;
+      }
+    }
+  } else if (target.global) {
+    state[target.global] = val;
+    const el = document.getElementById(target.global === 'end_text' ? 'end_text' : '');
+    if (el) el.value = val;
+  } else if (target.cellKey) {
+    const cell = state.cells[target.cellKey];
+    if (cell) cell[target.field] = val;
+  }
+}
+
+function focusCodeField(cellKey, field, value) {
+  openEditorTab(cellKey ? { cellKey, field } : { global: field }, null, value);
+}
+
+function focusBlockCode(chestName, blockKey) {
+  let value = '';
+  for (const k in state.cells) {
+    const c = state.cells[k];
+    if (c.name === chestName && c.blocks && c.blocks[blockKey] !== undefined) {
+      value = c.blocks[blockKey] || '';
+      break;
+    }
+  }
+  openEditorTab({ type: 'block', chestName, blockKey }, null, value);
+}
+
+function highlightCodeDisplay(text) {
+  if (!text) return '(空)';
+  let html = highlightEscapes(text);
+  html = html.replace(/\$(clue_\w+)\$/g, (match, name) => {
+    const clue = Object.values(state.cells).find(c => c.type === 'clue' && c.name === name);
+    const tip = clue ? (clue.value || '(空)') : '(未找到)';
+    return `<span class="clue-tip" data-tip="${esc(tip)}">${match}</span>`;
+  });
+  return html;
+}
+
+// idx-panel 即时 tooltip — 鼠标划过代码块/线索时展示代码内容
+let _idxTipTarget = null;
+function _setupIdxTooltip() {
+  const tipDiv = document.getElementById('idx-tooltip');
+  if (!tipDiv) return;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.idx-block, .idx-clue');
+    if (el === _idxTipTarget) return;
+    _idxTipTarget = el;
+    if (!el) { tipDiv.style.display = 'none'; return; }
+    const val = el.getAttribute('data-val') || '';
+    const refs = (el.getAttribute('data-refs') || '').split('|').filter(Boolean);
+    const orphan = el.getAttribute('data-orphan') === '1';
+    let html = '';
+    if (el.classList.contains('idx-clue')) {
+      const name = el.getAttribute('data-clue') || '';
+      html += `<div class="tt-key">📋 ${esc(name)}</div>`;
+      html += `<div class="tt-src">线索 (clue)</div>`;
+    } else {
+      const key = el.getAttribute('data-key') || '';
+      const src = el.getAttribute('data-source') || '';
+      html += `<div class="tt-key">${esc(key)}</div>`;
+      html += `<div class="tt-src">来源: ${esc(src)}</div>`;
+    }
+    html += `<div class="tt-code">${highlightCodeDisplay(val)}</div>`;
+    if (refs.length > 0) {
+      html += `<div class="tt-refs">被引用: `;
+      refs.forEach((r, i) => {
+        if (i > 0) html += '<br>  &nbsp;&nbsp;';
+        html += `<span class="tt-arrow">→</span> ${esc(r)}`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="tt-refs"><span class="warn">${el.classList.contains('idx-clue') ? '未被引用 (无用线索)' : '未被引用 (死代码块)'}</span></div>`;
+    }
+    tipDiv.innerHTML = html;
+    tipDiv.style.display = 'block';
+  }, true);
+  document.addEventListener('mousemove', e => {
+    if (!_idxTipTarget) return;
+    let x = e.clientX + 14, y = e.clientY - 10;
+    if (x + tipDiv.offsetWidth > window.innerWidth - 8) x = e.clientX - tipDiv.offsetWidth - 14;
+    if (y + tipDiv.offsetHeight > window.innerHeight - 8) y = e.clientY - tipDiv.offsetHeight - 10;
+    if (y < 4) y = 4;
+    tipDiv.style.left = x + 'px';
+    tipDiv.style.top = y + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    if (!e.target.closest('.idx-block, .idx-clue')) { _idxTipTarget = null; tipDiv.style.display = 'none'; }
+  }, true);
+}
+
+// Clue 气泡 tooltip — 用 JS 实现，避免 overflow 裁剪
+let _clueTipActive = null;
+function _setupClueTooltip() {
+  const tipDiv = document.getElementById('clue-tooltip');
+  if (!tipDiv) return;
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.clue-tip');
+    if (el === _clueTipActive) return;
+    _clueTipActive = el;
+    if (!el) { tipDiv.style.display = 'none'; return; }
+    tipDiv.textContent = el.getAttribute('data-tip') || '';
+    tipDiv.style.display = 'block';
+  }, true);
+  document.addEventListener('mousemove', e => {
+    if (!_clueTipActive) return;
+    let x = e.clientX + 12, y = e.clientY - tipDiv.offsetHeight - 8;
+    if (x + tipDiv.offsetWidth > window.innerWidth - 4) x = e.clientX - tipDiv.offsetWidth - 12;
+    if (y < 4) y = e.clientY + 20;
+    tipDiv.style.left = x + 'px';
+    tipDiv.style.top = y + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    if (!e.target.closest('.clue-tip')) { _clueTipActive = null; tipDiv.style.display = 'none'; }
+  }, true);
+}
+
+function onCodeEditorInput() {
+  const val = document.getElementById('code-editor').value;
+  if (!codeTarget) return;
+  syncCodeTargetValue(codeTarget, val);
+  renderPropPanel();
+  renderBlockPanel();
+  saveState();
+}
+
+// ---- $clue$ 预览：按住按钮临时替换 textarea 内容 ----
+let savedEditorValue = null;
+
+function showResolvedPreview() {
+  const ta = document.getElementById('code-editor');
+  if (!ta) return;
+  savedEditorValue = ta.value;
+  const lines = ta.value.split('\n');
+  const out = [];
+  for (const line of lines) {
+    const indent = (line.match(/^\t*/) || [''])[0];
+    const result = line.replace(/\$(clue_\w+)\$/g, (match, name) => {
+      const clue = Object.values(state.cells).find(c => c.type === 'clue' && c.name === name);
+      if (!clue || !clue.value) return match;
+      const cLines = clue.value.split('\n');
+      if (cLines.length === 1) return '▶' + cLines[0] + '◀';
+      let r = '▶' + cLines[0];
+      for (let i = 1; i < cLines.length; i++) {
+        r += '\n' + indent + cLines[i];
+      }
+      r += '◀';
+      return r;
+    });
+    out.push(result);
+  }
+  ta.value = out.join('\n');
+}
+
+function hideResolvedPreview() {
+  const ta = document.getElementById('code-editor');
+  if (!ta || savedEditorValue === null) return;
+  ta.value = savedEditorValue;
+  savedEditorValue = null;
+}
+
+function handleCodeKeydown(event) {
+  const ta = event.target;
+
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '\t' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    onCodeEditorInput();
+    return;
+  }
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    const before = ta.value.substring(0, start);
+    const after = ta.value.substring(ta.selectionEnd);
+    const lastNewline = before.lastIndexOf('\n');
+    const currentLine = before.substring(lastNewline + 1);
+    const indent = currentLine.match(/^(\t*)/)[1] || '';
+    const trimmed = currentLine.trimEnd();
+    let extra = '';
+    if (trimmed.endsWith('{')) extra = '\t';
+    ta.value = before + '\n' + indent + extra + after;
+    ta.selectionStart = ta.selectionEnd = before.length + 1 + indent.length + extra.length;
+    onCodeEditorInput();
+    return;
+  }
+
+  if (event.key === '{') {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '{}' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    onCodeEditorInput();
+    return;
+  }
+
+  if (event.key === '(') {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '()' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    onCodeEditorInput();
+    return;
+  }
+
+  if (event.key === '[') {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + '[]' + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    onCodeEditorInput();
+    return;
+  }
+
+  if (event.key === '"' || event.key === "'") {
+    event.preventDefault();
+    const start = ta.selectionStart;
+    const q = event.key;
+    ta.value = ta.value.substring(0, start) + q + q + ta.value.substring(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = start + 1;
+    onCodeEditorInput();
+    return;
+  }
+}
+
+// ==================== JSON EXPORT ====================
+function exportJson() {
+  // Read top-level values
+  state.map_width = parseInt(document.getElementById('map_w').value) || 3;
+  state.map_height = parseInt(document.getElementById('map_h').value) || 3;
+  state.bag_size = parseInt(document.getElementById('bag_size').value) || 2;
+  state.end_text = document.getElementById('end_text').value;
+
+  renumberAll();
+
+  // Build map_grid, collect entities, and find start position
+  const entityCells = {};  // name -> cell
+  let startPos = null;
+  const map_grid = [];
+  for (let r = 0; r < state.map_height; r++) {
+    const row = [];
+    for (let c = 0; c < state.map_width; c++) {
+      const cell = state.cells[cellKey(r, c)];
+      if (!cell) { row.push('.'); continue; }
+      if (cell.type === 'empty') row.push('.');
+      else if (cell.type === 'wall') row.push('#');
+      else if (cell.type === 'start') {
+        row.push('start');
+        startPos = [r, c];
+      } else {
+        row.push(cell.name);
+        if (['chest', 'monster', 'clue', 'boss'].includes(cell.type)) {
+          entityCells[cell.name] = cell;
+        }
+      }
+    }
+    map_grid.push(row);
+  }
+
+  const root = {
+    map_width: state.map_width,
+    map_height: state.map_height,
+    level_type: state.level_type,
+    special_tags: state.special_tags,
+    bag_size: state.bag_size,
+    map_grid: map_grid,
+    clue_count: 0,
+    clues: {},
+    chest_count: 0,
+    chests: {},
+    monster_count: 0,
+    monsters: {},
+    boss: null,
+    start: startPos,
+    end_text: state.end_text
+  };
+
+  // Build chests
+  Object.entries(entityCells).forEach(([name, cell]) => {
+    if (cell.type === 'chest') {
+      root.chest_count++;
+      root.chests[name] = {
+        forced_pick: !!cell.forced_pick,
+        repeat: !!cell.repeat,
+        block_count: Object.keys(cell.blocks || {}).length,
+        blocks: cell.blocks || {}
+      };
+    }
+  });
+
+  // Build clues
+  Object.entries(entityCells).forEach(([name, cell]) => {
+    if (cell.type === 'clue') {
+      root.clue_count++;
+      root.clues[name] = cell.value || '';
+    }
+  });
+
+  function cleanSpaces(spaces) {
+    const out = {};
+    Object.entries(spaces || {}).forEach(([k, sp]) => {
+      const raw = Array.isArray(sp.val) ? sp.val.join('\n') : (sp.val || '');
+      out[k] = {
+        type: sp.type || 'regex',
+        val: raw ? raw.split('\n').map(s => s.trim()).filter(Boolean) : []
+      };
+    });
+    return out;
+  }
+
+  // Build monsters
+  Object.entries(entityCells).forEach(([name, cell]) => {
+    if (cell.type === 'monster') {
+      root.monster_count++;
+      root.monsters[name] = {
+        pic: cell.pic || '',
+        nickname: cell.nickname || '',
+        name: cell.refName || '',
+        type: cell.refType || 'function',
+        code: cell.code || '',
+        spaces: cleanSpaces(cell.spaces)
+      };
+    }
+  });
+
+  // Build boss
+  Object.entries(entityCells).forEach(([name, cell]) => {
+    if (cell.type === 'boss') {
+      root.boss = {
+        pic: cell.pic || '',
+        nickname: cell.nickname || '',
+        code: cell.code || '',
+        input: cell.input || '',
+        output: cell.output || '',
+        spaces: cleanSpaces(cell.spaces)
+      };
+    }
+  });
+
+  const json = JSON.stringify(root, null, 4);
+  document.getElementById('json-out').value = json;
+  renderBlockPanel();
+  saveState();
+}
+
+function copyJson() {
+  const ta = document.getElementById('json-out');
+  ta.select();
+  document.execCommand('copy');
+  alert('已复制到剪贴板');
+}
+
+function downloadJson() {
+  const content = document.getElementById('json-out').value;
+  if (!content) { alert('请先生成 JSON'); return; }
+  const blob = new Blob([content], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'level.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ==================== UTILS ====================
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function highlightEscapes(text) {
+  if (!text) return '(空)';
+  const labels = {
+    '\\n': '换行符 \\n',
+    '\\t': '制表符 \\t',
+    '\\r': '回车符 \\r',
+    '\\\\': '反斜杠 \\\\',
+    '\\"': '转义双引号 \\"',
+    "\\'": '转义单引号 \\\'',
+    '\\0': '空字符 \\0',
+  };
+  let result = '';
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '\\' && i + 1 < text.length) {
+      const pair = text.substring(i, i + 2);
+      if (labels[pair]) {
+        result += `<span class="esc-seq" title="${esc(labels[pair])}">${esc(pair)}</span>`;
+        i += 2;
+        continue;
+      }
+      if (text[i + 1] === 'x' && i + 3 < text.length && /^[0-9a-fA-F]{2}$/.test(text.substring(i + 2, i + 4))) {
+        const hex = text.substring(i, i + 4);
+        const code = parseInt(hex.slice(2), 16);
+        result += `<span class="esc-seq" title="十六进制转义 \\x${hex.slice(2)} (ASCII ${code})">${esc(hex)}</span>`;
+        i += 4;
+        continue;
+      }
+    }
+    result += esc(text[i]);
+    i++;
+  }
+  return result;
+}
+
+// ==================== LOAD example.json ====================
+function loadExample() {
+  // Try to load example.json from same directory (won't work via file:// due to CORS)
+  // Provide a manual paste option instead
+  const raw = prompt('粘贴 example.json 内容以加载，或取消跳过：');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    importFromJson(data);
+    alert('加载成功！');
+  } catch (e) {
+    alert('JSON 解析失败: ' + e.message);
+  }
+}
+
+function importFromJson(data) {
+  state.map_width = data.map_width || 3;
+  state.map_height = data.map_height || 3;
+  state.special_tags = data.special_tags || [];
+  state.bag_size = data.bag_size || 2;
+  state.end_text = data.end_text || '';
+  state.level_type = data.level_type || 'simple';
+
+  document.getElementById('map_w').value = state.map_width;
+  document.getElementById('level_type').value = state.level_type;
+  document.getElementById('map_h').value = state.map_height;
+  document.getElementById('bag_size').value = state.bag_size;
+  document.getElementById('end_text').value = state.end_text;
+
+  state.cells = {};
+  if (data.map_grid) {
+    for (let r = 0; r < data.map_grid.length; r++) {
+      for (let c = 0; c < data.map_grid[r].length; c++) {
+        const val = data.map_grid[r][c];
+        let type, name;
+        if (val === '.') { type = 'empty'; name = 'empty'; }
+        else if (val === '#') { type = 'wall'; name = 'wall'; }
+        else if (val === 'start') { type = 'start'; name = 'start'; }
+        else if (val.startsWith('chest_')) { type = 'chest'; name = val; }
+        else if (val.startsWith('monster_')) { type = 'monster'; name = val; }
+        else if (val.startsWith('clue_')) { type = 'clue'; name = val; }
+        else if (val === 'boss') { type = 'boss'; name = 'boss'; }
+        else { type = 'empty'; name = 'empty'; }
+        setCell(r, c, type);
+        state.cells[cellKey(r, c)].name = name;
+      }
+    }
+  }
+
+  // Enforce one-start rule: use explicit start coords if provided
+  if (data.start && Array.isArray(data.start) && data.start.length === 2) {
+    for (const k in state.cells) {
+      if (state.cells[k].type === 'start') state.cells[k] = { type: 'empty', name: 'empty' };
+    }
+    const [sr, sc] = data.start;
+    if (sr < state.map_height && sc < state.map_width) {
+      state.cells[cellKey(sr, sc)] = { type: 'start', name: 'start' };
+    }
+  }
+
+  // Fill chest data
+  if (data.chests) {
+    Object.entries(data.chests).forEach(([name, chest]) => {
+      for (const k in state.cells) {
+        if (state.cells[k].name === name) {
+          state.cells[k].forced_pick = !!chest.forced_pick;
+          state.cells[k].repeat = !!chest.repeat;
+          state.cells[k].blocks = chest.blocks || {};
+        }
+      }
+    });
+  }
+
+  function importSpaces(spaces) {
+    const out = {};
+    Object.entries(spaces || {}).forEach(([k, sp]) => {
+      const raw = Array.isArray(sp.val) ? sp.val.join('\n') : (sp.val || '');
+      out[k] = {
+        type: sp.type || 'regex',
+        val: raw
+      };
+    });
+    return out;
+  }
+
+  // Fill monster data
+  if (data.monsters) {
+    Object.entries(data.monsters).forEach(([name, monster]) => {
+      for (const k in state.cells) {
+        if (state.cells[k].name === name) {
+          state.cells[k].pic = monster.pic || '';
+          state.cells[k].nickname = monster.nickname || '';
+          state.cells[k].refName = monster.name || '';
+          state.cells[k].refType = monster.type || 'function';
+          state.cells[k].code = monster.code || '';
+          state.cells[k].spaces = importSpaces(monster.spaces);
+        }
+      }
+    });
+  }
+
+  // Fill clue data
+  if (data.clues) {
+    Object.entries(data.clues).forEach(([name, value]) => {
+      for (const k in state.cells) {
+        if (state.cells[k].name === name) {
+          state.cells[k].value = typeof value === 'string' ? value : '';
+        }
+      }
+    });
+  }
+
+  // Fill boss data
+  if (data.boss) {
+    for (const k in state.cells) {
+      if (state.cells[k].name === 'boss') {
+        state.cells[k].pic = data.boss.pic || '';
+        state.cells[k].nickname = data.boss.nickname || '';
+        state.cells[k].code = data.boss.code || '';
+        state.cells[k].input = data.boss.input || '';
+        state.cells[k].output = data.boss.output || '';
+        state.cells[k].spaces = importSpaces(data.boss.spaces);
+      }
+    }
+  }
+
+  // Update UI
+  renderTags();
+  renderGrid();
+  renderPropPanel();
+  renderBlockPanel();
+}
+
+// ==================== STARTUP ====================
+initState();
+renderTags();
+renderGrid();
+renderPropPanel();
+renderBlockPanel();
+</script>
+<div id="clue-tooltip"></div>
+<div id="idx-tooltip"></div>
+<script>_setupClueTooltip();_setupIdxTooltip();</script>
+</body>
+</html>

@@ -75,3 +75,18 @@ void SaveManager::UnlockAll(){
         i=1;
     }
 }
+
+int SaveManager::levelCount(){
+    return totalLevelCount;
+}
+
+void SaveManager::deleteSave(){
+    QFile file(SAVE_PATH);
+    file.remove();
+}
+
+void SaveManager::hardReset(){
+    unlockState=QVector<int>(totalLevelCount,0);
+    if(totalLevelCount>0)unlockState[0]=1;
+    Save();
+}

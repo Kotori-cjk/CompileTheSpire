@@ -39,7 +39,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="mainMenuPage">
        <layout class="QVBoxLayout" name="mainMenuLayout">
@@ -1309,7 +1309,7 @@ for (int i = 1; i &lt;= 3; ++i) {
      <x>0</x>
      <y>0</y>
      <width>1100</width>
-     <height>25</height>
+     <height>18</height>
     </rect>
    </property>
   </widget>

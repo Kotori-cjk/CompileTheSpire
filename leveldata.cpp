@@ -7,6 +7,7 @@
 #include<QJsonArray>
 #include<QFile>
 #include<QDir>
+#include<QPoint>
 
 LevelData::LevelData() {}
 
@@ -101,7 +102,9 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
         this->specialTags.append(s.toString());
     }
     for(const auto& key:root["clues"].toObject().keys()){
-        this->clues[key]=root["clues"].toObject()[key].toString();
+        Clue tmp;
+        tmp.val=root["clues"].toObject()[key].toString();
+        this->clues[key]=tmp;
     }
     this->monsters=this->parseMonsters(root["monsters"].toObject());
     this->chests=this->parseChests(root["chests"].toObject());
@@ -135,6 +138,28 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
             row_v.push_back(i.toString());
         }
         this->mapGrid.push_back(row_v);
+    }
+    QJsonArray startpos=root["start"].toArray();
+    levelType=root["level_type"].toString();
+    this->startpos=QPoint(startpos[0].toInt(),startpos[1].toInt());
+    for(int i=0;i<mapHeight;i++){
+        for(int j=0;j<mapWidth;j++){
+            QString s=mapGrid[i][j];
+            if(s.length()<4)continue;
+            QString op=s.mid(0,3);
+            if(op=="mon"){
+                monsters[s].pos=QPoint(i,j);
+            }
+            if(op=="che"){
+                chests[s].pos=QPoint(i,j);
+            }
+            if(op=="clu"){
+                clues[s].pos=QPoint(i,j);
+            }
+            if(op=="bos"){
+                this->boss.pos=QPoint(i,j);
+            }
+        }
     }
     return true;
 }

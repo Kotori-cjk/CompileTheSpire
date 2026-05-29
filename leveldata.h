@@ -7,6 +7,7 @@
 #include<QJsonObject>
 #include<QJsonArray>
 #include<QDir>
+#include<QPoint>
 
 struct Space{
     QString spaceId;
@@ -15,6 +16,7 @@ struct Space{
 };
 
 struct Monster{
+    QPoint pos;
     QString monsterId;
     QString pic;
     QString nickname;
@@ -35,10 +37,16 @@ struct CodeBlock {
 };
 
 struct Chest {
+    QPoint pos;
     QString chestId;
     bool forcedPick;
     bool repeat;
     QMap<QString,CodeBlock>blocks;
+};
+
+struct Clue{
+    QPoint pos;
+    QString val;
 };
 
 class LevelData
@@ -56,10 +64,12 @@ public:
     int bagSize;
     QVector<QVector<QString>>mapGrid;
     QMap<QString,Chest>chests;
-    QMap<QString,QString>clues;
+    QMap<QString,Clue>clues;
     QMap<QString,Monster>monsters;
     Boss boss;
     QString endText;
+    QPoint startpos;
+    QString levelType;
     bool LoadFromJson(const QString& filePath,QString* errorMessage=nullptr);
     //从Json中读入，filePath为读取路径，errorMessage为可选的传出报错信息的指针
 };
