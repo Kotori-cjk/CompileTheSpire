@@ -38,14 +38,20 @@ public:
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     void applyDefaultSettings();
     void applyVisualStyle();
     void buildRuntimeGameUi();
+    void positionMainMenuButtons();
     void loadLevels();
     void refreshLevelSelectUi();
     void startLevel(int levelIndex);
+    void setLevelSelectMode(bool exMode);
+    void changeLevelPage(int delta);
+    void selectStage(int levelIndex);
+    bool isLevelUnlocked(int levelIndex) const;
     void resetLevel();
     void pushUndoState();
     void undo();
@@ -80,13 +86,18 @@ private:
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
     QSet<QString> seenMonsters;
+    QSet<int> completedStageIndexes;
     QVector<GameSnapshot> history;
+    int currentLevelSelectPage = 0;
+    bool showingExLevels = false;
+    int selectedStageIndex = 0;
 
     QGridLayout *worldGridLayout = nullptr;
     QVector<QVector<QPushButton *>> mapButtons;
     QLabel *tileInfoLabel = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
+    QWidget *mainMenuButtonBar = nullptr;
 };
 
 #endif // MAINWINDOW_H
