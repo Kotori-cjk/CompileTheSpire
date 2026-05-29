@@ -1,11 +1,13 @@
 #include "combat.h"
 #include<QRegularExpression>
 
-Combat::Combat(const Monster& monster){
+Combat::Combat(const Monster& monster,const QMap<QString,Clue>& clues){
+    this->clues=clues;
     this->monster=&monster;
     isBossVal=false;
 }
-Combat::Combat(const Boss& boss){
+Combat::Combat(const Boss& boss,const QMap<QString,Clue>& clues){
+    this->clues=clues;
     isBossVal=true;
     this->monster=&boss;
 }
@@ -108,36 +110,27 @@ bool Combat::canSynthesize()const{
 CodeBlock Combat::synthesize(QStringList& used)const{
     if(!canSynthesize())return CodeBlock();
     CodeBlock ret;
-    QStringList text,spaceId;
-    QString s=monster->codeTemplate,ss;
-    for(int i=0;i<s.length();i++){
-        if(s[i]!='$'){
-            ss+=s[i];
-            continue;
-        }
-        text.append(ss);
-        ss="";
-        while(s[++i]!='$'){
-            ss+=s[i];
-        }
-        spaceId.append(ss);
-        ss="";
-    }
+    Synthesis synthesis=templateBreakdown(monster->codeTemplate);
     ret.blockId=monster->name;
     ret.blockId+='[';
-    int cnt=0,size=filledCodesMap.size();
-    for(const auto& i:spaceId){
+    int cnt=0,size=synthesis.spacecnt;
+    for(const auto& i:synthesis.cell){
+        if(i.type=="clue")continue;
         cnt++;
-        CodeBlock b=filledCodesMap[i];
+        CodeBlock b=filledCodesMap[i.id];
         ret.blockId+=b.blockId;
         used.append(b.blockId);
         if(cnt<size)ret.blockId+=',';
     }
     ret.blockId+=']';
-    for(int i=0;i<text.length();i++){
-        ret.code+=text[i];
-        ret.code+=filledCodesMap[spaceId[i]].code;
+    for(int i=0;i<synthesis.text.length();i++){
+        ret.code+=synthesis.text[i];
+        if(i<synthesis.cell.length()&&synthesis.cell[i].type=="clue"){
+            ret.code+=clues[synthesis.cell[i].id].val;
+        }
+        if(i<synthesis.cell.length()&&synthesis.cell[i].type=="space"){
+            ret.code+=filledCodesMap[synthesis.cell[i].id].code;
+        }
     }
-    ret.code+=ss;
     return ret;
 }

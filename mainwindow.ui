@@ -39,7 +39,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="mainMenuPage">
        <layout class="QVBoxLayout" name="mainMenuLayout">
@@ -617,19 +617,19 @@
       <widget class="QWidget" name="gamePage">
        <layout class="QVBoxLayout" name="gameLayout">
         <property name="spacing">
-         <number>12</number>
+         <number>10</number>
         </property>
         <property name="leftMargin">
-         <number>24</number>
+         <number>20</number>
         </property>
         <property name="topMargin">
-         <number>18</number>
+         <number>16</number>
         </property>
         <property name="rightMargin">
-         <number>24</number>
+         <number>20</number>
         </property>
         <property name="bottomMargin">
-         <number>18</number>
+         <number>16</number>
         </property>
         <item>
          <widget class="QFrame" name="topBarFrame">
@@ -646,7 +646,7 @@
               </size>
              </property>
              <property name="text">
-              <string>HP: 80/80</string>
+              <string>Level: -</string>
              </property>
             </widget>
            </item>
@@ -654,12 +654,12 @@
             <widget class="QLabel" name="goldLabel">
              <property name="minimumSize">
               <size>
-               <width>100</width>
+               <width>120</width>
                <height>0</height>
               </size>
              </property>
              <property name="text">
-              <string>Gold: 99</string>
+              <string>Bag: 0/0</string>
              </property>
             </widget>
            </item>
@@ -667,12 +667,12 @@
             <widget class="QLabel" name="floorLabel">
              <property name="minimumSize">
               <size>
-               <width>100</width>
+               <width>120</width>
                <height>0</height>
               </size>
              </property>
              <property name="text">
-              <string>Floor: 1</string>
+              <string>Pos: 0,0</string>
              </property>
             </widget>
            </item>
@@ -710,7 +710,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>280</height>
+            <height>360</height>
            </size>
           </property>
           <property name="frameShape">
@@ -718,132 +718,8 @@
           </property>
           <layout class="QHBoxLayout" name="combatLayout">
            <property name="spacing">
-            <number>24</number>
+            <number>18</number>
            </property>
-           <item>
-            <widget class="QFrame" name="playerPanel">
-             <property name="frameShape">
-              <enum>QFrame::Shape::StyledPanel</enum>
-             </property>
-             <layout class="QVBoxLayout" name="playerPanelLayout">
-              <item>
-               <spacer name="playerTopSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>30</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="playerNameLabel">
-                <property name="font">
-                 <font>
-                  <pointsize>18</pointsize>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Player</string>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="playerHpLabel">
-                <property name="text">
-                 <string>Progress: Ready</string>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="playerBlockLabel">
-                <property name="text">
-                 <string>Mode: Code Fill</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="playerBottomSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>30</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QFrame" name="enemyPanel">
-             <property name="frameShape">
-              <enum>QFrame::Shape::StyledPanel</enum>
-             </property>
-             <layout class="QVBoxLayout" name="enemyPanelLayout">
-              <item>
-               <spacer name="enemyTopSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>30</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="enemyNameLabel">
-                <property name="font">
-                 <font>
-                  <pointsize>18</pointsize>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Runtime Bug</string>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="enemyHpLabel">
-                <property name="text">
-                 <string>Status: Unsolved</string>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-               <widget class="QLabel" name="enemyIntentLabel">
-                <property name="text">
-                 <string>Defeat condition: correct answer</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="enemyBottomSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>30</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-           </item>
           </layout>
          </widget>
         </item>
@@ -852,7 +728,7 @@
           <property name="minimumSize">
            <size>
             <width>0</width>
-            <height>190</height>
+            <height>160</height>
            </size>
           </property>
           <property name="frameShape">
@@ -860,7 +736,7 @@
           </property>
           <layout class="QVBoxLayout" name="challengeLayout">
            <property name="spacing">
-            <number>10</number>
+            <number>8</number>
            </property>
            <item>
             <widget class="QLabel" name="challengeTitleLabel">
@@ -871,7 +747,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Code Fill Challenge</string>
+              <string>Interaction</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -883,15 +759,8 @@
              <property name="readOnly">
               <bool>true</bool>
              </property>
-             <property name="text" stdset="0">
-              <string>Fill the blank:
-
-int total = 0;
-for (int i = 1; i &lt;= 3; ++i) {
-    total += i;
-}
-
-// total == ____</string>
+             <property name="placeholderText">
+              <string>Tile details, clue text, chest contents, or code fill will appear here.</string>
              </property>
             </widget>
            </item>
@@ -903,14 +772,14 @@ for (int i = 1; i &lt;= 3; ++i) {
              <item>
               <widget class="QLabel" name="answerLabel">
                <property name="text">
-                <string>Your answer</string>
+                <string>Blocks</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QLineEdit" name="answerLineEdit">
                <property name="placeholderText">
-                <string>Type the missing code or value</string>
+                <string>Example: block_add1, block_mul2</string>
                </property>
               </widget>
              </item>
@@ -923,7 +792,7 @@ for (int i = 1; i &lt;= 3; ++i) {
                 </size>
                </property>
                <property name="text">
-                <string>Submit</string>
+                <string>Fill</string>
                </property>
               </widget>
              </item>
@@ -947,7 +816,7 @@ for (int i = 1; i &lt;= 3; ++i) {
               </size>
              </property>
              <property name="text">
-              <string>Deck</string>
+              <string>Bag</string>
              </property>
             </widget>
            </item>
@@ -960,14 +829,14 @@ for (int i = 1; i &lt;= 3; ++i) {
               </size>
              </property>
              <property name="text">
-              <string>Map</string>
+              <string>Manual</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QLabel" name="combatLogLabel">
              <property name="text">
-              <string>Fill the blank and submit your answer.</string>
+              <string>Move on the map and interact with rooms.</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -978,12 +847,12 @@ for (int i = 1; i &lt;= 3; ++i) {
             <widget class="QPushButton" name="nextChallengeButton">
              <property name="minimumSize">
               <size>
-               <width>130</width>
+               <width>120</width>
                <height>40</height>
               </size>
              </property>
              <property name="text">
-              <string>Next Challenge</string>
+              <string>Undo</string>
              </property>
             </widget>
            </item>
@@ -1309,7 +1178,7 @@ for (int i = 1; i &lt;= 3; ++i) {
      <x>0</x>
      <y>0</y>
      <width>1100</width>
-     <height>18</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>

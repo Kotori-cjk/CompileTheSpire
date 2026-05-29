@@ -49,6 +49,19 @@ struct Clue{
     QString val;
 };
 
+struct SynthesisCell{
+    QString type;//"clue" "space"
+    QString id;//"clue_1" "space_1"
+};
+
+struct Synthesis{
+    QStringList text;
+    QVector<SynthesisCell>cell;
+    int cluecnt,spacecnt;
+};
+
+Synthesis templateBreakdown(QString codeTemplate);//工具函数 拆分一个转义模板 可能会有用
+
 class LevelData
 {
 private:
