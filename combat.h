@@ -13,8 +13,8 @@ struct CombatResult{
 class Combat
 {
 public:
-    Combat(const Monster& monster);
-    Combat(const Boss& boss);
+    Combat(const Monster& monster,const QMap<QString,Clue>& clues);
+    Combat(const Boss& boss,const QMap<QString,Clue>& clues);
 
     bool isBoss()const;
     QString monsterId()const;
@@ -35,6 +35,7 @@ private:
     const Monster* monster=nullptr;
     bool isBossVal=false;
     QMap<QString,CodeBlock>filledCodesMap;
+    QMap<QString,Clue>clues;
 };
 
 #endif // COMBAT_H
