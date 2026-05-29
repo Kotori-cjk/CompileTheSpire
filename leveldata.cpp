@@ -11,6 +11,31 @@
 
 LevelData::LevelData() {}
 
+Synthesis templateBreakdown(QString codeTemplate){
+    Synthesis ret;
+    ret.cluecnt=ret.spacecnt=0;
+    QString s=codeTemplate,ss="";
+    for(int i=0;i<s.length();i++){
+        if(s[i]!='$'){
+            ss+=s[i];
+            continue;
+        }
+        ret.text.append(ss);
+        ss="";
+        SynthesisCell tmp;
+        if(s[i+1]=='c')tmp.type="clue",ret.cluecnt++;
+        else tmp.type="space",ret.spacecnt++;
+        while(s[++i]!='$'){
+            ss+=s[i];
+        }
+        tmp.id=ss;
+        ret.cell.append(tmp);
+        ss="";
+    }
+    ret.text.append(ss);
+    return ret;
+}
+
 QVector<Space> LevelData::parseSpaces(const QJsonObject &spacesObj){
     QVector<Space>ret;
     for(const auto& key:spacesObj.keys()){
@@ -61,14 +86,10 @@ QMap<QString,Monster> LevelData::parseMonsters(const QJsonObject &monstersObj){
         tmp.spaces=parseSpaces(item["spaces"].toObject());
         tmp.codeTemplate=item["code"].toString();
         tmp.type=item["type"].toString();
-        QString s=tmp.codeTemplate;
-        for(int i=0;i<tmp.codeTemplate.length();i++){
-            if(s[i]=='$'&&i+1<s.length()&&s[i+1]=='c'){
-                QString ss="";
-                while(s[++i]!='$'){
-                    ss+=s[i];
-                }
-                tmp.referencedClues.append(ss);
+        Synthesis synthesis=templateBreakdown(tmp.codeTemplate);
+        for(int i=0;i<synthesis.cell.length();i++){
+            if(synthesis.cell[i].type=="clue"){
+                tmp.referencedClues.append(synthesis.cell[i].id);
             }
         }
         ret[key]=tmp;
@@ -119,14 +140,10 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
     boss.pic=boss_j["pic"].toString();
     boss.spaces=this->parseSpaces(boss_j["spaces"].toObject());
     boss.type="boss";
-    QString s=boss.codeTemplate;
-    for(int i=0;i<s.length();i++){
-        if(s[i]=='$'&&i+1<s.length()&&s[i+1]=='c'){
-            QString ss="";
-            while(s[++i]!='$'){
-                ss+=s[i];
-            }
-            boss.referencedClues.append(ss);
+    Synthesis synthesis=templateBreakdown(boss.codeTemplate);
+    for(int i=0;i<synthesis.cell.length();i++){
+        if(synthesis.cell[i].type=="clue"){
+            boss.referencedClues.append(synthesis.cell[i].id);
         }
     }
     this->boss=boss;

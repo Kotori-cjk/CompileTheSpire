@@ -190,3 +190,22 @@ void GameMap::Clear(int tarX,int tarY){
 void GameMap::Clear(QPoint target){
     Clear(target.x(),target.y());
 }
+<<<<<<< HEAD
+=======
+bool GameMap::clueRevealed(QString clue){
+    QPoint pos=levelData->clues[clue].pos;
+    return cleared[pos.x()][pos.y()];
+}
+
+monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId){
+    monsterClueDetail ret;
+    ret.codeTemplate=levelData->monsters[monsterId].codeTemplate;
+    Synthesis synthesis=templateBreakdown(ret.codeTemplate);
+    for(int i=0;i<synthesis.cell.size();i++){
+        if(synthesis.cell[i].type=="clue"){
+            ret.clueUnlockStates[synthesis.cell[i].id]=clueRevealed(synthesis.cell[i].id);
+        }
+    }
+    return ret;
+}
+>>>>>>> 1bbe454 (feat: add templateBreakdown utility, fix clue placeholder in Combat synthesis, add GameMap query interfaces)
