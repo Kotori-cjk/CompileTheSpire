@@ -94,6 +94,7 @@ private:
     int currentBagPage = 0;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
+    QString manualSelectedMonsterId;
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
