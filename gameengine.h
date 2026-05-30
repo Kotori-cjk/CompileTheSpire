@@ -23,7 +23,7 @@ struct GameSnapshot{
 
 struct LevelMeta{
     int levelIndex;//the id in the vector
-    LevelData* level;
+    const LevelData* level;
     bool unlocked;
     QString levelType;
 };
@@ -52,6 +52,7 @@ signals:
     void exitLevel();//only emited when battle win(not included when player exit)
 
 public:
+    GameSnapshot getCurrentSnapshot();
     GameEngine();
     void gameInit(QString path);
     //for develop:look to savemanager to recall the things you should do(Init() in it)
@@ -66,8 +67,6 @@ public:
     bool moveTo(QPoint target);
     //for develop:if trigger an event, then save the snapshot
     //call these when move by click (with mouse)
-    bool startCombat(const QString& monsterId);
-    //call it when a combat start(extrally for m_combat needs update)
     bool fillSpace(const QString& spaceId,const QString& blockId);
     //call it when player fill the space
     bool revealClue(const QString& clueId);

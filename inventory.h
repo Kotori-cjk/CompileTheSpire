@@ -35,13 +35,13 @@ public:
     bool chestIsEmpty(const QString &chestId) const;
     QVector<CodeBlock> blocksRemaining(const QString &chestId);
     QStringList remainingIds(const QString &chestId);
-
+    QMap<QString, QSet<QString>> leftBlocks;
 
 private:
     const LevelData* leveldata;
     int m_capacity = 0;
     QVector<CodeBlock> bagBlocks;
-    QMap<QString, QSet<QString>> leftBlocks;
+
 };
 
 

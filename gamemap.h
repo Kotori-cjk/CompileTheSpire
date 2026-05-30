@@ -23,6 +23,8 @@ struct node{
 struct monsterClueDetail{
     QString codeTemplate;
     QMap<QString,bool>clueUnlockStates;
+    QStringList clueIds;
+    int revealedCount;
 };
 
 inline constexpr int dx[4] = {0, 0, 1, -1};
@@ -54,6 +56,7 @@ public:
     bool clueRevealed(QString clue)const;
     monsterClueDetail getMonsterClueDetail(QString monsterId)const;
     QPoint playerPos()const;
+    QPoint prevPos()const;
     bool ifDefeated(const QString& monsterId)const;
     QVector<Monster>monsterLeft()const;
 

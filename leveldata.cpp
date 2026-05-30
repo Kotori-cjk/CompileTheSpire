@@ -146,7 +146,6 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
             boss.referencedClues.append(synthesis.cell[i].id);
         }
     }
-    this->boss=boss;
     const auto& g=root["map_grid"].toArray();
     for(const auto& item:g){
         const auto& row=item.toArray();
@@ -174,10 +173,12 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
                 clues[s].pos=QPoint(i,j);
             }
             if(op=="bos"){
-                this->boss.pos=QPoint(i,j);
+                boss.pos=QPoint(i,j);
             }
         }
     }
+    this->boss=boss;
+    this->monsters[boss.monsterId]=boss;
     return true;
 }
 
