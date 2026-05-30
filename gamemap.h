@@ -38,9 +38,9 @@ public:
     QString currentId(QPoint target);
     bool canGoIn(int tarX,int tarY);
     bool canGoIn(QPoint target);
-    bool moveAccessibility(int tarX,int tarY);
-    bool moveAccessibility(QPoint target);
-    //返回能否从此格子走向非来路的其他格子
+    bool moveAccessibility(int tarX,int tarY,int oriX,int oriY);
+    bool moveAccessibility(QPoint target,QPoint origin);
+    //返回能否从ori走向非来路的tar
     QString getEvent(int tarX,int tarY);
     QString getEvent(QPoint target);
     QVector<QPoint> findPath(int tarX,int tarY,bool* success=nullptr);
