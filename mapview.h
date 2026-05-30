@@ -18,6 +18,8 @@ public:
     void setLevel(const LevelData *level);
     void setPlayerPosition(const QPoint &position);
     void setClearedObjects(const QSet<QString> &openedChests, const QSet<QString> &defeatedMonsters);
+    void setCollectedClues(const QSet<QString> &collectedClues);
+    void setMovePath(const QVector<QPoint> &path, int consumedCount);
     QSize minimumSizeHint() const override;
 
 signals:
@@ -37,8 +39,9 @@ private:
     bool isOpenTile(int row, int column) const;
     bool wallTouchesOpenTile(int row, int column) const;
     void drawTile(QPainter &painter, int row, int column, const QRect &rect, const QString &tileId) const;
+    void drawMovePath(QPainter &painter) const;
     void drawObject(QPainter &painter, const QRect &rect, const QString &tileId) const;
-    void drawChest(QPainter &painter, const QRect &rect) const;
+    void drawChest(QPainter &painter, const QRect &rect, const QString &tileId) const;
     void drawClue(QPainter &painter, const QRect &rect) const;
 
     const LevelData *m_level = nullptr;
@@ -46,9 +49,13 @@ private:
     QPoint m_selectedTile = QPoint(-1, -1);
     QSet<QString> m_openedChests;
     QSet<QString> m_defeatedMonsters;
+    QSet<QString> m_collectedClues;
+    QVector<QPoint> m_movePath;
+    int m_consumedPathCount = 0;
     QPixmap m_playerPixmap;
     QPixmap m_bossPixmap;
-    QPixmap m_chestPixmap;
+    QPixmap m_forcedChestPixmap;
+    QPixmap m_unforcedChestPixmap;
     QPixmap m_cluePixmap;
     QPixmap m_referenceMap;
     QPixmap m_wallPixmap;
