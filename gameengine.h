@@ -30,7 +30,7 @@ struct LevelMeta{
 
 class GameEngine:public QObject
 {
-    Q_OBJECT;
+    Q_OBJECT
 public:
     QVector<LevelData>levels;
     SaveManager m_save;
