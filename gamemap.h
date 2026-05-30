@@ -54,6 +54,8 @@ public:
     bool clueRevealed(QString clue)const;
     monsterClueDetail getMonsterClueDetail(QString monsterId)const;
     QPoint playerPos()const;
+    bool ifDefeated(const QString& monsterId)const;
+    QVector<Monster>monsterLeft()const;
 
 private:
     const LevelData* levelData;

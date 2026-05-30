@@ -12,7 +12,7 @@ GameMap::GameMap(const LevelData* ptr){
     cleared=QVector<QVector<int>>(ptr->mapHeight,QVector<int>(ptr->mapWidth,0));
 }
 QString GameMap::currentId(int tarX,int tarY){
-    if(cleared[tarX][tarY])return "space";
+    if(cleared[tarX][tarY])return ".";
     return levelData->mapGrid[tarX][tarY];
 }
 QString GameMap::currentId(QPoint target){
@@ -208,4 +208,19 @@ monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId)const{
 }
 QPoint GameMap::playerPos()const{
     return QPoint(playerX,playerY);
+}
+bool GameMap::ifDefeated(const QString& monsterId)const{
+    QPoint pos=levelData->monsters[monsterId].pos;
+    return cleared[pos.x()][pos.y()];
+}
+QVector<Monster> GameMap::monsterLeft()const{
+    QVector<Monster>ret;
+    for(const auto& monsterId:levelData->monsters.keys()){
+        const Monster& monster=levelData->monsters[monsterId];
+        QPoint pos=monster.pos;
+        if(!cleared[pos.x()][pos.y()]){
+            ret.append(monster);
+        }
+    }
+    return ret;
 }
