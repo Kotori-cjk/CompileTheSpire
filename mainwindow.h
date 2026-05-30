@@ -19,7 +19,7 @@ QT_END_NAMESPACE
 
 class MapView;
 
-struct GameSnapshot
+struct UiGameSnapshot
 {
     int row = 0;
     int column = 0;
@@ -89,7 +89,7 @@ private:
     QSet<QString> defeatedMonsters;
     QSet<QString> seenMonsters;
     QSet<int> completedStageIndexes;
-    QVector<GameSnapshot> history;
+    QVector<UiGameSnapshot> history;
     int currentLevelSelectPage = 0;
     int currentBagPage = 0;
     bool showingExLevels = false;
