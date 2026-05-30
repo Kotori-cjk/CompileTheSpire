@@ -268,8 +268,24 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(handbookButton, &QPushButton::clicked, this, [this]() {
+        manualSelectedMonsterId.clear();
         refreshManualPage();
-        ui->stackedWidget->setCurrentWidget(ui->deckPage);
+        ui->stackedWidget->setCurrentWidget(ui->manualPage);
+    });
+
+    connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
+        manualSelectedMonsterId.clear();
+        refreshManualPage();
+        ui->stackedWidget->setCurrentWidget(ui->manualPage);
+    });
+
+    connect(ui->manualBackButton, &QPushButton::clicked, this, [this]() {
+        if (!manualSelectedMonsterId.isEmpty()) {
+            manualSelectedMonsterId.clear();
+            refreshManualPage();
+        } else {
+            ui->stackedWidget->setCurrentWidget(ui->gamePage);
+        }
     });
 
     connect(ui->saveSettingsButton, &QPushButton::clicked, this, [this]() {

@@ -94,6 +94,8 @@ private:
     int currentBagPage = 0;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
+
+    //---manual part---
     QString manualSelectedMonsterId;
 
     MapView *mapView = nullptr;
