@@ -22,6 +22,7 @@ struct GameSnapshot{
 };
 
 struct LevelMeta{
+    int levelIndex;//the id in the vector
     LevelData* level;
     bool unlocked;
     QString levelType;
@@ -29,7 +30,8 @@ struct LevelMeta{
 
 class GameEngine:public QObject
 {
-private:
+    Q_OBJECT;
+public:
     QVector<LevelData>levels;
     SaveManager m_save;
     Inventory* m_bag;
@@ -39,10 +41,15 @@ private:
     //warn:deal with memory-related operation carefully
     QVector<GameSnapshot>snapshotStack;
 
-public:
-
 signals:
-    //W.I.P.
+    void levelLoaded();
+    void moveCompleted(MoveResult result);
+    void combatStarted(QString monsterId,Combat* combat);
+    void combatEnded(CombatResult result);
+    void clueRevealed(QString clueId,QString monsterId,QString text);
+    void chestEntered(QString chestId);
+    void stateRestored();
+    void exitLevel();//only emited when battle win(not included when player exit)
 
     GameEngine();
     void gameInit(QString path);
@@ -59,7 +66,7 @@ signals:
     //for develop:if trigger an event, then save the snapshot
     //call these when move by click (with mouse)
     bool startCombat(const QString& monsterId);
-    //call it when a combat start(extrally for combat needs update)
+    //call it when a combat start(extrally for m_combat needs update)
     bool fillSpace(const QString& spaceId,const QString& blockId);
     //call it when player fill the space
     bool revealClue(const QString& clueId);
@@ -86,12 +93,8 @@ signals:
     bool resetLevel();
     //call it when reset
     void exit();
-    //call it when Exit(by any mean, include auto-calling when win)
-    Combat* combat();
-    //call it to get Combat pointer for information
-    Inventory* inventory();
-    GameMap* gamemap();
-    LevelData* leveldata();
+    //call it when Exit(by any mean, include auto-calling when win or player exit)
+
 };
 
 #endif // GAMEENGINE_H
