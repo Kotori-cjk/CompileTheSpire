@@ -336,7 +336,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-    updateMainMenuBackground();
     positionMainMenuButtons();
 }
 
@@ -372,7 +371,9 @@ void MainWindow::applyVisualStyle()
             font-weight: 700;
         }
 
-        QWidget#mainMenuPage { background: #050609; }
+        QWidget#mainMenuPage {
+            border-image: url(:/images/assets/title_cover_16_9.png) 0 0 0 0 stretch stretch;
+        }
 
         QWidget#mapPage {
             border-image: url(:/images/assets/stage_select_bg.png) 0 0 0 0 stretch stretch;
@@ -846,11 +847,7 @@ void MainWindow::buildRuntimeGameUi()
     }
     ui->titleLabel->hide();
     ui->menuSubtitleLabel->hide();
-    ui->mainMenuBackgroundLabel->setParent(ui->mainMenuPage);
-    ui->mainMenuBackgroundLabel->setAlignment(Qt::AlignCenter);
-    ui->mainMenuBackgroundLabel->setScaledContents(false);
-    ui->mainMenuBackgroundLabel->show();
-    updateMainMenuBackground();
+    ui->mainMenuBackgroundLabel->hide();
     mainMenuButtonBar = new QWidget(ui->mainMenuPage);
     mainMenuButtonBar->setObjectName("mainMenuButtonBar");
     mainMenuButtonBar->setStyleSheet("QWidget#mainMenuButtonBar { background: transparent; border: none; }");
@@ -969,16 +966,20 @@ void MainWindow::buildRuntimeGameUi()
     nodeCanvas->setObjectName("stageNodeCanvas");
     nodeCanvas->setFixedSize(650, 250);
     nodeCanvas->setStyleSheet("QWidget#stageNodeCanvas { background: transparent; border: none; }");
-    QLabel *bridge01 = new QLabel("////////", nodeCanvas);
-    QLabel *bridge12 = new QLabel("////////", nodeCanvas);
+    QLabel *bridge01 = new QLabel(nodeCanvas);
+    QLabel *bridge12 = new QLabel(nodeCanvas);
     bridge01->setObjectName("stageBridge0");
     bridge12->setObjectName("stageBridge1");
     bridge01->setProperty("levelBridge", "true");
     bridge12->setProperty("levelBridge", "true");
     bridge01->setAlignment(Qt::AlignCenter);
     bridge12->setAlignment(Qt::AlignCenter);
-    bridge01->setGeometry(170, 142, 210, 42);
-    bridge12->setGeometry(378, 68, 210, 42);
+    bridge01->setPixmap(QPixmap(":/images/assets/stage_bridge_up.png"));
+    bridge12->setPixmap(QPixmap(":/images/assets/stage_bridge_up2.png"));
+    bridge01->setScaledContents(true);
+    bridge12->setScaledContents(true);
+    bridge01->setGeometry(158, 112, 250, 108);
+    bridge12->setGeometry(366, 38, 250, 108);
     ui->mapFightButton->setParent(nodeCanvas);
     ui->mapEliteButton->setParent(nodeCanvas);
     ui->mapBossButton->setParent(nodeCanvas);
@@ -987,8 +988,8 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapBossButton->setGeometry(512, 18, 84, 84);
     bridge01->lower();
     bridge12->lower();
-    bridge01->setStyleSheet("background: transparent; border: none; font-size: 40px; font-weight: 900;");
-    bridge12->setStyleSheet("background: transparent; border: none; font-size: 40px; font-weight: 900;");
+    bridge01->setStyleSheet("background: transparent; border: none;");
+    bridge12->setStyleSheet("background: transparent; border: none;");
     ui->mapFightButton->show();
     ui->mapEliteButton->show();
     ui->mapBossButton->show();
@@ -1065,26 +1066,6 @@ void MainWindow::positionMainMenuButtons()
 
 void MainWindow::updateMainMenuBackground()
 {
-    if (!ui || !ui->mainMenuBackgroundLabel) {
-        return;
-    }
-
-    static const QPixmap cover(":/images/assets/cover.png");
-    if (cover.isNull()) {
-        return;
-    }
-
-    const QSize targetSize = ui->mainMenuPage->size();
-    if (targetSize.isEmpty()) {
-        return;
-    }
-
-    QPixmap scaled = cover.scaled(targetSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const int x = qMax(0, (scaled.width() - targetSize.width()) / 2);
-    const int y = qMax(0, (scaled.height() - targetSize.height()) / 2);
-    ui->mainMenuBackgroundLabel->setGeometry(ui->mainMenuPage->rect());
-    ui->mainMenuBackgroundLabel->setPixmap(scaled.copy(x, y, targetSize.width(), targetSize.height()));
-    ui->mainMenuBackgroundLabel->lower();
 }
 
 void MainWindow::loadLevels()
@@ -1214,7 +1195,7 @@ void MainWindow::refreshLevelSelectUi()
         return;
     }
     if (startButton) {
-        startButton->setEnabled(selectedStageIndex >= 0 && selectedStageIndex < levels.size() && isLevelUnlocked(selectedStageIndex));
+        startButton->setEnabled(selectedStageIndex >= 0 && !levels.isEmpty() && isLevelUnlocked(selectedStageIndex));
     }
     ui->mapBackButton->setText("Back");
 }
@@ -1268,9 +1249,14 @@ void MainWindow::startLevel(int levelIndex)
         statusBar()->showMessage("This stage is locked by the path order.", 2500);
         return;
     }
-    if (levelIndex < 0 || levelIndex >= levels.size()) {
+    if (levels.isEmpty()) {
         statusBar()->showMessage("This level is not available yet.", 2500);
         return;
+    }
+
+    if (levelIndex < 0 || levelIndex >= levels.size()) {
+        statusBar()->showMessage("This stage has no JSON yet. Opening the preview map.", 2500);
+        levelIndex = 0;
     }
 
     currentLevelIndex = levelIndex;
@@ -1307,7 +1293,7 @@ void MainWindow::resetLevel()
 
 void MainWindow::pushUndoState()
 {
-    GameSnapshot snapshot;
+    UiGameSnapshot snapshot;
     snapshot.row = playerRow;
     snapshot.column = playerColumn;
     snapshot.bagBlocks = bagBlocks;
@@ -1324,7 +1310,7 @@ void MainWindow::undo()
         return;
     }
 
-    const GameSnapshot snapshot = history.takeLast();
+    const UiGameSnapshot snapshot = history.takeLast();
     playerRow = snapshot.row;
     playerColumn = snapshot.column;
     bagBlocks = snapshot.bagBlocks;
@@ -1423,7 +1409,7 @@ void MainWindow::refreshBagPage()
         codeItems.append(qMakePair(QString("waiting"), QString("open chest")));
     }
 
-    constexpr int slotsPerPage = 16;
+    constexpr int slotsPerPage = 5;
     constexpr int bagPageCount = 2;
     currentBagPage = qBound(0, currentBagPage, bagPageCount - 1);
     const int pageStart = currentBagPage * slotsPerPage;
@@ -1431,8 +1417,6 @@ void MainWindow::refreshBagPage()
     const auto makeCodeStrip = [](const QString &id, const QString &code, QWidget *parent) {
         QLabel *strip = new QLabel(parent);
         strip->setProperty("codeStrip", "true");
-        strip->setMinimumSize(150, 58);
-        strip->setMaximumWidth(220);
         strip->setWordWrap(true);
         strip->setAlignment(Qt::AlignCenter);
         if (id.isEmpty()) {
@@ -1447,20 +1431,17 @@ void MainWindow::refreshBagPage()
     QFrame *board = new QFrame(ui->deckListWidget);
     board->setObjectName("bagBoardFrame");
     board->setProperty("bagBoard", "true");
-    board->setStyleSheet("QFrame#bagBoardFrame { border-image: url(:/images/assets/bag_background.png) 0 0 0 0 stretch stretch; border: 4px solid #0b0805; border-radius: 6px; }");
-    QVBoxLayout *boardLayout = new QVBoxLayout(board);
-    boardLayout->setContentsMargins(68, 74, 68, 52);
-    boardLayout->setSpacing(14);
+    board->setMinimumSize(1180, 665);
+    board->setStyleSheet("QFrame#bagBoardFrame { border-image: url(:/images/assets/bag_background.png) 0 0 0 0 stretch stretch; border: none; }");
 
-    QHBoxLayout *toolbar = new QHBoxLayout();
-    toolbar->setSpacing(14);
     QPushButton *prevPage = new QPushButton("<", board);
     QPushButton *nextPage = new QPushButton(">", board);
-    QLabel *pageLabel = new QLabel(QString("Code Bag  %1 / %2").arg(currentBagPage + 1).arg(bagPageCount), board);
+    QLabel *pageLabel = new QLabel(QString("%1 / %2").arg(currentBagPage + 1).arg(bagPageCount), board);
     prevPage->setProperty("bagPageButton", "true");
     nextPage->setProperty("bagPageButton", "true");
-    prevPage->setFixedSize(48, 34);
-    nextPage->setFixedSize(48, 34);
+    prevPage->setGeometry(930, 50, 46, 32);
+    nextPage->setGeometry(1035, 50, 46, 32);
+    pageLabel->setGeometry(980, 50, 52, 32);
     pageLabel->setAlignment(Qt::AlignCenter);
     pageLabel->setProperty("bagSection", "true");
     prevPage->setEnabled(currentBagPage > 0);
@@ -1473,37 +1454,25 @@ void MainWindow::refreshBagPage()
         currentBagPage = qMin(1, currentBagPage + 1);
         refreshBagPage();
     });
-    toolbar->addStretch();
-    toolbar->addWidget(prevPage);
-    toolbar->addWidget(pageLabel);
-    toolbar->addWidget(nextPage);
-    toolbar->addStretch();
-    boardLayout->addLayout(toolbar);
 
-    const auto addRow = [&makeCodeStrip, &codeItems, board, boardLayout, pageStart](const QString &title, int rowStart, int count) {
-        QLabel *sectionTitle = new QLabel(title, board);
-        sectionTitle->setProperty("bagSection", "true");
-        boardLayout->addWidget(sectionTitle);
-        QHBoxLayout *slotLayout = new QHBoxLayout();
-        slotLayout->setSpacing(8);
-        for (int i = 0; i < count; ++i) {
-            const int itemIndex = pageStart + rowStart + i;
-            if (itemIndex < codeItems.size()) {
-                slotLayout->addWidget(makeCodeStrip(codeItems.at(itemIndex).first, codeItems.at(itemIndex).second, board));
-            } else {
-                slotLayout->addWidget(makeCodeStrip(QString(), QString(), board));
-            }
-        }
-        slotLayout->addStretch();
-        boardLayout->addLayout(slotLayout);
+    const QVector<QRect> stripRects = {
+        QRect(212, 94, 745, 78),
+        QRect(212, 195, 745, 78),
+        QRect(212, 296, 745, 78),
+        QRect(212, 397, 745, 78),
+        QRect(212, 498, 745, 78)
     };
-
-    addRow("Pinned Code", 0, 4);
-    addRow("Code Bar", 4, 6);
-    addRow("Backpack", 10, 6);
+    for (int i = 0; i < stripRects.size(); ++i) {
+        const int itemIndex = pageStart + i;
+        QLabel *strip = itemIndex < codeItems.size()
+                            ? makeCodeStrip(codeItems.at(itemIndex).first, codeItems.at(itemIndex).second, board)
+                            : makeCodeStrip(QString(), QString(), board);
+        strip->setGeometry(stripRects.at(i));
+        strip->show();
+    }
 
     QListWidgetItem *item = new QListWidgetItem(ui->deckListWidget);
-    item->setSizeHint(QSize(0, 590));
+    item->setSizeHint(QSize(1180, 665));
     ui->deckListWidget->setItemWidget(item, board);
 }
 
