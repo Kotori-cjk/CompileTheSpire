@@ -51,6 +51,7 @@ signals:
     void stateRestored();
     void exitLevel();//only emited when battle win(not included when player exit)
 
+public:
     GameEngine();
     void gameInit(QString path);
     //for develop:look to savemanager to recall the things you should do(Init() in it)
