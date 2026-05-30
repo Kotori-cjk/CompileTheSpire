@@ -51,6 +51,7 @@ private:
     QPixmap m_chestPixmap;
     QPixmap m_cluePixmap;
     QPixmap m_referenceMap;
+    QPixmap m_wallPixmap;
 };
 
 #endif // MAPVIEW_H

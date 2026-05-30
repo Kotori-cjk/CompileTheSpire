@@ -46,6 +46,7 @@ private:
     void applyVisualStyle();
     void buildRuntimeGameUi();
     void positionMainMenuButtons();
+    void updateMainMenuBackground();
     void loadLevels();
     void refreshLevelSelectUi();
     void startLevel(int levelIndex);
@@ -90,6 +91,7 @@ private:
     QSet<int> completedStageIndexes;
     QVector<GameSnapshot> history;
     int currentLevelSelectPage = 0;
+    int currentBagPage = 0;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
 

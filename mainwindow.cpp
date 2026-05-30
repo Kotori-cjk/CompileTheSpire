@@ -1,17 +1,23 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "mapview.h"
 
+#include <QAbstractItemView>
 #include <QCoreApplication>
 #include <QDir>
+#include <QFrame>
+#include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QListWidgetItem>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QQueue>
 #include <QRegularExpression>
 #include <QSlider>
 #include <QStyle>
 #include <QTextEdit>
 #include <QTimer>
+#include <QVBoxLayout>
 
 namespace {
 void clearLayout(QLayout *layout)
@@ -205,6 +211,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->deckButton, &QPushButton::clicked, this, [this]() {
+        currentBagPage = 0;
         refreshBagPage();
         ui->stackedWidget->setCurrentWidget(ui->deckPage);
     });
@@ -329,6 +336,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
+    updateMainMenuBackground();
     positionMainMenuButtons();
 }
 
@@ -364,12 +372,19 @@ void MainWindow::applyVisualStyle()
             font-weight: 700;
         }
 
-        QWidget#mainMenuPage {
-            border-image: url(:/images/assets/cover.png) 0 0 0 0 stretch stretch;
-        }
+        QWidget#mainMenuPage { background: #050609; }
 
         QWidget#mapPage {
             border-image: url(:/images/assets/stage_select_bg.png) 0 0 0 0 stretch stretch;
+        }
+
+        QWidget#settingsPage {
+            background-color: #15161a;
+            border-image: url(:/images/assets/interface_background_fitted.png) 0 0 0 0 stretch stretch;
+        }
+
+        QWidget#deckPage {
+            background: #16120d;
         }
 
         QPushButton#startGameButton, QPushButton#settingsButton, QPushButton#exitButton {
@@ -427,6 +442,91 @@ void MainWindow::applyVisualStyle()
             background: #242832;
             border: 1px solid #454b59;
             border-radius: 6px;
+        }
+
+        QListWidget#deckListWidget {
+            background: rgba(18, 14, 10, 238);
+            border: 4px solid #120e09;
+            border-radius: 6px;
+            padding: 16px;
+            outline: none;
+        }
+
+        QListWidget#deckListWidget::item {
+            background: transparent;
+            border: none;
+            margin: 4px;
+        }
+
+        QLabel#deckTitleLabel, QLabel#settingsTitleLabel {
+            color: #f1d37c;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 26px;
+            font-weight: 900;
+            padding: 6px 22px;
+            background: rgba(27, 20, 12, 220);
+            border: 2px solid #d7b75f;
+            border-radius: 6px;
+        }
+
+        QLabel#settingsTitleLabel {
+            max-width: 420px;
+        }
+
+        QLabel#settingsSubtitleLabel {
+            background: rgba(24, 24, 26, 170);
+            border: 1px solid rgba(90, 90, 90, 110);
+            border-radius: 4px;
+            padding: 4px 12px;
+        }
+
+        QFrame[bagPanel="true"] {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 rgba(58, 43, 25, 245),
+                                        stop:0.55 rgba(28, 22, 15, 245),
+                                        stop:1 rgba(16, 13, 9, 248));
+            border: 3px solid #090706;
+            border-radius: 6px;
+        }
+
+        QFrame[bagBoard="true"] {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 rgba(48, 39, 26, 242),
+                                        stop:1 rgba(20, 17, 12, 248));
+            border: 4px solid #090706;
+            border-radius: 4px;
+        }
+
+        QLabel[bagSection="true"] {
+            color: #f2d790;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 17px;
+            font-weight: 900;
+            background: transparent;
+            border: none;
+        }
+
+        QLabel[codeStrip="true"] {
+            color: #1c1208;
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 #fff0ca,
+                                        stop:0.50 #d49d61,
+                                        stop:1 #7a4a25);
+            border: 2px solid #100b08;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-family: "Consolas", "Cascadia Mono", "Microsoft YaHei UI";
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        QPushButton[bagPageButton="true"] {
+            background: rgba(24, 18, 12, 230);
+            border: 2px solid #d0aa59;
+            border-radius: 5px;
+            color: #ffe5a0;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-weight: 900;
         }
 
         QFrame#mapFrame {
@@ -629,18 +729,18 @@ void MainWindow::applyVisualStyle()
         }
 
         QLabel[levelBridge="true"] {
-            color: rgba(34, 219, 247, 225);
+            color: rgba(62, 232, 255, 245);
             background: transparent;
             border: none;
-            font-size: 30px;
+            font-size: 42px;
             font-weight: 900;
         }
 
         QLabel[levelBridge="locked"] {
-            color: rgba(73, 78, 86, 175);
+            color: rgba(115, 128, 139, 210);
             background: transparent;
             border: none;
-            font-size: 30px;
+            font-size: 42px;
             font-weight: 900;
         }
 
@@ -648,7 +748,7 @@ void MainWindow::applyVisualStyle()
             color: rgba(255, 206, 91, 235);
             background: transparent;
             border: none;
-            font-size: 30px;
+            font-size: 42px;
             font-weight: 900;
         }
 
@@ -746,7 +846,11 @@ void MainWindow::buildRuntimeGameUi()
     }
     ui->titleLabel->hide();
     ui->menuSubtitleLabel->hide();
-    ui->mainMenuBackgroundLabel->hide();
+    ui->mainMenuBackgroundLabel->setParent(ui->mainMenuPage);
+    ui->mainMenuBackgroundLabel->setAlignment(Qt::AlignCenter);
+    ui->mainMenuBackgroundLabel->setScaledContents(false);
+    ui->mainMenuBackgroundLabel->show();
+    updateMainMenuBackground();
     mainMenuButtonBar = new QWidget(ui->mainMenuPage);
     mainMenuButtonBar->setObjectName("mainMenuButtonBar");
     mainMenuButtonBar->setStyleSheet("QWidget#mainMenuButtonBar { background: transparent; border: none; }");
@@ -766,6 +870,25 @@ void MainWindow::buildRuntimeGameUi()
     mainMenuButtonBar->raise();
     positionMainMenuButtons();
     QTimer::singleShot(0, this, &MainWindow::positionMainMenuButtons);
+
+    QList<QLabel *> settingsLabels = {
+        ui->musicVolumeLabel,
+        ui->sfxVolumeLabel,
+        ui->windowModeLabel,
+        ui->resolutionLabel,
+        ui->languageLabel,
+        ui->animationSpeedLabel
+    };
+    if (QLabel *volumeLabel = findChild<QLabel *>("volumeLabel")) {
+        settingsLabels.prepend(volumeLabel);
+    }
+    for (QLabel *label : settingsLabels) {
+        if (!label) {
+            continue;
+        }
+        label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        label->setFixedWidth(150);
+    }
 
     ui->hpLabel->setText("Mode: Explore");
     ui->deckButton->setText("Bag");
@@ -821,8 +944,8 @@ void MainWindow::buildRuntimeGameUi()
 
     QHBoxLayout *stageLayout = new QHBoxLayout();
     stageLayout->setSpacing(38);
-    QPushButton *prevButton = new QPushButton("◀", ui->mapFrame);
-    QPushButton *nextButton = new QPushButton("▶", ui->mapFrame);
+    QPushButton *prevButton = new QPushButton("<", ui->mapFrame);
+    QPushButton *nextButton = new QPushButton(">", ui->mapFrame);
     prevButton->setFixedSize(70, 70);
     nextButton->setFixedSize(70, 70);
     prevButton->setProperty("levelNav", "true");
@@ -846,16 +969,16 @@ void MainWindow::buildRuntimeGameUi()
     nodeCanvas->setObjectName("stageNodeCanvas");
     nodeCanvas->setFixedSize(650, 250);
     nodeCanvas->setStyleSheet("QWidget#stageNodeCanvas { background: transparent; border: none; }");
-    QLabel *bridge01 = new QLabel("━━━━━━", nodeCanvas);
-    QLabel *bridge12 = new QLabel("━━━━━━", nodeCanvas);
+    QLabel *bridge01 = new QLabel("////////", nodeCanvas);
+    QLabel *bridge12 = new QLabel("////////", nodeCanvas);
     bridge01->setObjectName("stageBridge0");
     bridge12->setObjectName("stageBridge1");
     bridge01->setProperty("levelBridge", "true");
     bridge12->setProperty("levelBridge", "true");
     bridge01->setAlignment(Qt::AlignCenter);
     bridge12->setAlignment(Qt::AlignCenter);
-    bridge01->setGeometry(174, 145, 170, 34);
-    bridge12->setGeometry(382, 72, 170, 34);
+    bridge01->setGeometry(170, 142, 210, 42);
+    bridge12->setGeometry(378, 68, 210, 42);
     ui->mapFightButton->setParent(nodeCanvas);
     ui->mapEliteButton->setParent(nodeCanvas);
     ui->mapBossButton->setParent(nodeCanvas);
@@ -864,6 +987,8 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapBossButton->setGeometry(512, 18, 84, 84);
     bridge01->lower();
     bridge12->lower();
+    bridge01->setStyleSheet("background: transparent; border: none; font-size: 40px; font-weight: 900;");
+    bridge12->setStyleSheet("background: transparent; border: none; font-size: 40px; font-weight: 900;");
     ui->mapFightButton->show();
     ui->mapEliteButton->show();
     ui->mapBossButton->show();
@@ -936,6 +1061,30 @@ void MainWindow::positionMainMenuButtons()
     const int y = qMax(0, ui->mainMenuPage->height() - height - 6);
     mainMenuButtonBar->setGeometry(x, y, width, height);
     mainMenuButtonBar->raise();
+}
+
+void MainWindow::updateMainMenuBackground()
+{
+    if (!ui || !ui->mainMenuBackgroundLabel) {
+        return;
+    }
+
+    static const QPixmap cover(":/images/assets/cover.png");
+    if (cover.isNull()) {
+        return;
+    }
+
+    const QSize targetSize = ui->mainMenuPage->size();
+    if (targetSize.isEmpty()) {
+        return;
+    }
+
+    QPixmap scaled = cover.scaled(targetSize, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    const int x = qMax(0, (scaled.width() - targetSize.width()) / 2);
+    const int y = qMax(0, (scaled.height() - targetSize.height()) / 2);
+    ui->mainMenuBackgroundLabel->setGeometry(ui->mainMenuPage->rect());
+    ui->mainMenuBackgroundLabel->setPixmap(scaled.copy(x, y, targetSize.width(), targetSize.height()));
+    ui->mainMenuBackgroundLabel->lower();
 }
 
 void MainWindow::loadLevels()
@@ -1251,28 +1400,119 @@ void MainWindow::refreshBagPage()
 {
     ui->deckTitleLabel->setText("Bag");
     ui->deckListWidget->clear();
-    if (bagBlocks.isEmpty()) {
-        ui->deckListWidget->addItem("Empty. Open chests to collect code blocks.");
-        return;
+    ui->deckListWidget->setStyleSheet("QListWidget#deckListWidget { background: rgba(18, 14, 10, 238); border: 4px solid #120e09; border-radius: 6px; padding: 10px; outline: none; }");
+    ui->deckListWidget->setSpacing(0);
+    ui->deckListWidget->setSelectionMode(QAbstractItemView::NoSelection);
+
+    QVector<QPair<QString, QString>> codeItems;
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        const LevelData &level = levels.at(currentLevelIndex);
+        for (const QString &blockId : bagBlocks) {
+            QString code = blockId;
+            for (const Chest &chest : level.chests) {
+                if (chest.blocks.contains(blockId)) {
+                    code = chest.blocks.value(blockId).code;
+                    break;
+                }
+            }
+            codeItems.append(qMakePair(blockId, code));
+        }
     }
 
-    const LevelData &level = levels.at(currentLevelIndex);
-    for (const QString &blockId : bagBlocks) {
-        QString code = blockId;
-        for (const Chest &chest : level.chests) {
-            if (chest.blocks.contains(blockId)) {
-                code = chest.blocks.value(blockId).code;
-                break;
+    if (codeItems.isEmpty()) {
+        codeItems.append(qMakePair(QString("waiting"), QString("open chest")));
+    }
+
+    constexpr int slotsPerPage = 16;
+    constexpr int bagPageCount = 2;
+    currentBagPage = qBound(0, currentBagPage, bagPageCount - 1);
+    const int pageStart = currentBagPage * slotsPerPage;
+
+    const auto makeCodeStrip = [](const QString &id, const QString &code, QWidget *parent) {
+        QLabel *strip = new QLabel(parent);
+        strip->setProperty("codeStrip", "true");
+        strip->setMinimumSize(150, 58);
+        strip->setMaximumWidth(220);
+        strip->setWordWrap(true);
+        strip->setAlignment(Qt::AlignCenter);
+        if (id.isEmpty()) {
+            strip->setText(" ");
+            strip->setStyleSheet("background: rgba(244, 218, 166, 210); border: 2px solid #20160d; border-radius: 4px;");
+        } else {
+            strip->setText(QString("%1\n%2").arg(id, code));
+        }
+        return strip;
+    };
+
+    QFrame *board = new QFrame(ui->deckListWidget);
+    board->setObjectName("bagBoardFrame");
+    board->setProperty("bagBoard", "true");
+    board->setStyleSheet("QFrame#bagBoardFrame { border-image: url(:/images/assets/bag_background.png) 0 0 0 0 stretch stretch; border: 4px solid #0b0805; border-radius: 6px; }");
+    QVBoxLayout *boardLayout = new QVBoxLayout(board);
+    boardLayout->setContentsMargins(68, 74, 68, 52);
+    boardLayout->setSpacing(14);
+
+    QHBoxLayout *toolbar = new QHBoxLayout();
+    toolbar->setSpacing(14);
+    QPushButton *prevPage = new QPushButton("<", board);
+    QPushButton *nextPage = new QPushButton(">", board);
+    QLabel *pageLabel = new QLabel(QString("Code Bag  %1 / %2").arg(currentBagPage + 1).arg(bagPageCount), board);
+    prevPage->setProperty("bagPageButton", "true");
+    nextPage->setProperty("bagPageButton", "true");
+    prevPage->setFixedSize(48, 34);
+    nextPage->setFixedSize(48, 34);
+    pageLabel->setAlignment(Qt::AlignCenter);
+    pageLabel->setProperty("bagSection", "true");
+    prevPage->setEnabled(currentBagPage > 0);
+    nextPage->setEnabled(currentBagPage + 1 < bagPageCount);
+    connect(prevPage, &QPushButton::clicked, this, [this]() {
+        currentBagPage = qMax(0, currentBagPage - 1);
+        refreshBagPage();
+    });
+    connect(nextPage, &QPushButton::clicked, this, [this]() {
+        currentBagPage = qMin(1, currentBagPage + 1);
+        refreshBagPage();
+    });
+    toolbar->addStretch();
+    toolbar->addWidget(prevPage);
+    toolbar->addWidget(pageLabel);
+    toolbar->addWidget(nextPage);
+    toolbar->addStretch();
+    boardLayout->addLayout(toolbar);
+
+    const auto addRow = [&makeCodeStrip, &codeItems, board, boardLayout, pageStart](const QString &title, int rowStart, int count) {
+        QLabel *sectionTitle = new QLabel(title, board);
+        sectionTitle->setProperty("bagSection", "true");
+        boardLayout->addWidget(sectionTitle);
+        QHBoxLayout *slotLayout = new QHBoxLayout();
+        slotLayout->setSpacing(8);
+        for (int i = 0; i < count; ++i) {
+            const int itemIndex = pageStart + rowStart + i;
+            if (itemIndex < codeItems.size()) {
+                slotLayout->addWidget(makeCodeStrip(codeItems.at(itemIndex).first, codeItems.at(itemIndex).second, board));
+            } else {
+                slotLayout->addWidget(makeCodeStrip(QString(), QString(), board));
             }
         }
-        ui->deckListWidget->addItem(QString("%1    %2").arg(blockId, code));
-    }
+        slotLayout->addStretch();
+        boardLayout->addLayout(slotLayout);
+    };
+
+    addRow("Pinned Code", 0, 4);
+    addRow("Code Bar", 4, 6);
+    addRow("Backpack", 10, 6);
+
+    QListWidgetItem *item = new QListWidgetItem(ui->deckListWidget);
+    item->setSizeHint(QSize(0, 590));
+    ui->deckListWidget->setItemWidget(item, board);
 }
 
 void MainWindow::refreshManualPage()
 {
     ui->deckTitleLabel->setText("Monster Manual");
     ui->deckListWidget->clear();
+    ui->deckListWidget->setStyleSheet("QListWidget#deckListWidget { background: rgba(16, 18, 24, 225); border: 2px solid #485162; border-radius: 6px; padding: 18px; outline: none; }");
+    ui->deckListWidget->setSpacing(6);
     if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return;
     }
