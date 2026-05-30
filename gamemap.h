@@ -59,6 +59,11 @@ public:
     QPoint prevPos()const;
     bool ifDefeated(const QString& monsterId)const;
     QVector<Monster>monsterLeft()const;
+    void setPlayerPos(int x,int y);
+    void setPlayerPos(QPoint pos);
+    void setPrevPos(int x,int y);
+    void setPrevPos(QPoint pos);
+
 
 private:
     const LevelData* levelData;

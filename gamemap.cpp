@@ -200,3 +200,15 @@ QVector<Monster> GameMap::monsterLeft()const{
     }
     return ret;
 }
+void GameMap::setPlayerPos(int x,int y){
+    playerX=x,playerY=y;
+}
+void GameMap::setPlayerPos(QPoint pos){
+    setPlayerPos(pos.x(),pos.y());
+}
+void GameMap::setPrevPos(int x,int y){
+    prevX=x,prevY=y;
+}
+void GameMap::setPrevPos(QPoint pos){
+    setPrevPos(pos.x(),pos.y());
+}

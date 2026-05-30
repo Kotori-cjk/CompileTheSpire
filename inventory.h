@@ -36,11 +36,12 @@ public:
     QVector<CodeBlock> blocksRemaining(const QString &chestId);
     QStringList remainingIds(const QString &chestId);
     QMap<QString, QSet<QString>> leftBlocks;
+    QVector<CodeBlock> bagBlocks;
 
 private:
     const LevelData* leveldata;
     int m_capacity = 0;
-    QVector<CodeBlock> bagBlocks;
+
 
 };
 

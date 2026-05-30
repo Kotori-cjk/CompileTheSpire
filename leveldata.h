@@ -72,6 +72,7 @@ private:
 
 public:
     LevelData();
+    int levelIndex;
     int mapWidth,mapHeight;
     QStringList specialTags;
     int bagSize;

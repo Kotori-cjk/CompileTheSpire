@@ -13,7 +13,7 @@ public:
     bool Save()const;
     bool Load(int currentLevelCount);
     bool isUnlocked(int levelIndex)const;
-    void Unlock(int levelIndex);
+    bool Unlock(int levelIndex);
     void UnlockAll();
     int levelCount();
     void deleteSave();
