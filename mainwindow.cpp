@@ -284,7 +284,20 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->deckBackButton, &QPushButton::clicked, this, [this]() {
-        ui->stackedWidget->setCurrentWidget(ui->gamePage);
+        if (!manualSelectedMonsterId.isEmpty()) {
+            manualSelectedMonsterId.clear();
+            refreshManualPage();
+        } else {
+            ui->stackedWidget->setCurrentWidget(ui->gamePage);
+        }
+    });
+
+    connect(ui->deckListWidget, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
+        if (!manualSelectedMonsterId.isEmpty()) return;
+        const QString monsterId = item->data(Qt::UserRole).toString();
+        if (monsterId.isEmpty()) return;
+        manualSelectedMonsterId = monsterId;
+        refreshManualPage();
     });
 
     connect(ui->mapBackButton, &QPushButton::clicked, this, [this]() {
@@ -323,7 +336,23 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(handbookButton, &QPushButton::clicked, this, [this]() {
         cancelAutoMove(true);
+        manualSelectedMonsterId.clear();
         showManualDialog();
+    });
+
+    connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
+        cancelAutoMove(true);
+        manualSelectedMonsterId.clear();
+        showManualDialog();
+    });
+
+    connect(ui->manualBackButton, &QPushButton::clicked, this, [this]() {
+        if (!manualSelectedMonsterId.isEmpty()) {
+            manualSelectedMonsterId.clear();
+            refreshManualPage();
+        } else {
+            ui->stackedWidget->setCurrentWidget(ui->gamePage);
+        }
     });
 
     connect(ui->saveSettingsButton, &QPushButton::clicked, this, [this]() {
@@ -1544,25 +1573,369 @@ void MainWindow::refreshBagPage()
 
 void MainWindow::refreshManualPage()
 {
-    ui->deckTitleLabel->setText("Monster Manual");
     ui->deckListWidget->clear();
     ui->deckListWidget->setStyleSheet("QListWidget#deckListWidget { background: rgba(16, 18, 24, 225); border: 2px solid #485162; border-radius: 6px; padding: 18px; outline: none; }");
-    ui->deckListWidget->setSpacing(6);
+    ui->deckListWidget->setSpacing(8);
+
     if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+        ui->deckTitleLabel->setText("Monster Manual");
+        ui->deckListWidget->addItem("No level data available.");
         return;
     }
 
     const LevelData &level = levels.at(currentLevelIndex);
-    for (const QString &monsterId : level.monsters.keys()) {
-        const bool seen = seenMonsters.contains(monsterId) || defeatedMonsters.contains(monsterId);
-        const Monster monster = level.monsters.value(monsterId);
-        ui->deckListWidget->addItem(seen
-                                        ? QString("%1 | %2 | %3").arg(monsterId, monster.nickname, monster.type)
-                                        : QString("%1 | display(hidden)").arg(monsterId));
+    const int listWidth = ui->deckListWidget->viewport()->width() - 24;
+
+    // --- detail view ---
+    if (!manualSelectedMonsterId.isEmpty()) {
+        if (!level.monsters.contains(manualSelectedMonsterId)) {
+            manualSelectedMonsterId.clear();
+            refreshManualPage();
+            return;
+        }
+
+        const Monster &m = level.monsters[manualSelectedMonsterId];
+        const bool isBoss = (manualSelectedMonsterId == "boss");
+        const bool seen = seenMonsters.contains(manualSelectedMonsterId)
+                       || defeatedMonsters.contains(manualSelectedMonsterId);
+        const bool defeated = defeatedMonsters.contains(manualSelectedMonsterId);
+
+        ui->deckTitleLabel->setText(seen ? (m.nickname.isEmpty() ? m.name : m.nickname) : "???");
+
+        QFrame *detailCard = new QFrame();
+        detailCard->setObjectName("manualDetailCard");
+        detailCard->setStyleSheet(
+            "QFrame#manualDetailCard { background: #1a1d26; border: 2px solid #353a47; border-radius: 8px; }"
+        );
+
+        QVBoxLayout *root = new QVBoxLayout(detailCard);
+        root->setContentsMargins(20, 18, 20, 18);
+        root->setSpacing(14);
+
+        if (!seen) {
+            QLabel *unknown = new QLabel("???  —  Undiscovered");
+            unknown->setStyleSheet("color: #5b5f6b; font-size: 22px; font-weight: bold;");
+            unknown->setAlignment(Qt::AlignCenter);
+            root->addWidget(unknown);
+            QLabel *hint = new QLabel("Encounter this enemy in the tower to reveal its details.");
+            hint->setStyleSheet("color: #464a55; font-size: 13px;");
+            hint->setAlignment(Qt::AlignCenter);
+            hint->setWordWrap(true);
+            root->addWidget(hint);
+        } else {
+            // header row: sprite + badges
+            QHBoxLayout *headerRow = new QHBoxLayout();
+            headerRow->setSpacing(18);
+
+            static const QStringList monsterSprites = {
+                ":/images/assets/alice.png", ":/images/assets/cheshire_cat.png",
+                ":/images/assets/dodo.png", ":/images/assets/gerda.png",
+                ":/images/assets/jabberwock.png", ":/images/assets/mabel.png",
+                ":/images/assets/node.png", ":/images/assets/red_hood.png"
+            };
+            QString spriteFile = isBoss
+                ? QString(":/images/assets/marry_ann.png")
+                : monsterSprites.at(qHash(manualSelectedMonsterId) % monsterSprites.size());
+
+            QLabel *spriteLabel = new QLabel();
+            spriteLabel->setFixedSize(112, 112);
+            spriteLabel->setAlignment(Qt::AlignCenter);
+            QPixmap pix(spriteFile);
+            if (!pix.isNull()) {
+                spriteLabel->setPixmap(pix.scaled(104, 104, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            } else {
+                spriteLabel->setText(isBoss ? "BOSS" : "M");
+                spriteLabel->setStyleSheet("color: #d99cff; font-size: 20px; font-weight: bold; background: #2d2040; border-radius: 6px;");
+            }
+            headerRow->addWidget(spriteLabel);
+
+            QWidget *headerInfo = new QWidget();
+            QVBoxLayout *hiLayout = new QVBoxLayout(headerInfo);
+            hiLayout->setContentsMargins(0, 0, 0, 0);
+            hiLayout->setSpacing(5);
+
+            QLabel *nameLabel = new QLabel(m.nickname.isEmpty() ? m.name : m.nickname);
+            nameLabel->setStyleSheet("color: #f1d37c; font-size: 22px; font-weight: bold;");
+            hiLayout->addWidget(nameLabel);
+
+            QHBoxLayout *badgeRow = new QHBoxLayout();
+            badgeRow->setSpacing(8);
+            QString typeColor = (m.type == "function") ? "#5dade2"
+                              : (m.type == "class") ? "#58d68d"
+                              : "#d99cff";
+            QLabel *typeBadge = new QLabel(m.type.toUpper());
+            typeBadge->setStyleSheet(QString(
+                "color: %1; font-size: 11px; font-weight: bold;"
+                "background: transparent; border: 1px solid %1;"
+                "border-radius: 3px; padding: 2px 8px;"
+            ).arg(typeColor));
+            badgeRow->addWidget(typeBadge);
+
+            if (defeated) {
+                QLabel *defBadge = new QLabel("DEFEATED");
+                defBadge->setStyleSheet(
+                    "color: #f6d878; font-size: 11px; font-weight: bold;"
+                    "background: transparent; border: 1px solid #f6d878;"
+                    "border-radius: 3px; padding: 2px 8px;"
+                );
+                badgeRow->addWidget(defBadge);
+            }
+            QLabel *idLabel = new QLabel(manualSelectedMonsterId);
+            idLabel->setStyleSheet("color: #5e6370; font-size: 11px;");
+            badgeRow->addWidget(idLabel);
+            badgeRow->addStretch();
+            hiLayout->addLayout(badgeRow);
+
+            if (isBoss) {
+                const Boss &boss = level.boss;
+                if (!boss.input.isEmpty() || !boss.output.isEmpty()) {
+                    QLabel *ioLabel = new QLabel(QString("Input: %1    Output: %2").arg(boss.input, boss.output));
+                    ioLabel->setStyleSheet("color: #78c8e2; font-size: 12px; font-family: 'Consolas', monospace;");
+                    hiLayout->addWidget(ioLabel);
+                }
+            }
+
+            hiLayout->addStretch();
+            headerRow->addWidget(headerInfo, 1);
+            root->addLayout(headerRow);
+
+            // code template
+            QLabel *codeSection = new QLabel("Code Template");
+            codeSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
+            root->addWidget(codeSection);
+
+            QString renderedCode = renderMonsterCode(m);
+            QLabel *codeLabel = new QLabel(renderedCode);
+            codeLabel->setWordWrap(true);
+            codeLabel->setTextFormat(Qt::PlainText);
+            codeLabel->setStyleSheet(
+                "color: #c8d6e5; font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;"
+                "font-size: 13px; background: #11131a; border: 1px solid #282c36;"
+                "border-radius: 4px; padding: 10px 12px;"
+            );
+            root->addWidget(codeLabel);
+
+            // spaces table
+            if (!m.spaces.isEmpty()) {
+                QLabel *spacesSection = new QLabel("Spaces");
+                spacesSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
+                root->addWidget(spacesSection);
+
+                QFrame *spacesTable = new QFrame();
+                spacesTable->setStyleSheet("QFrame { background: #11131a; border: 1px solid #282c36; border-radius: 4px; }");
+                QVBoxLayout *spacesLayout = new QVBoxLayout(spacesTable);
+                spacesLayout->setContentsMargins(12, 8, 12, 8);
+                spacesLayout->setSpacing(4);
+
+                for (const Space &sp : m.spaces) {
+                    QHBoxLayout *spaceRow = new QHBoxLayout();
+                    spaceRow->setSpacing(10);
+
+                    QLabel *idLbl = new QLabel(sp.spaceId);
+                    idLbl->setStyleSheet("color: #f1d37c; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;");
+                    idLbl->setFixedWidth(100);
+                    spaceRow->addWidget(idLbl);
+
+                    QLabel *typeLbl = new QLabel(sp.type);
+                    typeLbl->setStyleSheet("color: #78c8e2; font-size: 11px; font-family: 'Consolas', monospace;");
+                    typeLbl->setFixedWidth(60);
+                    spaceRow->addWidget(typeLbl);
+
+                    QLabel *valLbl = new QLabel(sp.values.join(", "));
+                    valLbl->setStyleSheet("color: #a0a8b8; font-size: 11px; font-family: 'Consolas', monospace;");
+                    valLbl->setWordWrap(true);
+                    spaceRow->addWidget(valLbl, 1);
+
+                    spacesLayout->addLayout(spaceRow);
+                }
+                root->addWidget(spacesTable);
+            }
+
+            // referenced clues
+            if (!m.referencedClues.isEmpty()) {
+                QLabel *cluesSection = new QLabel("Referenced Clues");
+                cluesSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
+                root->addWidget(cluesSection);
+
+                QFrame *cluesFrame = new QFrame();
+                cluesFrame->setStyleSheet("QFrame { background: #11131a; border: 1px solid #282c36; border-radius: 4px; }");
+                QVBoxLayout *cluesLayout = new QVBoxLayout(cluesFrame);
+                cluesLayout->setContentsMargins(12, 8, 12, 8);
+                cluesLayout->setSpacing(4);
+
+                for (const QString &clueId : m.referencedClues) {
+                    QString clueText = level.clues.contains(clueId) ? level.clues[clueId].val : "(missing)";
+                    QLabel *clueLine = new QLabel(QString("%1  →  %2").arg(clueId, clueText.trimmed()));
+                    clueLine->setStyleSheet("color: #78e2a0; font-size: 12px; font-family: 'Consolas', monospace;");
+                    clueLine->setWordWrap(true);
+                    cluesLayout->addWidget(clueLine);
+                }
+                root->addWidget(cluesFrame);
+            }
+        }
+
+        root->addStretch();
+
+        QListWidgetItem *detailItem = new QListWidgetItem();
+        detailItem->setSizeHint(QSize(listWidth, seen ? 520 : 120));
+        detailItem->setFlags(Qt::NoItemFlags);
+        ui->deckListWidget->addItem(detailItem);
+        ui->deckListWidget->setItemWidget(detailItem, detailCard);
+        return;
     }
-    ui->deckListWidget->addItem(defeatedMonsters.contains("boss")
-                                    ? QString("boss | %1 | defeated").arg(level.boss.nickname)
-                                    : "boss | display(hidden)");
+
+    // --- list view ---
+    ui->deckTitleLabel->setText("Monster Manual");
+    ui->deckListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+
+    static const QStringList monsterSprites = {
+        ":/images/assets/alice.png", ":/images/assets/cheshire_cat.png",
+        ":/images/assets/dodo.png", ":/images/assets/gerda.png",
+        ":/images/assets/jabberwock.png", ":/images/assets/mabel.png",
+        ":/images/assets/node.png", ":/images/assets/red_hood.png"
+    };
+    auto spritePath = [](const QString &id, bool isBoss) -> QString {
+        if (isBoss) return ":/images/assets/marry_ann.png";
+        return monsterSprites.at(qHash(id) % monsterSprites.size());
+    };
+
+    struct Entry {
+        QString id;
+        QString nickname;
+        QString type;
+        bool isBoss;
+        bool seen;
+        bool defeated;
+    };
+
+    QVector<Entry> entries;
+    for (auto it = level.monsters.constBegin(); it != level.monsters.constEnd(); ++it) {
+        if (it.key() == "boss") continue;
+        const Monster &m = it.value();
+        Entry e;
+        e.id = it.key();
+        e.nickname = m.nickname;
+        e.type = m.type;
+        e.isBoss = false;
+        e.seen = seenMonsters.contains(e.id) || defeatedMonsters.contains(e.id);
+        e.defeated = defeatedMonsters.contains(e.id);
+        entries.append(e);
+    }
+    {
+        Entry e;
+        e.id = "boss";
+        e.nickname = level.boss.nickname;
+        e.type = "boss";
+        e.isBoss = true;
+        e.seen = seenMonsters.contains("boss") || defeatedMonsters.contains("boss");
+        e.defeated = defeatedMonsters.contains("boss");
+        entries.append(e);
+    }
+
+    for (const Entry &entry : entries) {
+        QFrame *card = new QFrame();
+        card->setObjectName("manualCard");
+        card->setStyleSheet(
+            "QFrame#manualCard { background: #1a1d26; border: 2px solid #353a47; border-radius: 8px; }"
+        );
+
+        QHBoxLayout *row = new QHBoxLayout(card);
+        row->setContentsMargins(14, 12, 14, 12);
+        row->setSpacing(16);
+
+        // sprite
+        QLabel *spriteLabel = new QLabel();
+        spriteLabel->setFixedSize(76, 76);
+        spriteLabel->setAlignment(Qt::AlignCenter);
+
+        if (entry.seen) {
+            QPixmap pix(spritePath(entry.id, entry.isBoss));
+            if (!pix.isNull()) {
+                spriteLabel->setPixmap(pix.scaled(68, 68, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            } else {
+                spriteLabel->setText(entry.isBoss ? "BOSS" : "M");
+                spriteLabel->setStyleSheet("color: #d99cff; font-size: 14px; font-weight: bold; background: #2d2040; border-radius: 6px;");
+            }
+        } else {
+            spriteLabel->setText("?");
+            spriteLabel->setStyleSheet("color: #4a4e59; font-size: 32px; font-weight: bold; background: #14161c; border: 2px dashed #2e313a; border-radius: 6px;");
+        }
+        row->addWidget(spriteLabel);
+
+        // info
+        QWidget *infoArea = new QWidget();
+        QVBoxLayout *infoLayout = new QVBoxLayout(infoArea);
+        infoLayout->setContentsMargins(0, 0, 0, 0);
+        infoLayout->setSpacing(3);
+
+        if (!entry.seen) {
+            QLabel *unknown = new QLabel("???");
+            unknown->setStyleSheet("color: #5b5f6b; font-size: 18px; font-weight: bold;");
+            infoLayout->addWidget(unknown);
+            QLabel *hint = new QLabel("Encounter this enemy in the tower to reveal its details.");
+            hint->setStyleSheet("color: #464a55; font-size: 11px;");
+            hint->setWordWrap(true);
+            infoLayout->addWidget(hint);
+        } else {
+            QHBoxLayout *headerRow = new QHBoxLayout();
+            headerRow->setSpacing(8);
+
+            QLabel *nameLabel = new QLabel(entry.nickname.isEmpty() ? entry.id : entry.nickname);
+            nameLabel->setStyleSheet("color: #f1d37c; font-size: 16px; font-weight: bold;");
+            headerRow->addWidget(nameLabel);
+
+            QString typeColor = (entry.type == "function") ? "#5dade2"
+                              : (entry.type == "class") ? "#58d68d"
+                              : "#d99cff";
+            QLabel *typeBadge = new QLabel(entry.type.toUpper());
+            typeBadge->setStyleSheet(QString(
+                "color: %1; font-size: 9px; font-weight: bold;"
+                "background: transparent; border: 1px solid %1;"
+                "border-radius: 3px; padding: 1px 6px;"
+            ).arg(typeColor));
+            headerRow->addWidget(typeBadge);
+
+            if (entry.defeated) {
+                QLabel *defBadge = new QLabel("DEFEATED");
+                defBadge->setStyleSheet(
+                    "color: #f6d878; font-size: 9px; font-weight: bold;"
+                    "background: transparent; border: 1px solid #f6d878;"
+                    "border-radius: 3px; padding: 1px 6px;"
+                );
+                headerRow->addWidget(defBadge);
+            }
+
+            headerRow->addStretch();
+            infoLayout->addLayout(headerRow);
+
+            // brief code preview
+            const Monster &m = level.monsters[entry.id];
+            QString brief = renderMonsterCode(m);
+            // trim to a reasonable preview length
+            if (brief.length() > 120) {
+                brief = brief.left(117) + "...";
+            }
+            QLabel *codePreview = new QLabel(brief);
+            codePreview->setWordWrap(true);
+            codePreview->setTextFormat(Qt::PlainText);
+            codePreview->setStyleSheet(
+                "color: #9098a8; font-family: 'Consolas', 'Cascadia Mono', monospace;"
+                "font-size: 11px; background: #14161d; border: 1px solid #232730;"
+                "border-radius: 3px; padding: 5px 8px;"
+            );
+            infoLayout->addWidget(codePreview);
+        }
+
+        infoLayout->addStretch();
+        row->addWidget(infoArea, 1);
+
+        QListWidgetItem *item = new QListWidgetItem();
+        item->setSizeHint(QSize(listWidth, entry.seen ? 100 : 76));
+        item->setData(Qt::UserRole, entry.id);
+        item->setFlags(entry.seen ? Qt::ItemIsSelectable : Qt::NoItemFlags);
+        ui->deckListWidget->addItem(item);
+        ui->deckListWidget->setItemWidget(item, card);
+    }
 }
 
 void MainWindow::showBagDialog()

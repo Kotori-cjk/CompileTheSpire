@@ -115,6 +115,9 @@ private:
     bool showingExLevels = false;
     int selectedStageIndex = 0;
 
+    //---manual part---
+    QString manualSelectedMonsterId;
+
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
     QPushButton *resetRunButton = nullptr;
