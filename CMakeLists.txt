@@ -59,6 +59,17 @@ endif()
 
 target_link_libraries(CompileTheSpire PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
+foreach(runtime_data_dir IN ITEMS levels savedata)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_data_dir}")
+        add_custom_command(TARGET CompileTheSpire POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_data_dir}"
+                    "$<TARGET_FILE_DIR:CompileTheSpire>/${runtime_data_dir}"
+            COMMENT "Copying ${runtime_data_dir} to runtime output directory"
+        )
+    endif()
+endforeach()
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
