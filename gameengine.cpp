@@ -103,3 +103,41 @@ bool GameEngine::moveDir(int dx,int dy){
     if(abs(dx)+abs(dy)!=1)return false;
     return moveTo(m_map->playerPos().x()+dx,m_map->playerPos().y()+dy);
 }
+
+
+// ---------
+
+bool GameEngine::fillSpace(const QString& spaceId,const QString& blockId) {
+    if(m_combat == nullptr || m_bag == nullptr){
+        return false;
+    }
+    bool success = false;
+    CodeBlock block = m_bag->bagGet(blockId, &success);
+    if(!success){
+        return false;
+    }
+    Space space = m_combat->id2Space(spaceId, &success);
+    if(!success){
+        return false;
+    }
+    return m_combat->submitBlock(space, block);
+}
+
+bool GameEngine::revealClue(const QString &clueId) {
+    if(m_level == nullptr || m_map == nullptr){
+        return false;
+    }
+    if(!m_level->clues.contains(clueId)){
+        return false;
+    }
+    QPoint pos = m_level->clues[clueId].pos;
+    m_map->Clear(pos);
+    for(const auto& monsterId:m_level->monsters.keys()){
+        const auto& mcd=m_map->getMonsterClueDetail(monsterId);
+            if(mcd.clueUnlockStates.contains(clueId)){
+                emit clueRevealed(clueId,monsterId,m_level->clues[clueId].val);
+                break;
+            }
+         }
+    return true;
+}
