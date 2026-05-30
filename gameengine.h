@@ -48,11 +48,14 @@ signals:
     void combatEnded(CombatResult result);
     void clueRevealed(QString clueId,QString monsterId,QString text);
     void chestEntered(QString chestId);
-    void stateRestored();
-    void exitLevel();//only emited when battle win(not included when player exit)
+    void forcedMove(QPoint newpos);
+    //when forced move(by exit), trigger this and change physical location
+    void exitLevel();
+    void levelUnlocked(int levelIndex);
 
 public:
     GameSnapshot getCurrentSnapshot();
+    void restoreFromSnapshot(GameSnapshot snapshot);
     GameEngine();
     void gameInit(QString path);
     //for develop:look to savemanager to recall the things you should do(Init() in it)
@@ -70,7 +73,7 @@ public:
     bool fillSpace(const QString& spaceId,const QString& blockId);
     //call it when player fill the space
     bool revealClue(const QString& clueId);
-    //call it when player exit a clue(deal some afterthing)
+    //call it when player trigger a clue
     bool exitChest(const QString& chestId);
     //for develop:to go back to prev pos;technically I don't need the id,but I may check it
     //call it if player leave a **forced_pick** chest
@@ -80,7 +83,7 @@ public:
     bool exitCombat();
     //for develop:aka endCombat, similar func to exitChest
     //call it when player exit a combat
-    bool submitCombat();
+    CombatResult submitCombat();
     //for develop:be care that if it's a boss battle(if win, update unlock .etc)
     //call it when player submit a combat
     QVector<CodeBlock> bagBlocks();
@@ -93,7 +96,8 @@ public:
     bool resetLevel();
     //call it when reset
     void exit();
-    //call it when Exit(by any mean, include auto-calling when win or player exit)
+    //call it when Exit(only player exit)
+    //no need to call when auto-exit at winning
 
 };
 

@@ -19,6 +19,17 @@ GameSnapshot GameEngine::getCurrentSnapshot(){
     ret.leftBlocks=m_bag->leftBlocks;
     return ret;
 }
+void GameEngine::restoreFromSnapshot(GameSnapshot snapshot){
+    if(snapshot.levelData!=m_level){
+        throw "encounter bug at snapshot loading";
+        return;
+    }
+    m_map->setPlayerPos(snapshot.playerX,snapshot.playerY);
+    m_map->setPrevPos(snapshot.prevX,snapshot.prevY);
+    m_map->cleared=snapshot.cleared;
+    m_bag->leftBlocks=snapshot.leftBlocks;
+    m_bag->bagBlocks=snapshot.bagBlocks;
+}
 void GameEngine::gameInit(QString path){
     QStringList errors;
     levels=LoadDirectory(path,&errors);
@@ -50,6 +61,7 @@ bool GameEngine::startLevel(int levelIndex){
     m_bag=new Inventory(&levels[levelIndex]);
     m_map=new GameMap(&levels[levelIndex]);
     m_level=&levels[levelIndex];
+    m_level->levelIndex=levelIndex;
     snapshotStack=QVector<GameSnapshot>();
     snapshotStack.append(getCurrentSnapshot());
     emit levelLoaded();
@@ -74,7 +86,7 @@ bool GameEngine::moveTo(int tarX,int tarY){
                 }
             }
         }
-        if(res.event=="chest"){
+        else if(res.event=="chest"){
             emit chestEntered(res.eventId);
         }
         else{
@@ -102,4 +114,130 @@ bool GameEngine::moveTo(QPoint target){
 bool GameEngine::moveDir(int dx,int dy){
     if(abs(dx)+abs(dy)!=1)return false;
     return moveTo(m_map->playerPos().x()+dx,m_map->playerPos().y()+dy);
+}
+bool GameEngine::fillSpace(const QString& spaceId,const QString& blockId){
+    bool success=false;
+    Space spc=m_combat->id2Space(spaceId,&success);
+    if(!success)return false;
+    if(!m_bag->bagContains(blockId))return false;
+    CodeBlock tblock;
+    for(const auto& block:m_bag->bag()){
+        if(block.blockId==blockId){
+            tblock=block;
+            break;
+        }
+    }
+    return m_combat->submitBlock(spc,tblock);
+}
+bool GameEngine::revealClue(const QString& clueId){
+    if(m_map->clueRevealed(clueId))return false;
+    if(!m_level->clues.contains(clueId))return false;
+    QPoint cpos=m_level->clues[clueId].pos;
+    m_map->Clear(cpos);
+    snapshotStack.append(getCurrentSnapshot());
+    Monster tmonster;
+    for(const auto& monster:m_level->monsters.values()){
+        if(monster.referencedClues.contains(clueId)){
+            tmonster=monster;
+            break;
+        }
+    }
+    emit clueRevealed(clueId,tmonster.monsterId,m_level->clues[clueId].val);
+    return true;
+}
+bool GameEngine::exitChest(const QString& chestId){
+    snapshotStack.removeLast();
+    m_map->setPlayerPos(m_map->prevPos());
+    emit forcedMove(m_map->prevPos());
+    return true;
+}
+bool GameEngine::takeFromChest(const QString& chestId,const QString& blockId){
+    if(!m_level->chests.contains(chestId))return false;
+    bool success=false;
+    QString msg="";
+    success=m_bag->addBlockFromChest(blockId,chestId,&msg);
+    if(!success)return false;
+    snapshotStack.append(getCurrentSnapshot());
+    if(!m_level->chests[chestId].repeat||m_bag->chestIsEmpty(chestId)){
+        m_map->Clear(m_level->chests[chestId].pos);
+    }
+    return true;
+}
+bool GameEngine::exitCombat(){
+    if(m_combat!=nullptr){
+        delete m_combat;
+        m_combat=nullptr;
+        snapshotStack.removeLast();
+    }
+    m_map->setPlayerPos(m_map->prevPos());
+    emit forcedMove(m_map->prevPos());
+    return true;
+}
+CombatResult GameEngine::submitCombat(){
+    auto result=m_combat->submitCombat();
+    if(result.resultType=="success"){
+        if(m_combat->isBoss()){
+            //win
+            emit combatEnded(result);
+            if(m_combat!=nullptr)delete m_combat;
+            m_combat=nullptr;
+            if(m_map!=nullptr)delete m_map;
+            m_map=nullptr;
+            if(m_bag!=nullptr)delete m_bag;
+            m_bag=nullptr;
+            snapshotStack.clear();
+            if(m_save.Unlock(m_level->levelIndex+1)){
+                m_save.Save();
+                emit levelUnlocked(m_level->levelIndex+1);
+            }
+            emit exitLevel();
+            return result;
+        }
+        else{
+            for(const auto& blockId:result.usedBlocks){
+                m_bag->bagRemove(blockId);
+            }
+            m_bag->bagAdd(result.synthesizedBlock);
+            m_map->Clear(m_level->monsters[m_combat->monsterId()].pos);
+            snapshotStack.append(getCurrentSnapshot());
+            emit combatEnded(result);
+            if(m_combat!=nullptr)delete m_combat;
+            m_combat=nullptr;
+            return result;
+        }
+    }
+    return result;
+}
+QVector<CodeBlock> GameEngine::bagBlocks(){
+    return m_bag->bag();
+}
+monsterClueDetail GameEngine::getMonsterDetail(const QString& monsterId){
+    return m_map->getMonsterClueDetail(monsterId);
+}
+bool GameEngine::undo(){
+    if(snapshotStack.length()<=1){
+        return false;
+    }
+    restoreFromSnapshot(snapshotStack[snapshotStack.length()-2]);
+    snapshotStack.removeLast();
+    emit forcedMove(m_map->playerPos());
+    return true;
+}
+bool GameEngine::resetLevel(){
+    restoreFromSnapshot(snapshotStack[0]);
+    snapshotStack=QVector<GameSnapshot>();
+    snapshotStack.append(getCurrentSnapshot());
+    emit forcedMove(m_map->playerPos());
+    return true;
+}
+void GameEngine::exit(){
+    if(m_combat!=nullptr)delete m_combat;
+    m_combat=nullptr;
+    if(m_map!=nullptr)delete m_map;
+    m_map=nullptr;
+    if(m_bag!=nullptr)delete m_bag;
+    m_bag=nullptr;
+    snapshotStack.clear();
+    emit exitLevel();
+    return;
 }
