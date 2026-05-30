@@ -90,7 +90,8 @@ MapView::MapView(QWidget *parent)
     : QWidget(parent)
     , m_playerPixmap(loadSprite(":/images/assets/jibao.png", true))
     , m_bossPixmap(loadSprite(":/images/assets/marry_ann.png"))
-    , m_chestPixmap(loadSprite(":/images/assets/chest.png"))
+    , m_forcedChestPixmap(loadSprite(":/images/assets/forced_chest.png", true))
+    , m_unforcedChestPixmap(loadSprite(":/images/assets/unforce_chest.png", true))
     , m_cluePixmap(loadSprite(":/images/assets/clue.png"))
     , m_referenceMap(":/images/assets/example_map.png")
     , m_wallPixmap(":/images/assets/wall_image.jpg")
@@ -117,6 +118,19 @@ void MapView::setClearedObjects(const QSet<QString> &openedChests, const QSet<QS
 {
     m_openedChests = openedChests;
     m_defeatedMonsters = defeatedMonsters;
+    update();
+}
+
+void MapView::setCollectedClues(const QSet<QString> &collectedClues)
+{
+    m_collectedClues = collectedClues;
+    update();
+}
+
+void MapView::setMovePath(const QVector<QPoint> &path, int consumedCount)
+{
+    m_movePath = path;
+    m_consumedPathCount = qBound(0, consumedCount, path.size());
     update();
 }
 
@@ -157,6 +171,8 @@ void MapView::paintEvent(QPaintEvent *event)
             drawTile(painter, row, column, rect, m_level->mapGrid.at(row).at(column));
         }
     }
+
+    drawMovePath(painter);
 
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
@@ -387,6 +403,40 @@ void MapView::drawTile(QPainter &painter, int row, int column, const QRect &rect
     }
 }
 
+void MapView::drawMovePath(QPainter &painter) const
+{
+    if (m_movePath.isEmpty() || m_consumedPathCount >= m_movePath.size()) {
+        return;
+    }
+
+    QVector<QPoint> points;
+    points.append(m_playerPosition);
+    for (int i = m_consumedPathCount; i < m_movePath.size(); ++i) {
+        points.append(m_movePath.at(i));
+    }
+    if (points.size() < 2) {
+        return;
+    }
+
+    QPen glow(QColor(40, 224, 255, 90), 9, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+    glow.setDashPattern({2.0, 2.7});
+    QPen core(QColor(224, 252, 255, 210), 3, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+    core.setDashPattern({1.2, 4.0});
+
+    auto tileCenter = [this](const QPoint &tile) {
+        return tileRect(tile.y(), tile.x()).center();
+    };
+
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    for (int pass = 0; pass < 2; ++pass) {
+        painter.setPen(pass == 0 ? glow : core);
+        for (int i = 1; i < points.size(); ++i) {
+            painter.drawLine(tileCenter(points.at(i - 1)), tileCenter(points.at(i)));
+        }
+    }
+    painter.setRenderHint(QPainter::Antialiasing, false);
+}
+
 void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &tileId) const
 {
     if (tileId == "#" || tileId == "." || tileId == "start") {
@@ -395,12 +445,15 @@ void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &ti
 
     if (tileId.startsWith("chest")) {
         if (!m_openedChests.contains(tileId)) {
-            drawChest(painter, rect);
+            drawChest(painter, rect, tileId);
         }
         return;
     }
 
     if (tileId.startsWith("clue")) {
+        if (m_collectedClues.contains(tileId)) {
+            return;
+        }
         drawClue(painter, rect);
         return;
     }
@@ -432,15 +485,20 @@ void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &ti
     }
 }
 
-void MapView::drawChest(QPainter &painter, const QRect &rect) const
+void MapView::drawChest(QPainter &painter, const QRect &rect, const QString &tileId) const
 {
-    if (!m_chestPixmap.isNull()) {
+    bool forced = false;
+    if (m_level && m_level->chests.contains(tileId)) {
+        forced = m_level->chests.value(tileId).forcedPick;
+    }
+    const QPixmap &chestPixmap = forced ? m_forcedChestPixmap : m_unforcedChestPixmap;
+    if (!chestPixmap.isNull()) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(QColor(0, 0, 0, 105));
         painter.drawEllipse(QRect(rect.left() + rect.width() / 7, rect.bottom() - rect.height() / 5,
                                   rect.width() * 5 / 7, rect.height() / 5));
-        const QRect spriteRect = spriteRectInTile(rect, m_chestPixmap, 92, 88, 0);
-        painter.drawPixmap(spriteRect, m_chestPixmap);
+        const QRect spriteRect = spriteRectInTile(rect, chestPixmap, forced ? 100 : 112, forced ? 96 : 92, 0);
+        painter.drawPixmap(spriteRect, chestPixmap);
         return;
     }
 

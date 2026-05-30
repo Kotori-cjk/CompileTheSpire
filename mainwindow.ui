@@ -39,7 +39,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="mainMenuPage">
        <layout class="QVBoxLayout" name="mainMenuLayout">
@@ -237,6 +237,88 @@
            <property name="verticalSpacing">
             <number>10</number>
            </property>
+           <item row="0" column="2">
+            <widget class="QLabel" name="volumeValueLabel">
+             <property name="minimumSize">
+              <size>
+               <width>48</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>80%</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QLabel" name="sfxVolumeValueLabel">
+             <property name="text">
+              <string>75%</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="sfxVolumeLabel">
+             <property name="text">
+              <string>Effects Volume</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="musicVolumeValueLabel">
+             <property name="text">
+              <string>70%</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QSlider" name="musicVolumeSlider">
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="value">
+              <number>70</number>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QSlider" name="sfxVolumeSlider">
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="value">
+              <number>75</number>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="musicVolumeLabel">
+             <property name="text">
+              <string>Music Volume</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
            <item row="0" column="0">
             <widget class="QLabel" name="volumeLabel">
              <property name="text">
@@ -257,88 +339,6 @@
              </property>
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="volumeValueLabel">
-             <property name="minimumSize">
-              <size>
-               <width>48</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>80%</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="musicVolumeLabel">
-             <property name="text">
-              <string>Music Volume</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QSlider" name="musicVolumeSlider">
-             <property name="maximum">
-              <number>100</number>
-             </property>
-             <property name="value">
-              <number>70</number>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="musicVolumeValueLabel">
-             <property name="text">
-              <string>70%</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="sfxVolumeLabel">
-             <property name="text">
-              <string>Effects Volume</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QSlider" name="sfxVolumeSlider">
-             <property name="maximum">
-              <number>100</number>
-             </property>
-             <property name="value">
-              <number>75</number>
-             </property>
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLabel" name="sfxVolumeValueLabel">
-             <property name="text">
-              <string>75%</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -821,6 +821,19 @@
             </widget>
            </item>
            <item>
+            <widget class="QPushButton" name="manualButton">
+             <property name="minimumSize">
+              <size>
+               <width>110</width>
+               <height>36</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Manual</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="mapButton">
              <property name="minimumSize">
               <size>
@@ -1071,6 +1084,87 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="manualPage">
+       <layout class="QVBoxLayout" name="manualLayout">
+        <property name="spacing">
+         <number>16</number>
+        </property>
+        <property name="leftMargin">
+         <number>72</number>
+        </property>
+        <property name="topMargin">
+         <number>48</number>
+        </property>
+        <property name="rightMargin">
+         <number>72</number>
+        </property>
+        <property name="bottomMargin">
+         <number>48</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="manualTitleLabel">
+          <property name="font">
+           <font>
+            <pointsize>24</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Monster Manual</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="manualListWidget"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="manualButtonLayout">
+          <item>
+           <spacer name="manualButtonLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="manualBackButton">
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>38</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Back to Game</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="manualButtonRightSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
       <widget class="QWidget" name="pausePage">
        <layout class="QVBoxLayout" name="pauseLayout">
         <property name="spacing">
@@ -1178,7 +1272,7 @@
      <x>0</x>
      <y>0</y>
      <width>1100</width>
-     <height>25</height>
+     <height>17</height>
     </rect>
    </property>
   </widget>
