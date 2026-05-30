@@ -93,6 +93,7 @@ MapView::MapView(QWidget *parent)
     , m_chestPixmap(loadSprite(":/images/assets/chest.png"))
     , m_cluePixmap(loadSprite(":/images/assets/clue.png"))
     , m_referenceMap(":/images/assets/example_map.png")
+    , m_wallPixmap(":/images/assets/wall_image.jpg")
 {
     setMouseTracking(true);
     setMinimumSize(560, 420);
@@ -307,6 +308,11 @@ void MapView::drawTile(QPainter &painter, int row, int column, const QRect &rect
     painter.drawRect(rect);
 
     if (wall) {
+        if (!m_wallPixmap.isNull()) {
+            painter.setOpacity(0.45);
+            painter.drawPixmap(rect, m_wallPixmap);
+            painter.setOpacity(1.0);
+        }
         const int rows = 3;
         const int brickHeight = qMax(8, rect.height() / rows);
         for (int y = 0; y < rows; ++y) {
