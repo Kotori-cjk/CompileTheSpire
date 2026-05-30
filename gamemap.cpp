@@ -24,9 +24,7 @@ bool GameMap::canGoIn(int tarX,int tarY){
 bool GameMap::canGoIn(QPoint target){
     return canGoIn(target.x(),target.y());
 }
-bool GameMap::moveAccessibility(int tarX,int tarY,int oriX,int oriY){
-    Q_UNUSED(oriX);
-    Q_UNUSED(oriY);
+bool GameMap::moveAccessibility(int tarX,int tarY){
     QString s=levelData->mapGrid[tarX][tarY];
     if(s=="#"){
         return false;
@@ -54,8 +52,8 @@ bool GameMap::moveAccessibility(int tarX,int tarY,int oriX,int oriY){
     }
     return false;
 }
-bool GameMap::moveAccessibility(QPoint target,QPoint origin){
-    return moveAccessibility(target.x(),target.y(),origin.x(),origin.y());
+bool GameMap::moveAccessibility(QPoint target){
+    return moveAccessibility(target.x(),target.y());
 }
 QString GameMap::getEvent(int tarX,int tarY){
     QString s=levelData->mapGrid[tarX][tarY];
@@ -100,7 +98,7 @@ QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
         }
         for(int i=0;i<4;i++){
             int xx=u.x+dx[i],yy=u.y+dy[i];
-            if(xx>=0&&xx<levelData->mapHeight&&yy>=0&&yy<levelData->mapWidth&&moveAccessibility(xx,yy,u.x,u.y)&&canGoIn(xx,yy)&&!vis[xx][yy]){
+            if(xx>=0&&xx<levelData->mapHeight&&yy>=0&&yy<levelData->mapWidth&&moveAccessibility(u.x,u.y)&&canGoIn(xx,yy)&&!vis[xx][yy]){
                 vis[xx][yy]=1;
                 node nxt(xx,yy);
                 nxt.moves=u.moves;
