@@ -51,8 +51,9 @@ public:
     MoveResult moveTo(QPoint target,bool* success=nullptr);
     void Clear(int tarX,int tarY);
     void Clear(QPoint target);
-    bool clueRevealed(QString clue);
-    monsterClueDetail getMonsterClueDetail(QString monsterId);
+    bool clueRevealed(QString clue)const;
+    monsterClueDetail getMonsterClueDetail(QString monsterId)const;
+    QPoint playerPos()const;
 
 private:
     const LevelData* levelData;
