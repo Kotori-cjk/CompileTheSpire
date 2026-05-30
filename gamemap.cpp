@@ -173,12 +173,17 @@ monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId)const{
     for(int i=0;i<synthesis.cell.size();i++){
         if(synthesis.cell[i].type=="clue"){
             ret.clueUnlockStates[synthesis.cell[i].id]=clueRevealed(synthesis.cell[i].id);
+            ret.clueIds.append(synthesis.cell[i].id);
+            ret.revealedCount+=clueRevealed(synthesis.cell[i].id);
         }
     }
     return ret;
 }
 QPoint GameMap::playerPos()const{
     return QPoint(playerX,playerY);
+}
+QPoint GameMap::prevPos()const{
+    return QPoint(prevX,prevY);
 }
 bool GameMap::ifDefeated(const QString& monsterId)const{
     QPoint pos=levelData->monsters[monsterId].pos;

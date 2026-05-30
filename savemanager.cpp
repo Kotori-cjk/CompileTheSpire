@@ -60,14 +60,14 @@ bool SaveManager::isUnlocked(int levelIndex)const{
     if(levelIndex>unlockState.size()||levelIndex>totalLevelCount){
         return false;
     }
-    return unlockState[levelIndex-1];
+    return unlockState[levelIndex];
 }
 
 void SaveManager::Unlock(int levelIndex){
     if(levelIndex>unlockState.size()||levelIndex>totalLevelCount){
         return;
     }
-    unlockState[levelIndex-1]=1;
+    unlockState[levelIndex]=1;
 }
 
 void SaveManager::UnlockAll(){
