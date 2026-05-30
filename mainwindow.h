@@ -3,7 +3,6 @@
 
 #include "leveldata.h"
 
-#include <QGridLayout>
 #include <QLabel>
 #include <QMainWindow>
 #include <QPushButton>
@@ -17,6 +16,8 @@ namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+
+class MapView;
 
 struct GameSnapshot
 {
@@ -92,8 +93,7 @@ private:
     bool showingExLevels = false;
     int selectedStageIndex = 0;
 
-    QGridLayout *worldGridLayout = nullptr;
-    QVector<QVector<QPushButton *>> mapButtons;
+    MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;

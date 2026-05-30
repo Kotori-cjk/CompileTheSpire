@@ -22,6 +22,8 @@ set(PROJECT_SOURCES
         leveldata.h
         inventory.cpp
         inventory.h
+        mapview.cpp
+        mapview.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

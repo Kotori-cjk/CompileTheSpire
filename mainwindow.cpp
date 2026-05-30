@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "mapview.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -71,6 +72,85 @@ QVector<StageCard> stageCatalog()
 }
 
 constexpr int stagesPerPage = 3;
+
+LevelData createPreviewLevel()
+{
+    LevelData level;
+    level.mapWidth = 7;
+    level.mapHeight = 6;
+    level.bagSize = 5;
+    level.levelType = "preview";
+    level.startpos = QPoint(1, 1);
+    level.endText = "Preview boss cleared.";
+    level.specialTags = {"preview_map"};
+    level.mapGrid = {
+        {"#", "#", "#", "#", "#", "#", "#"},
+        {"#", "start", ".", "chest_1", ".", "monster_1", "#"},
+        {"#", ".", "#", ".", "#", ".", "#"},
+        {"#", "clue_1", ".", ".", ".", "monster_2", "#"},
+        {"#", ".", "chest_2", "#", ".", "boss", "#"},
+        {"#", "#", "#", "#", "#", "#", "#"}
+    };
+
+    Clue clue;
+    clue.pos = QPoint(3, 1);
+    clue.val = "cout << *func1(x);";
+    level.clues["clue_1"] = clue;
+
+    Chest chest1;
+    chest1.pos = QPoint(1, 3);
+    chest1.chestId = "chest_1";
+    chest1.forcedPick = true;
+    chest1.repeat = true;
+    chest1.blocks["block_add1"] = CodeBlock{"block_add1", "a += 1;"};
+    chest1.blocks["block_mul2"] = CodeBlock{"block_mul2", "a *= 2;"};
+    level.chests[chest1.chestId] = chest1;
+
+    Chest chest2;
+    chest2.pos = QPoint(4, 2);
+    chest2.chestId = "chest_2";
+    chest2.forcedPick = false;
+    chest2.repeat = false;
+    chest2.blocks["block_ret_val"] = CodeBlock{"block_ret_val", "return a;"};
+    chest2.blocks["block_ret_loc"] = CodeBlock{"block_ret_loc", "return &a;"};
+    level.chests[chest2.chestId] = chest2;
+
+    Monster monster1;
+    monster1.pos = QPoint(1, 5);
+    monster1.monsterId = "monster_1";
+    monster1.name = "func_ret";
+    monster1.nickname = "Runtime Bug";
+    monster1.type = "function";
+    monster1.codeTemplate = "int* func1(int& a){\n    a++;\n    $space1$\n}";
+    monster1.spaces.append(Space{"space1", "regex", {"^block.*"}});
+    level.monsters[monster1.monsterId] = monster1;
+
+    Monster monster2;
+    monster2.pos = QPoint(3, 5);
+    monster2.monsterId = "monster_2";
+    monster2.name = "class_calc";
+    monster2.nickname = "Stack Trace";
+    monster2.type = "class";
+    monster2.codeTemplate = "class A{\npublic:\n    int x;\n    A(int a=0){\n        $space1$\n        $space2$\n        x=a;\n    }\n};";
+    monster2.spaces.append(Space{"space1", "prefix", {"block"}});
+    monster2.spaces.append(Space{"space2", "find", {"block"}});
+    level.monsters[monster2.monsterId] = monster2;
+
+    Boss boss;
+    boss.pos = QPoint(4, 5);
+    boss.monsterId = "boss";
+    boss.name = "boss";
+    boss.nickname = "Marry Ann";
+    boss.type = "boss";
+    boss.codeTemplate = "$space1$\n$space2$\nint main(){ return 0; }";
+    boss.input = "1";
+    boss.output = "5";
+    boss.spaces.append(Space{"space1", "match", {"func_ret[block_ret_loc]"}});
+    boss.spaces.append(Space{"space2", "match", {"class_calc[block_add1,block_mul2]"}});
+    level.boss = boss;
+
+    return level;
+}
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -78,6 +158,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    resize(1366, 768);
     applyVisualStyle();
     applyDefaultSettings();
     buildRuntimeGameUi();
@@ -402,15 +483,16 @@ void MainWindow::applyVisualStyle()
 
         QPushButton[levelCard="true"] {
             background: qradialgradient(cx:0.5, cy:0.42, radius:0.72,
-                                        fx:0.42, fy:0.32,
-                                        stop:0 rgba(62, 66, 72, 240),
-                                        stop:0.55 rgba(23, 25, 29, 245),
-                                        stop:1 rgba(5, 8, 13, 250));
-            color: #e9dcc0;
-            border: 5px solid #5e5549;
-            border-radius: 56px;
+                                        fx:0.38, fy:0.30,
+                                        stop:0 rgba(140, 255, 255, 245),
+                                        stop:0.18 rgba(40, 183, 212, 238),
+                                        stop:0.54 rgba(8, 45, 64, 245),
+                                        stop:1 rgba(1, 8, 14, 255));
+            color: #eaffff;
+            border: 4px solid rgba(80, 240, 255, 225);
+            border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 34px;
+            font-size: 30px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -418,36 +500,23 @@ void MainWindow::applyVisualStyle()
 
         QPushButton[levelCard="true"]:hover {
             background: qradialgradient(cx:0.5, cy:0.45, radius:0.75,
-                                        stop:0 rgba(38, 91, 104, 245),
-                                        stop:0.65 rgba(10, 31, 42, 250),
+                                        stop:0 rgba(255, 255, 255, 245),
+                                        stop:0.28 rgba(91, 242, 255, 245),
+                                        stop:0.68 rgba(12, 68, 90, 250),
                                         stop:1 rgba(3, 8, 14, 255));
-            border-color: #87f8ff;
+            border-color: #c6fbff;
             color: #ffffff;
         }
 
         QPushButton[levelCard="selected"] {
             background: qradialgradient(cx:0.5, cy:0.43, radius:0.75,
-                                        stop:0 rgba(38, 145, 165, 245),
-                                        stop:0.48 rgba(15, 80, 101, 245),
-                                        stop:1 rgba(3, 12, 20, 255));
+                                        stop:0 rgba(255, 252, 188, 255),
+                                        stop:0.28 rgba(71, 238, 255, 255),
+                                        stop:0.62 rgba(14, 111, 143, 250),
+                                        stop:1 rgba(2, 15, 24, 255));
             color: #ffffff;
-            border: 6px solid #35eaff;
-            border-radius: 62px;
-            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 40px;
-            font-weight: 900;
-            padding: 4px;
-            text-align: center;
-        }
-
-        QPushButton[levelCard="cleared"] {
-            background: qradialgradient(cx:0.5, cy:0.42, radius:0.74,
-                                        stop:0 rgba(117, 92, 35, 245),
-                                        stop:0.58 rgba(43, 32, 18, 250),
-                                        stop:1 rgba(8, 9, 12, 255));
-            color: #ffe89b;
-            border: 5px solid #ffca55;
-            border-radius: 56px;
+            border: 5px solid #f7d75b;
+            border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
             font-size: 34px;
             font-weight: 900;
@@ -455,21 +524,38 @@ void MainWindow::applyVisualStyle()
             text-align: center;
         }
 
-        QPushButton[levelCard="locked"] {
-            background: qradialgradient(cx:0.5, cy:0.42, radius:0.7,
-                                        stop:0 rgba(49, 50, 52, 240),
-                                        stop:1 rgba(16, 17, 20, 250));
-            color: #b9ac91;
-            border: 5px solid #5b5144;
-            border-radius: 56px;
+        QPushButton[levelCard="cleared"] {
+            background: qradialgradient(cx:0.5, cy:0.42, radius:0.74,
+                                        stop:0 rgba(255, 244, 166, 250),
+                                        stop:0.34 rgba(194, 130, 28, 245),
+                                        stop:0.68 rgba(66, 42, 14, 250),
+                                        stop:1 rgba(8, 9, 12, 255));
+            color: #ffe89b;
+            border: 4px solid #ffca55;
+            border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 32px;
+            font-size: 30px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
         }
 
-        QPushButton[levelNav="true"], QPushButton[levelMode="true"], QPushButton#levelStartButton {
+        QPushButton[levelCard="locked"] {
+            background: qradialgradient(cx:0.5, cy:0.42, radius:0.7,
+                                        stop:0 rgba(67, 69, 72, 230),
+                                        stop:0.56 rgba(27, 29, 33, 248),
+                                        stop:1 rgba(4, 5, 7, 255));
+            color: #b6aa92;
+            border: 4px solid #5b5144;
+            border-radius: 42px;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 28px;
+            font-weight: 900;
+            padding: 4px;
+            text-align: center;
+        }
+
+        QPushButton[levelNav="true"], QPushButton#levelStartButton {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                         stop:0 rgba(16, 42, 53, 235),
                                         stop:0.5 rgba(7, 18, 27, 238),
@@ -481,6 +567,20 @@ void MainWindow::applyVisualStyle()
             font-size: 20px;
             font-weight: 900;
             padding: 7px 18px;
+        }
+
+        QPushButton[levelMode="true"] {
+            background: qradialgradient(cx:0.5, cy:0.42, radius:0.72,
+                                        stop:0 rgba(88, 238, 255, 230),
+                                        stop:0.38 rgba(14, 67, 86, 245),
+                                        stop:1 rgba(2, 8, 14, 255));
+            border: 3px solid #25d9ef;
+            border-radius: 38px;
+            color: #78f6ff;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 17px;
+            font-weight: 900;
+            padding: 4px;
         }
 
         QPushButton[levelNav="true"]:hover, QPushButton[levelMode="true"]:hover, QPushButton#levelStartButton:hover {
@@ -503,11 +603,17 @@ void MainWindow::applyVisualStyle()
         }
 
         QPushButton[levelMode="active"] {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                        stop:0 rgba(108, 47, 122, 245),
-                                        stop:1 rgba(31, 14, 44, 250));
-            border-color: #f0a2ff;
+            background: qradialgradient(cx:0.5, cy:0.42, radius:0.73,
+                                        stop:0 rgba(255, 230, 255, 245),
+                                        stop:0.35 rgba(166, 73, 190, 248),
+                                        stop:1 rgba(29, 10, 42, 255));
+            border: 3px solid #f0a2ff;
+            border-radius: 38px;
             color: #fff2ff;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 16px;
+            font-weight: 900;
+            padding: 4px;
         }
 
         QLabel#levelPageLabel {
@@ -524,19 +630,25 @@ void MainWindow::applyVisualStyle()
 
         QLabel[levelBridge="true"] {
             color: rgba(34, 219, 247, 225);
-            font-size: 34px;
+            background: transparent;
+            border: none;
+            font-size: 30px;
             font-weight: 900;
         }
 
         QLabel[levelBridge="locked"] {
             color: rgba(73, 78, 86, 175);
-            font-size: 34px;
+            background: transparent;
+            border: none;
+            font-size: 30px;
             font-weight: 900;
         }
 
         QLabel[levelBridge="cleared"] {
             color: rgba(255, 206, 91, 235);
-            font-size: 34px;
+            background: transparent;
+            border: none;
+            font-size: 30px;
             font-weight: 900;
         }
 
@@ -673,22 +785,18 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapFightButton->setProperty("levelCard", "true");
     ui->mapEliteButton->setProperty("levelCard", "true");
     ui->mapBossButton->setProperty("levelCard", "true");
-    ui->mapFightButton->setFixedSize(116, 116);
-    ui->mapEliteButton->setFixedSize(108, 108);
-    ui->mapBossButton->setFixedSize(108, 108);
-
     while (QLayoutItem *item = ui->mapNodeLayout->takeAt(0)) {
         delete item;
     }
-    ui->mapNodeLayout->setContentsMargins(82, 28, 82, 26);
-    ui->mapNodeLayout->setSpacing(12);
+    ui->mapNodeLayout->setContentsMargins(92, 24, 92, 18);
+    ui->mapNodeLayout->setSpacing(8);
 
     QHBoxLayout *modeLayout = new QHBoxLayout();
-    modeLayout->setSpacing(76);
+    modeLayout->setSpacing(160);
     QPushButton *normalButton = new QPushButton("NORMAL", ui->mapFrame);
     QPushButton *exButton = new QPushButton("EX", ui->mapFrame);
-    normalButton->setFixedSize(150, 54);
-    exButton->setFixedSize(120, 54);
+    normalButton->setFixedSize(76, 76);
+    exButton->setFixedSize(76, 76);
     normalButton->setProperty("levelMode", "active");
     exButton->setProperty("levelMode", "true");
     connect(normalButton, &QPushButton::clicked, this, [this]() {
@@ -708,14 +816,15 @@ void MainWindow::buildRuntimeGameUi()
     QLabel *pageLabel = new QLabel("SELECT STAGE", ui->mapFrame);
     pageLabel->setObjectName("levelPageLabel");
     pageLabel->setAlignment(Qt::AlignCenter);
+    pageLabel->setFixedHeight(48);
     ui->mapNodeLayout->addWidget(pageLabel);
 
     QHBoxLayout *stageLayout = new QHBoxLayout();
-    stageLayout->setSpacing(28);
-    QPushButton *prevButton = new QPushButton("<", ui->mapFrame);
-    QPushButton *nextButton = new QPushButton(">", ui->mapFrame);
-    prevButton->setFixedSize(74, 58);
-    nextButton->setFixedSize(74, 58);
+    stageLayout->setSpacing(38);
+    QPushButton *prevButton = new QPushButton("◀", ui->mapFrame);
+    QPushButton *nextButton = new QPushButton("▶", ui->mapFrame);
+    prevButton->setFixedSize(70, 70);
+    nextButton->setFixedSize(70, 70);
     prevButton->setProperty("levelNav", "true");
     nextButton->setProperty("levelNav", "true");
     connect(prevButton, &QPushButton::clicked, this, [this]() {
@@ -729,44 +838,61 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapFightButton->setObjectName("stageNodeButton0");
     ui->mapEliteButton->setObjectName("stageNodeButton1");
     ui->mapBossButton->setObjectName("stageNodeButton2");
-    QGridLayout *nodeGrid = new QGridLayout();
-    nodeGrid->setHorizontalSpacing(76);
-    nodeGrid->setVerticalSpacing(26);
-    nodeGrid->setContentsMargins(70, 18, 70, 6);
-    QLabel *bridge01 = new QLabel("/////", ui->mapFrame);
-    QLabel *bridge12 = new QLabel("/////", ui->mapFrame);
+    ui->mapFightButton->setFixedSize(84, 84);
+    ui->mapEliteButton->setFixedSize(84, 84);
+    ui->mapBossButton->setFixedSize(84, 84);
+
+    QWidget *nodeCanvas = new QWidget(ui->mapFrame);
+    nodeCanvas->setObjectName("stageNodeCanvas");
+    nodeCanvas->setFixedSize(650, 250);
+    nodeCanvas->setStyleSheet("QWidget#stageNodeCanvas { background: transparent; border: none; }");
+    QLabel *bridge01 = new QLabel("━━━━━━", nodeCanvas);
+    QLabel *bridge12 = new QLabel("━━━━━━", nodeCanvas);
     bridge01->setObjectName("stageBridge0");
     bridge12->setObjectName("stageBridge1");
     bridge01->setProperty("levelBridge", "true");
     bridge12->setProperty("levelBridge", "true");
     bridge01->setAlignment(Qt::AlignCenter);
     bridge12->setAlignment(Qt::AlignCenter);
-    nodeGrid->addWidget(ui->mapBossButton, 0, 4, Qt::AlignCenter);
-    nodeGrid->addWidget(bridge12, 1, 3, Qt::AlignCenter);
-    nodeGrid->addWidget(ui->mapEliteButton, 2, 2, Qt::AlignCenter);
-    nodeGrid->addWidget(bridge01, 3, 1, Qt::AlignCenter);
-    nodeGrid->addWidget(ui->mapFightButton, 4, 0, Qt::AlignCenter);
+    bridge01->setGeometry(174, 145, 170, 34);
+    bridge12->setGeometry(382, 72, 170, 34);
+    ui->mapFightButton->setParent(nodeCanvas);
+    ui->mapEliteButton->setParent(nodeCanvas);
+    ui->mapBossButton->setParent(nodeCanvas);
+    ui->mapFightButton->setGeometry(92, 160, 84, 84);
+    ui->mapEliteButton->setGeometry(300, 92, 84, 84);
+    ui->mapBossButton->setGeometry(512, 18, 84, 84);
+    bridge01->lower();
+    bridge12->lower();
+    ui->mapFightButton->show();
+    ui->mapEliteButton->show();
+    ui->mapBossButton->show();
     stageLayout->addWidget(prevButton, 0, Qt::AlignVCenter);
     stageLayout->addStretch(1);
-    stageLayout->addLayout(nodeGrid, 3);
+    stageLayout->addWidget(nodeCanvas, 0, Qt::AlignCenter);
     stageLayout->addStretch(1);
     stageLayout->addWidget(nextButton, 0, Qt::AlignVCenter);
     ui->mapNodeLayout->addLayout(stageLayout, 1);
 
     QPushButton *levelStartButton = new QPushButton("START", ui->mapFrame);
     levelStartButton->setObjectName("levelStartButton");
-    levelStartButton->setFixedSize(350, 64);
+    levelStartButton->setFixedSize(280, 50);
     connect(levelStartButton, &QPushButton::clicked, this, [this]() {
         startLevel(selectedStageIndex);
     });
+    ui->mapNodeLayout->addSpacing(4);
     ui->mapNodeLayout->addWidget(levelStartButton, 0, Qt::AlignCenter);
 
     clearLayout(ui->combatLayout);
-    QWidget *gridHost = new QWidget(ui->combatFrame);
-    worldGridLayout = new QGridLayout(gridHost);
-    worldGridLayout->setSpacing(5);
-    worldGridLayout->setContentsMargins(18, 18, 18, 18);
-    ui->combatLayout->addWidget(gridHost, 3);
+    mapView = new MapView(ui->combatFrame);
+    connect(mapView, &MapView::tileClicked, this, [this](int row, int column) {
+        const QString tileId = tileAt(row, column);
+        ui->combatLogLabel->setText(QString("Selected %1,%2: %3. GameEngine movement hook is pending.")
+                                        .arg(column)
+                                        .arg(row)
+                                        .arg(describeTile(tileId).replace('\n', ' ')));
+    });
+    ui->combatLayout->addWidget(mapView, 3);
 
     QFrame *sideFrame = new QFrame(ui->combatFrame);
     sideFrame->setObjectName("sideFrame");
@@ -833,7 +959,8 @@ void MainWindow::loadLevels()
         return;
     }
 
-    statusBar()->showMessage("No valid level JSON was found.", 4000);
+    levels.append(createPreviewLevel());
+    statusBar()->showMessage("No valid level JSON was found. Loaded preview map for UI testing.", 5000);
 }
 
 void MainWindow::refreshLevelSelectUi()
@@ -1076,50 +1203,14 @@ void MainWindow::refreshGameUi()
 
 void MainWindow::refreshMapGrid()
 {
-    if (!worldGridLayout || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+    if (!mapView || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return;
     }
 
-    clearLayout(worldGridLayout);
-    mapButtons.clear();
     const LevelData &level = levels.at(currentLevelIndex);
-
-    for (int row = 0; row < level.mapGrid.size(); ++row) {
-        QVector<QPushButton *> rowButtons;
-        for (int column = 0; column < level.mapGrid.at(row).size(); ++column) {
-            const QString tileId = level.mapGrid.at(row).at(column);
-            QPushButton *button = new QPushButton(tileId == "#" ? "#" : " ", ui->combatFrame);
-            button->setProperty("mapTile", "true");
-            button->setMinimumSize(76, 66);
-            button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-            button->setEnabled(tileId != "#");
-            button->setText(describeTile(tileId));
-            if (row == playerRow && column == playerColumn) {
-                button->setText("@\n" + describeTile(tileId));
-                button->setProperty("tileRole", "player");
-            } else if (tileId.startsWith("monster")) {
-                button->setProperty("tileRole", defeatedMonsters.contains(tileId) ? "cleared" : "monster");
-            } else if (tileId.startsWith("chest")) {
-                button->setProperty("tileRole", openedChests.contains(tileId) ? "cleared" : "chest");
-            } else if (tileId.startsWith("clue")) {
-                button->setProperty("tileRole", "clue");
-            } else if (tileId == "boss") {
-                button->setProperty("tileRole", defeatedMonsters.contains(tileId) ? "cleared" : "boss");
-            } else if (tileId == "#") {
-                button->setProperty("tileRole", "wall");
-            } else if (tileId == "start") {
-                button->setProperty("tileRole", "start");
-            } else {
-                button->setProperty("tileRole", "floor");
-            }
-            connect(button, &QPushButton::clicked, this, [this, row, column]() {
-                movePlayerTo(row, column);
-            });
-            worldGridLayout->addWidget(button, row, column);
-            rowButtons.append(button);
-        }
-        mapButtons.append(rowButtons);
-    }
+    mapView->setLevel(&level);
+    mapView->setPlayerPosition(QPoint(playerColumn, playerRow));
+    mapView->setClearedObjects(openedChests, defeatedMonsters);
 }
 
 void MainWindow::refreshSidePanel()

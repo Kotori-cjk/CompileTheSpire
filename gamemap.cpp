@@ -190,8 +190,6 @@ void GameMap::Clear(int tarX,int tarY){
 void GameMap::Clear(QPoint target){
     Clear(target.x(),target.y());
 }
-<<<<<<< HEAD
-=======
 bool GameMap::clueRevealed(QString clue){
     QPoint pos=levelData->clues[clue].pos;
     return cleared[pos.x()][pos.y()];
@@ -208,4 +206,3 @@ monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId){
     }
     return ret;
 }
->>>>>>> 1bbe454 (feat: add templateBreakdown utility, fix clue placeholder in Combat synthesis, add GameMap query interfaces)
