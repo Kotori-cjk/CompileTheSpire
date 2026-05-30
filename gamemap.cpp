@@ -12,7 +12,7 @@ GameMap::GameMap(const LevelData* ptr){
     cleared=QVector<QVector<int>>(ptr->mapHeight,QVector<int>(ptr->mapWidth,0));
 }
 QString GameMap::currentId(int tarX,int tarY){
-    if(cleared[tarX][tarY])return "space";
+    if(cleared[tarX][tarY])return ".";
     return levelData->mapGrid[tarX][tarY];
 }
 QString GameMap::currentId(QPoint target){
@@ -25,9 +25,6 @@ bool GameMap::canGoIn(QPoint target){
     return canGoIn(target.x(),target.y());
 }
 bool GameMap::moveAccessibility(int tarX,int tarY){
-    if(abs(playerX-tarX)+abs(playerY-tarY)!=1){
-        return false;
-    }
     QString s=levelData->mapGrid[tarX][tarY];
     if(s=="#"){
         return false;
@@ -82,68 +79,42 @@ node::node(int x,int y){
     this->x=x,this->y=y;
     moves=QVector<QPoint>(1,QPoint(x,y));
 }
-
 QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
-    if (!levelData || tarX < 0 || tarX >= levelData->mapHeight || tarY < 0 || tarY >= levelData->mapWidth) {
-        if (success) {
-            *success = false;
-        }
-        return {};
+    if (!levelData||tarX<0||tarX>=levelData->mapHeight||tarY<0||tarY>=levelData->mapWidth){
+        if(success!=nullptr)*success=false;
+        return QVector<QPoint>();
     }
-
-    const auto canStepOn = [this](int x, int y) {
-        if (x < 0 || x >= levelData->mapHeight || y < 0 || y >= levelData->mapWidth) {
-            return false;
-        }
-        const QString tileId = levelData->mapGrid[x][y];
-        if (tileId == "#" || tileId == "boss") {
-            return false;
-        }
-        if (tileId == "." || tileId == "start" || tileId.mid(0, 3) == "clu") {
-            return true;
-        }
-        if (tileId.mid(0, 3) == "mon") {
-            const QPoint pos = levelData->monsters[tileId].pos;
-            return cleared[pos.x()][pos.y()] != 0;
-        }
-        if (tileId.mid(0, 3) == "che") {
-            const Chest chest = levelData->chests[tileId];
-            return cleared[chest.pos.x()][chest.pos.y()] || !chest.forcedPick;
-        }
-        return false;
-    };
-
-    QVector<QVector<int>> vis(levelData->mapHeight, QVector<int>(levelData->mapWidth, 0));
-    node st(playerX, playerY);
-    vis[playerX][playerY] = 1;
-    QQueue<node> q;
+    QVector<QVector<int>> vis(levelData->mapHeight,QVector<int>(levelData->mapWidth,0));
+    node st(playerX,playerY);
+    vis[playerX][playerY]=1;
+    QQueue<node>q;
     q.push_back(st);
-    while (!q.empty()) {
-        const node u = q.front();
+    while(!q.empty()){
+        const auto& u=q.front();
         q.pop_front();
-        if (u.x == tarX && u.y == tarY) {
-            if (success) {
-                *success = true;
-            }
+        if(u.x==tarX&&u.y==tarY){
+            if(success!=nullptr)*success=true;
             return u.moves;
         }
-        for (int i = 0; i < 4; i++) {
-            const int xx = u.x + dx[i];
-            const int yy = u.y + dy[i];
-            if (canStepOn(xx, yy) && !vis[xx][yy]) {
-                vis[xx][yy] = 1;
-                node nxt(xx, yy);
-                nxt.moves = u.moves;
-                nxt.moves.push_back(QPoint(xx, yy));
+        for(int i=0;i<4;i++){
+            int xx=u.x+dx[i],yy=u.y+dy[i];
+            if(xx>=0&&xx<levelData->mapHeight&&yy>=0&&yy<levelData->mapWidth&&moveAccessibility(u.x,u.y)&&canGoIn(xx,yy)&&!vis[xx][yy]){
+                vis[xx][yy]=1;
+                node nxt(xx,yy);
+                nxt.moves=u.moves;
+                nxt.moves.push_back(QPoint(xx,yy));
                 q.push_back(nxt);
+                if(xx==tarX&&yy==tarY){
+                    if(success!=nullptr)*success=true;
+                    return nxt.moves;
+                }
             }
         }
     }
-    if (success) {
-        *success = false;
-    }
-    return {};
+    if(success!=nullptr)*success=false;
+    return QVector<QPoint>();
 }
+
 QVector<QPoint> GameMap::findPath(QPoint target,bool* success){
     return findPath(target.x(),target.y(),success);
 }
@@ -208,4 +179,19 @@ monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId)const{
 }
 QPoint GameMap::playerPos()const{
     return QPoint(playerX,playerY);
+}
+bool GameMap::ifDefeated(const QString& monsterId)const{
+    QPoint pos=levelData->monsters[monsterId].pos;
+    return cleared[pos.x()][pos.y()];
+}
+QVector<Monster> GameMap::monsterLeft()const{
+    QVector<Monster>ret;
+    for(const auto& monsterId:levelData->monsters.keys()){
+        const Monster& monster=levelData->monsters[monsterId];
+        QPoint pos=monster.pos;
+        if(!cleared[pos.x()][pos.y()]){
+            ret.append(monster);
+        }
+    }
+    return ret;
 }
