@@ -22,6 +22,14 @@ set(PROJECT_SOURCES
         leveldata.h
         inventory.cpp
         inventory.h
+        gamemap.cpp
+        gamemap.h
+        combat.cpp
+        combat.h
+        gameengine.cpp
+        gameengine.h
+        savemanager.cpp
+        savemanager.h
         mapview.cpp
         mapview.h
 )
