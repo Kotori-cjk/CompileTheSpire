@@ -372,7 +372,7 @@ void MainWindow::applyVisualStyle()
         }
 
         QWidget#mainMenuPage {
-            border-image: url(:/images/assets/title_clean_bg.png) 0 0 0 0 stretch stretch;
+            border-image: url(:/images/assets/title_cover_16_9.png) 0 0 0 0 stretch stretch;
         }
 
         QWidget#mapPage {
@@ -1195,7 +1195,7 @@ void MainWindow::refreshLevelSelectUi()
         return;
     }
     if (startButton) {
-        startButton->setEnabled(selectedStageIndex >= 0 && selectedStageIndex < levels.size() && isLevelUnlocked(selectedStageIndex));
+        startButton->setEnabled(selectedStageIndex >= 0 && !levels.isEmpty() && isLevelUnlocked(selectedStageIndex));
     }
     ui->mapBackButton->setText("Back");
 }
@@ -1249,9 +1249,14 @@ void MainWindow::startLevel(int levelIndex)
         statusBar()->showMessage("This stage is locked by the path order.", 2500);
         return;
     }
-    if (levelIndex < 0 || levelIndex >= levels.size()) {
+    if (levels.isEmpty()) {
         statusBar()->showMessage("This level is not available yet.", 2500);
         return;
+    }
+
+    if (levelIndex < 0 || levelIndex >= levels.size()) {
+        statusBar()->showMessage("This stage has no JSON yet. Opening the preview map.", 2500);
+        levelIndex = 0;
     }
 
     currentLevelIndex = levelIndex;
