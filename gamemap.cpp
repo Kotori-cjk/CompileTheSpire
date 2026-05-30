@@ -190,12 +190,12 @@ void GameMap::Clear(int tarX,int tarY){
 void GameMap::Clear(QPoint target){
     Clear(target.x(),target.y());
 }
-bool GameMap::clueRevealed(QString clue){
+bool GameMap::clueRevealed(QString clue)const{
     QPoint pos=levelData->clues[clue].pos;
     return cleared[pos.x()][pos.y()];
 }
 
-monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId){
+monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId)const{
     monsterClueDetail ret;
     ret.codeTemplate=levelData->monsters[monsterId].codeTemplate;
     Synthesis synthesis=templateBreakdown(ret.codeTemplate);
@@ -205,4 +205,7 @@ monsterClueDetail GameMap::getMonsterClueDetail(QString monsterId){
         }
     }
     return ret;
+}
+QPoint GameMap::playerPos()const{
+    return QPoint(playerX,playerY);
 }
