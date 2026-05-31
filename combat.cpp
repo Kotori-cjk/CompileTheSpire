@@ -162,5 +162,6 @@ CodeBlock Combat::synthesize(QStringList& used)const{
             ret.code+=filledCodesMap[synthesis.cell[i].id].code;
         }
     }
+    ret.type=monster->type;
     return ret;
 }
