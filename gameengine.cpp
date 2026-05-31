@@ -90,9 +90,8 @@ bool GameEngine::moveTo(int tarX,int tarY){
             emit chestEntered(res.eventId);
         }
         else{
-            QString& monsterId=res.eventId;
-            Monster monster;
-            monster=m_level->monsters[monsterId];
+            const QString& monsterId=res.eventId;
+            const Monster& monster=m_level->monsters[monsterId];
             auto mcd=m_map->getMonsterClueDetail(monsterId);
             QMap<QString,Clue>clues;
             for(const auto& clueId:mcd.clueIds){
