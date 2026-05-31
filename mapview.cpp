@@ -4,6 +4,9 @@
 #include <QLinearGradient>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QtMath>
+
+#include <algorithm>
 
 namespace {
 constexpr int tilePadding = 3;
@@ -59,6 +62,147 @@ QPixmap loadSprite(const QString &path, bool removeBlackBackground = false)
     return QPixmap::fromImage(image);
 }
 
+QVector<QVector<QPixmap>> loadSpriteSheet(const QString &path, int rows, int columns)
+{
+    QImage image(path);
+    if (image.isNull() || rows <= 0 || columns <= 0) {
+        return {};
+    }
+
+    image = image.convertToFormat(QImage::Format_ARGB32);
+    auto clearBakedCheckerBackground = [](QImage &frame) {
+        for (int y = 0; y < frame.height(); ++y) {
+            QRgb *scan = reinterpret_cast<QRgb *>(frame.scanLine(y));
+            for (int x = 0; x < frame.width(); ++x) {
+                QColor color = QColor::fromRgba(scan[x]);
+                const int maxChannel = qMax(color.red(), qMax(color.green(), color.blue()));
+                const int minChannel = qMin(color.red(), qMin(color.green(), color.blue()));
+                const bool likelyCheckerBackground = maxChannel > 218 && (maxChannel - minChannel) < 24;
+                if (color.alpha() < 8 || likelyCheckerBackground) {
+                    scan[x] = qRgba(color.red(), color.green(), color.blue(), 0);
+                }
+            }
+        }
+    };
+    auto croppedFrame = [](const QImage &source, const QRect &bounds) {
+        return QPixmap::fromImage(source.copy(bounds.adjusted(-3, -3, 3, 3).intersected(source.rect())));
+    };
+
+    clearBakedCheckerBackground(image);
+
+    const int width = image.width();
+    const int height = image.height();
+    QVector<uchar> visited(width * height, 0);
+    QVector<QRect> components;
+    components.reserve(rows * columns);
+
+    auto opaque = [&image, width, height](int x, int y) {
+        return x >= 0 && x < width && y >= 0 && y < height && QColor::fromRgba(image.pixel(x, y)).alpha() > 8;
+    };
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const int startIndex = y * width + x;
+            if (visited[startIndex] || !opaque(x, y)) {
+                continue;
+            }
+
+            QRect bounds(x, y, 1, 1);
+            QVector<QPoint> stack;
+            stack.append(QPoint(x, y));
+            visited[startIndex] = 1;
+            int area = 0;
+
+            while (!stack.isEmpty()) {
+                const QPoint point = stack.takeLast();
+                ++area;
+                bounds = bounds.united(QRect(point, QSize(1, 1)));
+                const QPoint neighbors[] = {
+                    QPoint(point.x() + 1, point.y()),
+                    QPoint(point.x() - 1, point.y()),
+                    QPoint(point.x(), point.y() + 1),
+                    QPoint(point.x(), point.y() - 1)
+                };
+                for (const QPoint &next : neighbors) {
+                    if (!opaque(next.x(), next.y())) {
+                        continue;
+                    }
+                    const int index = next.y() * width + next.x();
+                    if (visited[index]) {
+                        continue;
+                    }
+                    visited[index] = 1;
+                    stack.append(next);
+                }
+            }
+
+            if (area > 350 && bounds.width() > 18 && bounds.height() > 24) {
+                components.append(bounds);
+            }
+        }
+    }
+
+    if (components.size() >= rows * columns) {
+        std::sort(components.begin(), components.end(), [](const QRect &a, const QRect &b) {
+            if (qAbs(a.center().y() - b.center().y()) > 60) {
+                return a.center().y() < b.center().y();
+            }
+            return a.center().x() < b.center().x();
+        });
+        components = components.mid(0, rows * columns);
+
+        QVector<QVector<QPixmap>> frames;
+        frames.reserve(rows);
+        for (int row = 0; row < rows; ++row) {
+            QVector<QRect> lineRects = components.mid(row * columns, columns);
+            std::sort(lineRects.begin(), lineRects.end(), [](const QRect &a, const QRect &b) {
+                return a.center().x() < b.center().x();
+            });
+
+            QVector<QPixmap> line;
+            line.reserve(columns);
+            for (const QRect &rect : lineRects) {
+                line.append(croppedFrame(image, rect));
+            }
+            frames.append(line);
+        }
+        return frames;
+    }
+
+    const qreal cellWidth = static_cast<qreal>(image.width()) / columns;
+    const qreal cellHeight = static_cast<qreal>(image.height()) / rows;
+
+    QVector<QVector<QPixmap>> frames;
+    frames.reserve(rows);
+    for (int row = 0; row < rows; ++row) {
+        QVector<QPixmap> line;
+        line.reserve(columns);
+        for (int column = 0; column < columns; ++column) {
+            const QRect cell(qRound(column * cellWidth),
+                             qRound(row * cellHeight),
+                             qRound((column + 1) * cellWidth) - qRound(column * cellWidth),
+                             qRound((row + 1) * cellHeight) - qRound(row * cellHeight));
+            QImage frame = image.copy(cell).convertToFormat(QImage::Format_ARGB32);
+            clearBakedCheckerBackground(frame);
+
+            QRect crop;
+            for (int y = 0; y < frame.height(); ++y) {
+                for (int x = 0; x < frame.width(); ++x) {
+                    if (QColor::fromRgba(frame.pixel(x, y)).alpha() > 8) {
+                        crop = crop.isNull() ? QRect(x, y, 1, 1) : crop.united(QRect(x, y, 1, 1));
+                    }
+                }
+            }
+            if (!crop.isNull()) {
+                frame = frame.copy(crop.adjusted(-3, -3, 3, 3).intersected(frame.rect()));
+            }
+            line.append(QPixmap::fromImage(frame));
+        }
+        frames.append(line);
+    }
+    return frames;
+}
+
 QColor floorColor(int row, int column)
 {
     const int tone = 54 + ((row * 17 + column * 11) % 26);
@@ -89,6 +233,7 @@ QRect spriteRectInTile(const QRect &tileRect, const QPixmap &pixmap, int widthPe
 MapView::MapView(QWidget *parent)
     : QWidget(parent)
     , m_playerPixmap(loadSprite(":/images/assets/jibao.png", true))
+    , m_playerFrames(loadSpriteSheet(":/images/assets/jibao_walk_sheet.png", 8, 4))
     , m_bossPixmap(loadSprite(":/images/assets/marry_ann.png"))
     , m_forcedChestPixmap(loadSprite(":/images/assets/forced_chest.png", true))
     , m_unforcedChestPixmap(loadSprite(":/images/assets/unforce_chest.png", true))
@@ -99,6 +244,22 @@ MapView::MapView(QWidget *parent)
     setMouseTracking(true);
     setMinimumSize(560, 420);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_playerAnimationTimer.setInterval(16);
+    connect(&m_playerAnimationTimer, &QTimer::timeout, this, [this]() {
+        m_playerAnimationProgress = qMin<qreal>(1.0, m_playerAnimationProgress + 0.16);
+        const qreal eased = 1.0 - qPow(1.0 - m_playerAnimationProgress, 2.0);
+        m_playerVisualPosition = m_playerAnimationStart + (m_playerAnimationEnd - m_playerAnimationStart) * eased;
+        ++m_playerFrameTick;
+        if (m_playerFrameTick % 4 == 0) {
+            m_playerFrameIndex = (m_playerFrameIndex + 1) % 4;
+        }
+        if (m_playerAnimationProgress >= 1.0) {
+            m_playerVisualPosition = m_playerAnimationEnd;
+            m_playerWalking = false;
+            m_playerAnimationTimer.stop();
+        }
+        update();
+    });
 }
 
 void MapView::setLevel(const LevelData *level)
@@ -110,7 +271,27 @@ void MapView::setLevel(const LevelData *level)
 
 void MapView::setPlayerPosition(const QPoint &position)
 {
+    const QPoint previous = m_playerPosition;
     m_playerPosition = position;
+    const QPointF target(position.x(), position.y());
+    if (m_playerVisualPosition == QPointF(0, 0) && previous == QPoint(0, 0)) {
+        m_playerVisualPosition = target;
+    } else if (m_playerVisualPosition != target) {
+        const QPoint delta = position - previous;
+        if (qAbs(delta.x()) > qAbs(delta.y())) {
+            m_playerFacing = delta.x() >= 0 ? 3 : 2;
+        } else if (delta.y() != 0) {
+            m_playerFacing = delta.y() >= 0 ? 0 : 1;
+        }
+        m_playerAnimationStart = m_playerVisualPosition;
+        m_playerAnimationEnd = target;
+        m_playerAnimationProgress = 0.0;
+        m_playerFrameTick = 0;
+        m_playerWalking = true;
+        if (!m_playerAnimationTimer.isActive()) {
+            m_playerAnimationTimer.start();
+        }
+    }
     update();
 }
 
@@ -188,22 +369,7 @@ void MapView::paintEvent(QPaintEvent *event)
         painter.drawRect(selected);
     }
 
-    const QRect playerTile = tileRect(m_playerPosition.y(), m_playerPosition.x());
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(0, 0, 0, 125));
-    painter.drawEllipse(QRect(playerTile.left() + playerTile.width() / 5,
-                              playerTile.bottom() - playerTile.height() / 5,
-                              playerTile.width() * 3 / 5,
-                              playerTile.height() / 5));
-
-    if (!m_playerPixmap.isNull()) {
-        const QRect playerRect = spriteRectInTile(playerTile, m_playerPixmap, 112, 132, -5);
-        painter.drawPixmap(playerRect, m_playerPixmap);
-    } else {
-        painter.setBrush(QColor(255, 211, 91));
-        painter.setPen(QPen(QColor(27, 17, 7), 2));
-        painter.drawEllipse(playerTile.adjusted(8, 4, -8, -4));
-    }
+    drawPlayer(painter);
 }
 
 void MapView::mousePressEvent(QMouseEvent *event)
@@ -221,6 +387,22 @@ void MapView::mousePressEvent(QMouseEvent *event)
 QRect MapView::tileRect(int row, int column) const
 {
     return tileOuterRect(row, column).adjusted(tilePadding, tilePadding, -tilePadding, -tilePadding);
+}
+
+QRect MapView::visualTileRect(const QPointF &position) const
+{
+    if (!m_level || m_level->mapWidth <= 0 || m_level->mapHeight <= 0) {
+        return {};
+    }
+
+    const int tileSize = currentTileSize();
+    const QRect bounds = mapBounds();
+    const QPoint center(bounds.left() + qRound((position.x() + 0.5) * tileSize),
+                        bounds.top() + qRound((position.y() + 0.5) * tileSize));
+    return QRect(center.x() - tileSize / 2 + tilePadding,
+                 center.y() - tileSize / 2 + tilePadding,
+                 tileSize - tilePadding * 2,
+                 tileSize - tilePadding * 2);
 }
 
 QRect MapView::tileOuterRect(int row, int column) const
@@ -466,7 +648,7 @@ void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &ti
         painter.setBrush(QColor(0, 0, 0, 120));
         painter.drawEllipse(QRect(rect.left() + rect.width() / 7, rect.bottom() - rect.height() / 5,
                                   rect.width() * 5 / 7, rect.height() / 5));
-        const QRect spriteRect = spriteRectInTile(rect, m_bossPixmap, 106, 118, -2);
+        const QRect spriteRect = spriteRectInTile(rect, m_bossPixmap, 82, 96, -2);
         painter.drawPixmap(spriteRect, m_bossPixmap);
         return;
     }
@@ -480,7 +662,7 @@ void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &ti
         painter.setBrush(QColor(0, 0, 0, 105));
         painter.drawEllipse(QRect(rect.left() + rect.width() / 4, rect.bottom() - rect.height() / 6,
                                   rect.width() / 2, rect.height() / 7));
-        const QRect spriteRect = spriteRectInTile(rect, sprite, 78, 96, -3);
+        const QRect spriteRect = spriteRectInTile(rect, sprite, 62, 78, -2);
         painter.drawPixmap(spriteRect, sprite);
     }
 }
@@ -532,4 +714,64 @@ void MapView::drawClue(QPainter &painter, const QRect &rect) const
     painter.drawLine(scroll.left() + 8, scroll.center().y(), scroll.right() - 8, scroll.center().y());
     painter.setPen(QPen(QColor(72, 210, 226), 3));
     painter.drawEllipse(scroll.right() - scroll.width() / 4, scroll.top() + 4, 10, 10);
+}
+
+void MapView::drawPlayer(QPainter &painter) const
+{
+    const QRect playerTile = visualTileRect(m_playerVisualPosition);
+    if (playerTile.isEmpty()) {
+        return;
+    }
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(0, 0, 0, 125));
+    painter.drawEllipse(QRect(playerTile.left() + playerTile.width() / 5,
+                              playerTile.bottom() - playerTile.height() / 5,
+                              playerTile.width() * 3 / 5,
+                              playerTile.height() / 5));
+
+    const QPixmap frame = currentPlayerFrame();
+    if (!frame.isNull()) {
+        const QRect playerRect = spriteRectInTile(playerTile, frame, 72, 92, -2);
+        painter.drawPixmap(playerRect, frame);
+        return;
+    }
+
+    if (!m_playerPixmap.isNull()) {
+        const QRect playerRect = spriteRectInTile(playerTile, m_playerPixmap, 72, 92, -2);
+        painter.drawPixmap(playerRect, m_playerPixmap);
+    } else {
+        painter.setBrush(QColor(255, 211, 91));
+        painter.setPen(QPen(QColor(27, 17, 7), 2));
+        painter.drawEllipse(playerTile.adjusted(8, 4, -8, -4));
+    }
+}
+
+QPixmap MapView::currentPlayerFrame() const
+{
+    if (m_playerFrames.size() < 8) {
+        return {};
+    }
+
+    int row = 0;
+    if (m_playerWalking) {
+        // Sheet rows: idle down/up/left/right, walk down/up/right/left.
+        if (m_playerFacing == 0) {
+            row = 4;
+        } else if (m_playerFacing == 1) {
+            row = 5;
+        } else if (m_playerFacing == 2) {
+            row = 7;
+        } else {
+            row = 6;
+        }
+    } else {
+        row = qBound(0, m_playerFacing, 3);
+    }
+
+    if (row < 0 || row >= m_playerFrames.size() || m_playerFrames.at(row).isEmpty()) {
+        return {};
+    }
+    const int frame = m_playerWalking ? m_playerFrameIndex % m_playerFrames.at(row).size() : 0;
+    return m_playerFrames.at(row).at(frame);
 }

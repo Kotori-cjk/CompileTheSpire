@@ -5,7 +5,9 @@
 
 #include <QPixmap>
 #include <QPoint>
+#include <QPointF>
 #include <QSet>
+#include <QTimer>
 #include <QWidget>
 
 class MapView : public QWidget
@@ -31,6 +33,7 @@ protected:
 
 private:
     QRect tileRect(int row, int column) const;
+    QRect visualTileRect(const QPointF &position) const;
     QRect tileOuterRect(int row, int column) const;
     QRect mapBounds() const;
     int currentTileSize() const;
@@ -43,16 +46,28 @@ private:
     void drawObject(QPainter &painter, const QRect &rect, const QString &tileId) const;
     void drawChest(QPainter &painter, const QRect &rect, const QString &tileId) const;
     void drawClue(QPainter &painter, const QRect &rect) const;
+    void drawPlayer(QPainter &painter) const;
+    QPixmap currentPlayerFrame() const;
 
     const LevelData *m_level = nullptr;
     QPoint m_playerPosition = QPoint(0, 0);
+    QPointF m_playerVisualPosition = QPointF(0, 0);
+    QPointF m_playerAnimationStart = QPointF(0, 0);
+    QPointF m_playerAnimationEnd = QPointF(0, 0);
     QPoint m_selectedTile = QPoint(-1, -1);
     QSet<QString> m_openedChests;
     QSet<QString> m_defeatedMonsters;
     QSet<QString> m_collectedClues;
     QVector<QPoint> m_movePath;
     int m_consumedPathCount = 0;
+    QTimer m_playerAnimationTimer;
+    qreal m_playerAnimationProgress = 1.0;
+    int m_playerFrameIndex = 0;
+    int m_playerFrameTick = 0;
+    int m_playerFacing = 0;
+    bool m_playerWalking = false;
     QPixmap m_playerPixmap;
+    QVector<QVector<QPixmap>> m_playerFrames;
     QPixmap m_bossPixmap;
     QPixmap m_forcedChestPixmap;
     QPixmap m_unforcedChestPixmap;
