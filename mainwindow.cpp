@@ -2150,26 +2150,11 @@ void MainWindow::showManualDialog()
         QTextBrowser *codeView = new QTextBrowser(infoPanel);
         codeView->setHtml(renderMonsterCodeHtml(monster));
         codeView->setStyleSheet(
-            "QTextBrowser { background: rgba(9, 16, 28, 220); border: 1px solid rgba(215, 176, 106, 150);"
-            "border-radius: 6px; padding: 8px; color: #f9f1d0; }"
+            "QTextBrowser { background: rgba(7, 12, 20, 218); border: 1px solid rgba(215, 176, 106, 135);"
+            "border-radius: 6px; padding: 4px; color: #f9f1d0; }"
         );
-        codeView->setMinimumHeight(210);
+        codeView->setMinimumHeight(285);
         infoLayout->addWidget(codeView, 1);
-
-        QLabel *spaceTitle = new QLabel("Fill Rules", infoPanel);
-        spaceTitle->setStyleSheet("QLabel { color: #4feaff; font-size: 15px; font-weight: 800; }");
-        infoLayout->addWidget(spaceTitle);
-        QStringList spaceLines;
-        for (const Space &space : monster.spaces) {
-            spaceLines << QString("%1  [%2]  %3")
-                              .arg(space.spaceId,
-                                   space.type.isEmpty() ? "match" : space.type,
-                                   space.values.join(", "));
-        }
-        QLabel *spaces = new QLabel(spaceLines.isEmpty() ? "No fill slot." : spaceLines.join("\n"), infoPanel);
-        spaces->setStyleSheet("QLabel { color: #f6e7bd; font-family: 'Consolas', monospace; font-size: 13px; }");
-        spaces->setWordWrap(true);
-        infoLayout->addWidget(spaces);
 
         QLabel *clueTitle = new QLabel("Clues", infoPanel);
         clueTitle->setStyleSheet("QLabel { color: #4feaff; font-size: 15px; font-weight: 800; }");
@@ -3079,9 +3064,9 @@ QString MainWindow::renderMonsterCodeHtml(const Monster &monster) const
         html.replace(token, QString("<span style=\"%1\">%2</span>").arg(style, value));
     }
     return QString(
-               "<pre style=\"font-family:Consolas,'Cascadia Mono',monospace;"
-               "font-size:15px;line-height:1.45;color:#f9f1d0;background:#111827;"
-               "padding:14px;margin:0;white-space:pre-wrap;tab-size:4;\">%1</pre>")
+               "<pre style=\"font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
+               "font-size:14px;line-height:1.58;color:#fff4cf;background:#0b1320;"
+               "padding:16px 18px;margin:0;white-space:pre-wrap;tab-size:4;\">%1</pre>")
         .arg(html);
 }
 
