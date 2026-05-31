@@ -5,6 +5,7 @@
 
 #include <QLabel>
 #include <QMainWindow>
+#include <QMap>
 #include <QPushButton>
 #include <QSet>
 #include <QString>
@@ -24,6 +25,7 @@ struct UiGameSnapshot
     int row = 0;
     int column = 0;
     QStringList bagBlocks;
+    QMap<QString, CodeBlock> knownCodeBlocks;
     QSet<QString> collectedClues;
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
@@ -88,6 +90,10 @@ private:
     QString renderMonsterCode(const Monster &monster) const;
     QString renderMonsterCodeHtml(const Monster &monster) const;
     QString codeForBlock(const QString &blockId) const;
+    QString typeForBlock(const QString &blockId) const;
+    CodeBlock codeBlockForId(const QString &blockId) const;
+    QString codeBlockIconPath(const QString &blockId) const;
+    CodeBlock synthesizeMonsterBlock(const Monster &monster, const QStringList &blocks) const;
     bool chestHasAvailableBlocks(const QString &chestId) const;
     bool blockMatchesSpace(const QString &blockId, const Space &space) const;
     QStringList splitAnswerBlocks(const QString &text) const;
@@ -99,6 +105,7 @@ private:
     int playerRow = 0;
     int playerColumn = 0;
     QStringList bagBlocks;
+    QMap<QString, CodeBlock> knownCodeBlocks;
     QSet<QString> collectedClues;
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
