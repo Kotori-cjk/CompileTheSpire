@@ -109,14 +109,14 @@ constexpr const char *codeBlockMimeType = "application/x-compile-spire-code-bloc
 class CodeBlockIcon : public QToolButton
 {
 public:
-    explicit CodeBlockIcon(const QString &blockId, QWidget *parent = nullptr)
+    explicit CodeBlockIcon(const QString &blockId, const QString &iconPath, QWidget *parent = nullptr)
         : QToolButton(parent)
         , m_blockId(blockId)
     {
         setFixedSize(74, 74);
         setCursor(Qt::OpenHandCursor);
         setToolButtonStyle(Qt::ToolButtonIconOnly);
-        setIcon(QIcon(":/images/assets/code_ring.png"));
+        setIcon(QIcon(iconPath));
         setIconSize(QSize(62, 62));
         setStyleSheet(
             "QToolButton { background: rgba(7, 13, 19, 185); border: 2px solid #d7b75f; border-radius: 8px; }"
@@ -190,7 +190,7 @@ protected:
         }
 
         setProperty("blockId", blockId);
-        setText(blockId);
+        setText("FILLED");
         refreshStyle(false);
         event->acceptProposedAction();
         if (m_onChanged) {
@@ -1480,6 +1480,7 @@ void MainWindow::resetLevel()
     }
 
     bagBlocks.clear();
+    knownCodeBlocks.clear();
     collectedClues.clear();
     openedChests.clear();
     defeatedMonsters.clear();
@@ -1500,6 +1501,7 @@ void MainWindow::pushUndoState()
     snapshot.row = playerRow;
     snapshot.column = playerColumn;
     snapshot.bagBlocks = bagBlocks;
+    snapshot.knownCodeBlocks = knownCodeBlocks;
     snapshot.collectedClues = collectedClues;
     snapshot.openedChests = openedChests;
     snapshot.defeatedMonsters = defeatedMonsters;
@@ -1518,6 +1520,7 @@ void MainWindow::undo()
     playerRow = snapshot.row;
     playerColumn = snapshot.column;
     bagBlocks = snapshot.bagBlocks;
+    knownCodeBlocks = snapshot.knownCodeBlocks;
     collectedClues = snapshot.collectedClues;
     openedChests = snapshot.openedChests;
     defeatedMonsters = snapshot.defeatedMonsters;
@@ -1992,7 +1995,8 @@ void MainWindow::showBagDialog()
         QToolButton *icon = new QToolButton(board);
         icon->setFixedSize(86, 86);
         icon->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        icon->setIcon(QIcon(":/images/assets/code_ring.png"));
+        icon->setIcon(QIcon(i < codeItems.size() ? codeBlockIconPath(codeItems.at(i).first)
+                                                  : ":/images/assets/natural.png"));
         icon->setIconSize(QSize(70, 70));
         icon->setStyleSheet("QToolButton { background: rgba(31, 23, 16, 210); border: 2px solid #d7b06a; border-radius: 6px; color: #ffe8ad; font-weight: 700; }"
                             "QToolButton:hover { background: rgba(55, 40, 24, 235); border-color: #49e6ff; color: #ffffff; }");
@@ -2402,11 +2406,14 @@ void MainWindow::handleChest(const QString &chestId)
     for (const CodeBlock &block : chest.blocks) {
         QToolButton *blockIcon = new QToolButton(contents);
         blockIcon->setFixedSize(128, 68);
-        blockIcon->setText(block.blockId);
+        blockIcon->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        blockIcon->setIcon(QIcon(codeBlockIconPath(block.blockId)));
+        blockIcon->setIconSize(QSize(58, 58));
+        blockIcon->setToolTip(block.blockId);
         installHoverPopup(blockIcon,
                           QString("<b>%1</b><br><pre>%2</pre>")
                               .arg(block.blockId.toHtmlEscaped(), block.code.toHtmlEscaped()));
-        const bool alreadyPicked = bagBlocks.contains(block.blockId);
+        const bool alreadyPicked = !chest.repeat && bagBlocks.contains(block.blockId);
         blockIcon->setEnabled(!alreadyPicked);
         blockIcon->setStyleSheet(alreadyPicked
                                      ? "QToolButton { background: #20242a; border: 2px solid #5e6470; border-radius: 5px; color: #89909a; font-weight: 700; }"
@@ -2437,9 +2444,12 @@ void MainWindow::handleChest(const QString &chestId)
     if (dialog.exec() == QDialog::Accepted) {
         if (!selectedBlockId.isEmpty()) {
             pushUndoState();
+            knownCodeBlocks[selectedBlockId] = chest.blocks.value(selectedBlockId);
             bagBlocks.append(selectedBlockId);
             picked = selectedBlockId;
-            openedChests.insert(chestId);
+            if (!chest.repeat) {
+                openedChests.insert(chestId);
+            }
         }
         ui->combatLogLabel->setText(picked.isEmpty()
                                         ? "No new block was picked."
@@ -2497,7 +2507,7 @@ void MainWindow::handleMonster(const QString &monsterId)
             const QString blockId = i < blocks.size() ? blocks.at(i) : QString();
             const QString content = blockId.isEmpty()
                                         ? "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                                        : blockId.toHtmlEscaped();
+                                        : codeForBlock(blockId).toHtmlEscaped().replace(" ", "&nbsp;");
             html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), content));
         }
         for (auto it = levels.at(currentLevelIndex).clues.constBegin(); it != levels.at(currentLevelIndex).clues.constEnd(); ++it) {
@@ -2531,7 +2541,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     QPushButton *submitButton = buttons->addButton("Submit fill", QDialogButtonBox::ActionRole);
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &filledBlocks, monster, monsterId]() {
+    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &filledBlocks, &refreshEncounterCode, monster, monsterId]() {
         const QStringList blocks = filledBlocks();
         if (blocks.size() != monster.spaces.size()) {
             QMessageBox::warning(&dialog, "Wrong Fill", QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
@@ -2551,11 +2561,23 @@ void MainWindow::handleMonster(const QString &monsterId)
                 return;
             }
         }
+        pushUndoState();
         defeatedMonsters.insert(monsterId);
         seenMonsters.insert(monsterId);
         if (monsterId == "boss") {
             completedStageIndexes.insert(currentLevelIndex);
+        } else {
+            for (const QString &blockId : blocks) {
+                bagBlocks.removeOne(blockId);
+            }
+            const CodeBlock synthesized = synthesizeMonsterBlock(monster, blocks);
+            if (!synthesized.blockId.isEmpty()) {
+                knownCodeBlocks[synthesized.blockId] = synthesized;
+                bagBlocks.append(synthesized.blockId);
+            }
         }
+        refreshGameUi();
+        refreshEncounterCode();
         ui->combatLogLabel->setText(monsterId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
         dialog.accept();
     });
@@ -2578,10 +2600,12 @@ void MainWindow::handleMonster(const QString &monsterId)
     bagIconRow->setContentsMargins(12, 10, 12, 10);
     bagIconRow->setSpacing(10);
     for (const QString &blockId : bagBlocks) {
-        CodeBlockIcon *blockIcon = new CodeBlockIcon(blockId, bagStrip);
+        CodeBlockIcon *blockIcon = new CodeBlockIcon(blockId, codeBlockIconPath(blockId), bagStrip);
         installHoverPopup(blockIcon,
-                          QString("<b>%1</b><br><pre>%2</pre>")
-                              .arg(blockId.toHtmlEscaped(), codeForBlock(blockId).toHtmlEscaped()));
+                          QString("<b>%1</b><br>Type: %2<br><pre>%3</pre>")
+                              .arg(blockId.toHtmlEscaped(),
+                                   typeForBlock(blockId).toHtmlEscaped(),
+                                   codeForBlock(blockId).toHtmlEscaped()));
         bagIconRow->addWidget(blockIcon);
     }
     bagIconRow->addStretch();
@@ -2628,6 +2652,15 @@ void MainWindow::submitFill()
     seenMonsters.insert(tileId);
     if (tileId == "boss") {
         completedStageIndexes.insert(currentLevelIndex);
+    } else {
+        for (const QString &blockId : blocks) {
+            bagBlocks.removeOne(blockId);
+        }
+        const CodeBlock synthesized = synthesizeMonsterBlock(monster, blocks);
+        if (!synthesized.blockId.isEmpty()) {
+            knownCodeBlocks[synthesized.blockId] = synthesized;
+            bagBlocks.append(synthesized.blockId);
+        }
     }
     ui->answerLineEdit->clear();
     ui->combatLogLabel->setText(tileId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
@@ -2668,6 +2701,9 @@ QString MainWindow::renderMonsterCodeHtml(const Monster &monster) const
 
 QString MainWindow::codeForBlock(const QString &blockId) const
 {
+    if (knownCodeBlocks.contains(blockId)) {
+        return knownCodeBlocks.value(blockId).code;
+    }
     if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
         const LevelData &level = levels.at(currentLevelIndex);
         for (const Chest &chest : level.chests) {
@@ -2679,12 +2715,99 @@ QString MainWindow::codeForBlock(const QString &blockId) const
     return blockId;
 }
 
+QString MainWindow::typeForBlock(const QString &blockId) const
+{
+    const QString type = codeBlockForId(blockId).type.trimmed().toLower();
+    if (type == "class" || type == "function" || type == "natural") {
+        return type;
+    }
+    return "natural";
+}
+
+CodeBlock MainWindow::codeBlockForId(const QString &blockId) const
+{
+    if (knownCodeBlocks.contains(blockId)) {
+        return knownCodeBlocks.value(blockId);
+    }
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        const LevelData &level = levels.at(currentLevelIndex);
+        for (const Chest &chest : level.chests) {
+            if (chest.blocks.contains(blockId)) {
+                return chest.blocks.value(blockId);
+            }
+        }
+    }
+    CodeBlock fallback;
+    fallback.blockId = blockId;
+    fallback.code = blockId;
+    fallback.type = "natural";
+    return fallback;
+}
+
+QString MainWindow::codeBlockIconPath(const QString &blockId) const
+{
+    const QString type = typeForBlock(blockId);
+    if (type == "class") {
+        return ":/images/assets/class.png";
+    }
+    if (type == "function") {
+        return ":/images/assets/function.png";
+    }
+    return ":/images/assets/natural.png";
+}
+
+CodeBlock MainWindow::synthesizeMonsterBlock(const Monster &monster, const QStringList &blocks) const
+{
+    CodeBlock synthesized;
+    if (blocks.size() != monster.spaces.size()) {
+        return synthesized;
+    }
+
+    synthesized.blockId = monster.name.isEmpty() ? monster.monsterId : monster.name;
+    synthesized.blockId += "[";
+    for (int i = 0; i < blocks.size(); ++i) {
+        synthesized.blockId += blocks.at(i);
+        if (i + 1 < blocks.size()) {
+            synthesized.blockId += ",";
+        }
+    }
+    synthesized.blockId += "]";
+    synthesized.type = monster.type;
+
+    Synthesis synthesis = templateBreakdown(monster.codeTemplate);
+    QMap<QString, QString> filledCode;
+    for (int i = 0; i < monster.spaces.size(); ++i) {
+        filledCode[monster.spaces.at(i).spaceId] = codeForBlock(blocks.at(i));
+    }
+
+    for (int i = 0; i < synthesis.text.length(); ++i) {
+        synthesized.code += synthesis.text.at(i);
+        if (i >= synthesis.cell.length()) {
+            continue;
+        }
+        const SynthesisCell cell = synthesis.cell.at(i);
+        if (cell.type == "clue") {
+            synthesized.code += levels.at(currentLevelIndex).clues.value(cell.id).val;
+        } else if (cell.type == "space") {
+            synthesized.code += filledCode.value(cell.id);
+        }
+    }
+
+    if (synthesized.code.isEmpty()) {
+        synthesized.code = renderMonsterCode(monster);
+    }
+    return synthesized;
+}
+
 bool MainWindow::chestHasAvailableBlocks(const QString &chestId) const
 {
     if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return false;
     }
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
+    if (chest.repeat) {
+        return !chest.blocks.isEmpty();
+    }
     for (const CodeBlock &block : chest.blocks) {
         if (!bagBlocks.contains(block.blockId)) {
             return true;
