@@ -453,7 +453,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
         cancelAutoMove(true);
         manualSelectedMonsterId.clear();
-        showManualDialog();
+        refreshManualPage();
+        ui->stackedWidget->setCurrentWidget(ui->manualPage);
     });
 
     connect(ui->manualBackButton, &QPushButton::clicked, this, [this]() {
@@ -1684,18 +1685,35 @@ void MainWindow::refreshBagPage()
 
 void MainWindow::refreshManualPage()
 {
-    ui->deckListWidget->clear();
-    ui->deckListWidget->setStyleSheet("QListWidget#deckListWidget { background: rgba(16, 18, 24, 225); border: 2px solid #485162; border-radius: 6px; padding: 18px; outline: none; }");
-    ui->deckListWidget->setSpacing(8);
+    //---pageInit---
+    ui->manualListWidget->clear();
+    QString manualListStyle =
+        "QListWidget#deckListWidget { "
+        "background: rgba(16, 18, 24, 255); "
+        "border: 2px solid #485162; "
+        "border-radius: 6px; "
+        "padding: 18px; "
+        "outline: none; "
+        "} "
+        "QListWidget#deckListWidget::item { "
+        "padding: 8px 10px; "
+        "border-radius: 4px; "
+        "color: #E0E0E0; "
+        "} "
+        "QListWidget#deckListWidget::item:hover { "
+        "background-color: rgba(72, 81, 98, 150); "
+        "} "
+        "QListWidget#deckListWidget::item:selected { "
+        "background-color: #485162; "
+        "color: white; "
+        "}";
+    ui->manualListWidget->setStyleSheet(manualListStyle);
+    ui->manualListWidget->setSpacing(6);
 
-    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
-        ui->deckTitleLabel->setText("Monster Manual");
-        ui->deckListWidget->addItem("No level data available.");
+    if(currentLevelIndex < 0 || currentLevelIndex > levels.size()){
         return;
     }
-
     const LevelData &level = levels.at(currentLevelIndex);
-    const int listWidth = ui->deckListWidget->viewport()->width() - 24;
 
     // --- detail view ---
     if (!manualSelectedMonsterId.isEmpty()) {
@@ -1888,164 +1906,56 @@ void MainWindow::refreshManualPage()
         root->addStretch();
 
         QListWidgetItem *detailItem = new QListWidgetItem();
-        detailItem->setSizeHint(QSize(listWidth, seen ? 520 : 120));
         detailItem->setFlags(Qt::NoItemFlags);
         ui->deckListWidget->addItem(detailItem);
         ui->deckListWidget->setItemWidget(detailItem, detailCard);
         return;
     }
 
-    // --- list view ---
-    ui->deckTitleLabel->setText("Monster Manual");
-    ui->deckListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-
-    static const QStringList monsterSprites = {
-        ":/images/assets/alice.png", ":/images/assets/cheshire_cat.png",
-        ":/images/assets/dodo.png", ":/images/assets/gerda.png",
-        ":/images/assets/jabberwock.png", ":/images/assets/mabel.png",
-        ":/images/assets/node.png", ":/images/assets/red_hood.png"
-    };
-    auto spritePath = [](const QString &id, bool isBoss) -> QString {
-        if (isBoss) return ":/images/assets/marry_ann.png";
-        return monsterSprites.at(qHash(id) % monsterSprites.size());
-    };
-
-    struct Entry {
-        QString id;
-        QString nickname;
-        QString type;
-        bool isBoss;
-        bool seen;
-        bool defeated;
-    };
-
-    QVector<Entry> entries;
-    for (auto it = level.monsters.constBegin(); it != level.monsters.constEnd(); ++it) {
-        if (it.key() == "boss") continue;
+    //---list view---
+    ui->manualTitleLabel->setText("Monster Manual");
+    ui->manualListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    QString cardStyle =
+        "QFrame {"
+        "background-color: #2b2d30;"
+        "border-radius: 8px;"
+        "border: 1px solid #44474a;"
+        "padding: 5px;"
+        "}";
+    for(auto it = level.monsters.constBegin(); it != level.monsters.constEnd(); ++it){
         const Monster &m = it.value();
-        Entry e;
-        e.id = it.key();
-        e.nickname = m.nickname;
-        e.type = m.type;
-        e.isBoss = false;
-        e.seen = seenMonsters.contains(e.id) || defeatedMonsters.contains(e.id);
-        e.defeated = defeatedMonsters.contains(e.id);
-        entries.append(e);
-    }
-    {
-        Entry e;
-        e.id = "boss";
-        e.nickname = level.boss.nickname;
-        e.type = "boss";
-        e.isBoss = true;
-        e.seen = seenMonsters.contains("boss") || defeatedMonsters.contains("boss");
-        e.defeated = defeatedMonsters.contains("boss");
-        entries.append(e);
-    }
+        const bool isSeen = seenMonsters.contains(m.monsterId) || defeatedMonsters.contains(m.monsterId);
 
-    for (const Entry &entry : entries) {
+        //---init card for monsters---
         QFrame *card = new QFrame();
-        card->setObjectName("manualCard");
-        card->setStyleSheet(
-            "QFrame#manualCard { background: #1a1d26; border: 2px solid #353a47; border-radius: 8px; }"
-        );
+        card->setObjectName(m.nickname);
+        card->setStyleSheet(cardStyle);
 
-        QHBoxLayout *row = new QHBoxLayout(card);
-        row->setContentsMargins(14, 12, 14, 12);
-        row->setSpacing(16);
+        QHBoxLayout *cardLayout = new QHBoxLayout(card);
+        cardLayout->setContentsMargins(8, 8, 8, 8);
+        cardLayout->setSpacing(10);
+        QLabel *iconLabel = new QLabel(card);
+        iconLabel->setFixedSize(64, 64);
+        iconLabel->setScaledContents(true);
+        QString imgPath = ":/images/assets/" + m.pic;
+        iconLabel->setPixmap(imgPath);
+        cardLayout->addWidget(iconLabel);
+        QWidget *textContainer = new QWidget(card);
+        QVBoxLayout *textLayout = new QVBoxLayout(textContainer);
+        textLayout->setContentsMargins(0, 0, 0, 0);
+        textLayout->setSpacing(4);
+        QLabel *nameLabel = new QLabel(m.nickname, textContainer);
+        nameLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #FFFFFF;");
+        QLabel *descLabel = new QLabel(isSeen ? m.name : "???", textContainer);
+        descLabel->setStyleSheet("font-size: 12px; color: #AAAAAA;");
+        textLayout->addWidget(nameLabel);
+        textLayout->addWidget(descLabel);
+        cardLayout->addWidget(textContainer, 1);
 
-        // sprite
-        QLabel *spriteLabel = new QLabel();
-        spriteLabel->setFixedSize(76, 76);
-        spriteLabel->setAlignment(Qt::AlignCenter);
-
-        if (entry.seen) {
-            QPixmap pix(spritePath(entry.id, entry.isBoss));
-            if (!pix.isNull()) {
-                spriteLabel->setPixmap(pix.scaled(68, 68, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            } else {
-                spriteLabel->setText(entry.isBoss ? "BOSS" : "M");
-                spriteLabel->setStyleSheet("color: #d99cff; font-size: 14px; font-weight: bold; background: #2d2040; border-radius: 6px;");
-            }
-        } else {
-            spriteLabel->setText("?");
-            spriteLabel->setStyleSheet("color: #4a4e59; font-size: 32px; font-weight: bold; background: #14161c; border: 2px dashed #2e313a; border-radius: 6px;");
-        }
-        row->addWidget(spriteLabel);
-
-        // info
-        QWidget *infoArea = new QWidget();
-        QVBoxLayout *infoLayout = new QVBoxLayout(infoArea);
-        infoLayout->setContentsMargins(0, 0, 0, 0);
-        infoLayout->setSpacing(3);
-
-        if (!entry.seen) {
-            QLabel *unknown = new QLabel("???");
-            unknown->setStyleSheet("color: #5b5f6b; font-size: 18px; font-weight: bold;");
-            infoLayout->addWidget(unknown);
-            QLabel *hint = new QLabel("Encounter this enemy in the tower to reveal its details.");
-            hint->setStyleSheet("color: #464a55; font-size: 11px;");
-            hint->setWordWrap(true);
-            infoLayout->addWidget(hint);
-        } else {
-            QHBoxLayout *headerRow = new QHBoxLayout();
-            headerRow->setSpacing(8);
-
-            QLabel *nameLabel = new QLabel(entry.nickname.isEmpty() ? entry.id : entry.nickname);
-            nameLabel->setStyleSheet("color: #f1d37c; font-size: 16px; font-weight: bold;");
-            headerRow->addWidget(nameLabel);
-
-            QString typeColor = (entry.type == "function") ? "#5dade2"
-                              : (entry.type == "class") ? "#58d68d"
-                              : "#d99cff";
-            QLabel *typeBadge = new QLabel(entry.type.toUpper());
-            typeBadge->setStyleSheet(QString(
-                "color: %1; font-size: 9px; font-weight: bold;"
-                "background: transparent; border: 1px solid %1;"
-                "border-radius: 3px; padding: 1px 6px;"
-            ).arg(typeColor));
-            headerRow->addWidget(typeBadge);
-
-            if (entry.defeated) {
-                QLabel *defBadge = new QLabel("DEFEATED");
-                defBadge->setStyleSheet(
-                    "color: #f6d878; font-size: 9px; font-weight: bold;"
-                    "background: transparent; border: 1px solid #f6d878;"
-                    "border-radius: 3px; padding: 1px 6px;"
-                );
-                headerRow->addWidget(defBadge);
-            }
-
-            headerRow->addStretch();
-            infoLayout->addLayout(headerRow);
-
-            // brief code preview
-            const Monster &m = level.monsters[entry.id];
-            QString brief = renderMonsterCode(m);
-            // trim to a reasonable preview length
-            if (brief.length() > 120) {
-                brief = brief.left(117) + "...";
-            }
-            QLabel *codePreview = new QLabel(brief);
-            codePreview->setWordWrap(true);
-            codePreview->setTextFormat(Qt::PlainText);
-            codePreview->setStyleSheet(
-                "color: #9098a8; font-family: 'Consolas', 'Cascadia Mono', monospace;"
-                "font-size: 11px; background: #14161d; border: 1px solid #232730;"
-                "border-radius: 3px; padding: 5px 8px;"
-            );
-            infoLayout->addWidget(codePreview);
-        }
-
-        infoLayout->addStretch();
-        row->addWidget(infoArea, 1);
-
-        QListWidgetItem *item = new QListWidgetItem();
-        item->setSizeHint(QSize(listWidth, entry.seen ? 100 : 76));
-        item->setData(Qt::UserRole, entry.id);
-        item->setFlags(entry.seen ? Qt::ItemIsSelectable : Qt::NoItemFlags);
-        ui->deckListWidget->addItem(item);
-        ui->deckListWidget->setItemWidget(item, card);
+        QListWidgetItem *item = new QListWidgetItem(ui->manualListWidget);
+        item->setSizeHint(card->sizeHint());
+        ui->manualListWidget->setItemWidget(item, card);
+        item->setData(Qt::UserRole, m.monsterId);
     }
 }
 
