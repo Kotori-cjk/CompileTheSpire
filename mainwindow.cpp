@@ -1688,29 +1688,29 @@ void MainWindow::refreshManualPage()
     //---pageInit---
     ui->manualListWidget->clear();
     QString manualListStyle =
-        "QListWidget#deckListWidget { "
+        "QListWidget#manualListWidget { "
         "background: rgba(16, 18, 24, 255); "
         "border: 2px solid #485162; "
         "border-radius: 6px; "
         "padding: 18px; "
         "outline: none; "
         "} "
-        "QListWidget#deckListWidget::item { "
+        "QListWidget#manualListWidget::item { "
         "padding: 8px 10px; "
         "border-radius: 4px; "
         "color: #E0E0E0; "
         "} "
-        "QListWidget#deckListWidget::item:hover { "
+        "QListWidget#manualListWidget::item:hover { "
         "background-color: rgba(72, 81, 98, 150); "
         "} "
-        "QListWidget#deckListWidget::item:selected { "
+        "QListWidget#manualListWidget::item:selected { "
         "background-color: #485162; "
         "color: white; "
         "}";
     ui->manualListWidget->setStyleSheet(manualListStyle);
     ui->manualListWidget->setSpacing(6);
 
-    if(currentLevelIndex < 0 || currentLevelIndex > levels.size()){
+    if(currentLevelIndex < 0 || currentLevelIndex >= levels.size()){
         return;
     }
     const LevelData &level = levels.at(currentLevelIndex);
@@ -1729,7 +1729,7 @@ void MainWindow::refreshManualPage()
                        || defeatedMonsters.contains(manualSelectedMonsterId);
         const bool defeated = defeatedMonsters.contains(manualSelectedMonsterId);
 
-        ui->deckTitleLabel->setText(seen ? (m.nickname.isEmpty() ? m.name : m.nickname) : "???");
+        ui->manualTitleLabel->setText(seen ? (m.nickname.isEmpty() ? m.name : m.nickname) : "???");
 
         QFrame *detailCard = new QFrame();
         detailCard->setObjectName("manualDetailCard");
@@ -1756,20 +1756,11 @@ void MainWindow::refreshManualPage()
             QHBoxLayout *headerRow = new QHBoxLayout();
             headerRow->setSpacing(18);
 
-            static const QStringList monsterSprites = {
-                ":/images/assets/alice.png", ":/images/assets/cheshire_cat.png",
-                ":/images/assets/dodo.png", ":/images/assets/gerda.png",
-                ":/images/assets/jabberwock.png", ":/images/assets/mabel.png",
-                ":/images/assets/node.png", ":/images/assets/red_hood.png"
-            };
-            QString spriteFile = isBoss
-                ? QString(":/images/assets/marry_ann.png")
-                : monsterSprites.at(qHash(manualSelectedMonsterId) % monsterSprites.size());
-
             QLabel *spriteLabel = new QLabel();
             spriteLabel->setFixedSize(112, 112);
             spriteLabel->setAlignment(Qt::AlignCenter);
-            QPixmap pix(spriteFile);
+            spriteLabel->setScaledContents(true);
+            QPixmap pix(":/images/assets/" + m.pic);
             if (!pix.isNull()) {
                 spriteLabel->setPixmap(pix.scaled(104, 104, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             } else {
@@ -1907,8 +1898,8 @@ void MainWindow::refreshManualPage()
 
         QListWidgetItem *detailItem = new QListWidgetItem();
         detailItem->setFlags(Qt::NoItemFlags);
-        ui->deckListWidget->addItem(detailItem);
-        ui->deckListWidget->setItemWidget(detailItem, detailCard);
+        ui->manualListWidget->addItem(detailItem);
+        ui->manualListWidget->setItemWidget(detailItem, detailCard);
         return;
     }
 
@@ -1938,7 +1929,7 @@ void MainWindow::refreshManualPage()
         iconLabel->setFixedSize(64, 64);
         iconLabel->setScaledContents(true);
         QString imgPath = ":/images/assets/" + m.pic;
-        iconLabel->setPixmap(imgPath);
+        iconLabel->setPixmap(QPixmap(imgPath));
         cardLayout->addWidget(iconLabel);
         QWidget *textContainer = new QWidget(card);
         QVBoxLayout *textLayout = new QVBoxLayout(textContainer);
