@@ -127,6 +127,12 @@ bool GameEngine::fillSpace(const QString& spaceId,const QString& blockId){
             break;
         }
     }
+    if(m_combat->isFilled(spaceId)){
+        const auto& map=m_combat->filledCodes();
+        CodeBlock old=map[spaceId];
+        m_bag->bagAdd(old);
+    }
+    m_bag->bagRemove(blockId);
     return m_combat->submitBlock(spc,tblock);
 }
 bool GameEngine::revealClue(const QString& clueId){
@@ -165,6 +171,9 @@ bool GameEngine::takeFromChest(const QString& chestId,const QString& blockId){
 }
 bool GameEngine::exitCombat(){
     if(m_combat!=nullptr){
+        for(const auto& block:m_combat->filledCodes()){
+            m_bag->bagAdd(block);
+        }
         delete m_combat;
         m_combat=nullptr;
         snapshotStack.removeLast();

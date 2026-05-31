@@ -66,6 +66,7 @@ QMap<QString,Chest> LevelData::parseChests(const QJsonObject &chestsObj){
             CodeBlock tmpblock;
             tmpblock.blockId=BlockId;
             tmpblock.code=blocks_j[BlockId].toString();
+            tmpblock.type="natural";
             blocks[BlockId]=tmpblock;
         }
         tmp.blocks=blocks;
