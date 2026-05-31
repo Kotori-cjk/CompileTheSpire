@@ -139,6 +139,7 @@ body { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; background: #1a1a
 .cell.type-wall { background: #2c2c2c; cursor: default; }
 .cell.type-empty { background: #1b1b2f; }
 .cell.selected { border-color: #e94560; box-shadow: 0 0 8px rgba(233,69,96,0.6); transform: scale(1.08); z-index: 1; }
+	.cell.swap-source { border-color: #49e6ff; box-shadow: 0 0 12px rgba(73,230,255,0.8); transform: scale(1.08); z-index: 1; }
 
 /* 属性面板 */
 #prop-panel h3 { font-size: 14px; margin-bottom: 8px; color: #e94560; }
@@ -261,6 +262,7 @@ let state = {
 
 let selectedRow = -1, selectedCol = -1;
 let selectedBlockKey = null; // for index panel → blocks tab detail
+let swapMode = null; // { row, col } for grid cell swap
 // Predefined tags – user can add custom
 let knownTags = ['stacked_bag'];
 
@@ -441,16 +443,6 @@ function generateName(type, keepName) {
   return type + '_' + (count + 1);
 }
 
-function renumberAll() {
-  const counters = {};
-  for (const k in state.cells) {
-    const c = state.cells[k];
-    if (['chest', 'monster', 'clue'].includes(c.type)) {
-      counters[c.type] = (counters[c.type] || 0) + 1;
-      c.name = c.type + '_' + counters[c.type];
-    }
-  }
-}
 
 function cellDisplay(cell) {
   if (cell.type === 'empty') return { icon: '·', label: '' };
@@ -485,6 +477,8 @@ function renderGrid() {
       if (r === selectedRow && c === selectedCol) div.classList.add('selected');
       div.innerHTML = `<span style="font-size:${window._cellIconSize||22}px">${d.icon}</span><span style="font-size:${window._cellLblSize||11}px;color:#fff;font-weight:bold;margin-top:2px">${d.label}</span>`;
       div.onclick = () => selectCell(r, c);
+      div.ondblclick = () => enterSwapMode(r, c);
+      if (swapMode && swapMode.row === r && swapMode.col === c) div.classList.add('swap-source');
       container.appendChild(div);
     }
   }
@@ -510,8 +504,7 @@ function updateGrid() {
   state.map_height = h;
   selectedRow = -1;
   selectedCol = -1;
-  renumberAll();
-  renderGrid();
+    renderGrid();
   renderPropPanel();
   renderBlockPanel();
   saveState();
@@ -519,11 +512,58 @@ function updateGrid() {
 
 // ==================== SELECTION ====================
 function selectCell(r, c) {
+  if (swapMode) {
+    if (r === swapMode.row && c === swapMode.col) {
+      swapMode = null;
+    } else {
+      const k1 = cellKey(swapMode.row, swapMode.col);
+      const k2 = cellKey(r, c);
+      const tmp = state.cells[k1];
+      state.cells[k1] = state.cells[k2];
+      state.cells[k2] = tmp;
+      swapMode = null;
+            saveState();
+    }
+    selectedRow = r; selectedCol = c;
+    renderGrid(); renderPropPanel(); renderBlockPanel();
+    return;
+  }
   selectedRow = r;
   selectedCol = c;
   renderGrid();
   renderPropPanel();
 }
+
+function enterSwapMode(r, c) {
+  swapMode = { row: r, col: c };
+  selectedRow = r; selectedCol = c;
+  renderGrid(); renderPropPanel();
+}
+
+// Number key cell type switching (Feature 1)
+document.addEventListener('keydown', function(e) {
+  if (selectedRow < 0 || selectedCol < 0) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 7) {
+    const newType = CELL_TYPES[num - 1];
+    if (!newType) return;
+    const cell = state.cells[cellKey(selectedRow, selectedCol)];
+    if (!cell) return;
+    if (cell.type !== 'empty' && cell.type !== 'wall' && cell.type !== newType) {
+      if (!confirm('确定将 (' + selectedRow + ',' + selectedCol + ') 从 ' + TYPE_LABELS[cell.type] + ' 改为 ' + TYPE_LABELS[newType] + '？(内容会重置)')) return;
+    }
+    onCellTypeChange(newType);
+  }
+});
+
+// Swap mode cancel on Escape
+document.addEventListener('keydown', function(e2) {
+  if (e2.key === 'Escape' && swapMode) {
+    swapMode = null;
+    renderGrid();
+  }
+});
 
 // ==================== PROPERTY PANEL ====================
 function renderPropPanel() {
@@ -567,16 +607,28 @@ function renderPropPanel() {
 
 function onCellTypeChange(newType) {
   if (selectedRow < 0 || selectedCol < 0) return;
-  if (newType === 'start') {
-    // Only one start allowed: clear any existing start
+  if (newType === 'start' || newType === 'boss') {
     for (const k in state.cells) {
-      if (state.cells[k].type === 'start') {
+      if (state.cells[k].type === newType) {
+        if (newType === 'boss') {
+          // Preserve old boss data to transfer to new position
+          state._oldBoss = Object.assign({}, state.cells[k]);
+        }
         state.cells[k] = { type: 'empty', name: 'empty' };
       }
     }
   }
   setCell(selectedRow, selectedCol, newType);
-  renumberAll();
+  if (newType === 'boss' && state._oldBoss) {
+    const newCell = state.cells[cellKey(selectedRow, selectedCol)];
+    newCell.pic = state._oldBoss.pic || '';
+    newCell.nickname = state._oldBoss.nickname || '';
+    newCell.code = state._oldBoss.code || '';
+    newCell.input = state._oldBoss.input || '';
+    newCell.output = state._oldBoss.output || '';
+    newCell.spaces = state._oldBoss.spaces || {};
+    delete state._oldBoss;
+  }
   renderGrid();
   renderPropPanel();
   renderBlockPanel();
@@ -587,10 +639,13 @@ function updateCellProp(key, value) {
   if (selectedRow < 0 || selectedCol < 0) return;
   const cell = state.cells[cellKey(selectedRow, selectedCol)];
   if (!cell) return;
-  // Handle boolean from checkbox
   if (typeof cell[key] === 'boolean') cell[key] = (value === 'true' || value === true);
   else if (typeof cell[key] === 'number') cell[key] = parseInt(value) || 0;
   else cell[key] = value;
+  // Sync code editor if this field is currently being edited
+  if (codeTarget && codeTarget.cellKey === cellKey(selectedRow, selectedCol) && codeTarget.field === key) {
+    document.getElementById('code-editor').value = value;
+  }
 }
 
 // ---- Chest ----
@@ -640,11 +695,25 @@ function updateBlock(idx, field, value) {
   if (field === 'key' && value !== oldKey) {
     cell.blocks[value] = cell.blocks[oldKey];
     delete cell.blocks[oldKey];
+    // Update editor tabs for renamed block
+    const oldTabId = 'block|' + cell.name + '|' + oldKey;
+    const newTabId = 'block|' + cell.name + '|' + value;
+    editorTabs.forEach(t => {
+      if (t.id === oldTabId) {
+        t.id = newTabId;
+        t.label = value;
+        t.target.blockKey = value;
+        if (activeEditorTabId === oldTabId) activeEditorTabId = newTabId;
+      }
+    });
+    // Also update selectedBlockKey if pointing to old name
+    if (selectedBlockKey === oldKey) selectedBlockKey = value;
   } else {
     cell.blocks[oldKey] = value;
   }
   renderPropPanel();
   renderBlockPanel();
+  renderEditorTabs();
   saveState();
 }
 
@@ -780,7 +849,7 @@ function bossFields(cell) {
   h += `<label>图片路径</label><input type="text" value="${esc(cell.pic || '')}" onchange="updateCellProp('pic', this.value);saveState()" placeholder="pics\\boss.png">`;
   h += `<label>代码模板 <span style="font-size:10px;color:#e0c060">(点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','code',this.value)" onchange="updateCellProp('code', this.value);saveState()" onkeydown="handleCodeKeydown(event)" placeholder="$space1$\n$space2$\nint main(){...}">${esc(cell.code || '')}</textarea>`;
   h += `<label>测试输入</label><input type="text" value="${esc(cell.input || '')}" onchange="updateCellProp('input', this.value);saveState()" placeholder="1">`;
-  h += `<label>预期输出</label><input type="text" value="${esc(cell.output || '')}" onchange="updateCellProp('output', this.value);saveState()" placeholder="5">`;
+  h += `<label>预期输出 <span style="font-size:10px;color:#e0c060">(换行可用\\n，点击在右侧编辑)</span></label><textarea onfocus="focusCodeField('${cellKey(selectedRow,selectedCol)}','output',this.value)" onchange="updateCellProp('output', this.value);saveState()" onkeydown="handleCodeKeydown(event)" placeholder="5" style="height:60px;font-family:Consolas,monospace;font-size:12px;background:#0f3460;color:#8be0e0;border:1px solid #533483;border-radius:3px;padding:4px 6px;resize:vertical;width:100%;margin:3px 0 8px">${esc(cell.output || '')}</textarea>`;
   h += `<label>Spaces (与 monster 的 space 格式一致，match 类型用 refName[blockKey,...])</label>`;
   h += `<div id="spaces-container">`;
   const spKeys = Object.keys(cell.spaces || {});
@@ -1538,14 +1607,17 @@ function showResolvedPreview() {
   const ta = document.getElementById('code-editor');
   if (!ta) return;
   savedEditorValue = ta.value;
-  const lines = ta.value.split('\n');
+  // Resolve \\t and \\n escape sequences for preview
+  let resolved = ta.value.replace(/\\t/g, '\t').replace(/\\n/g, '\n');
+  const lines = resolved.split('\n');
   const out = [];
   for (const line of lines) {
-    const indent = (line.match(/^\t*/) || [''])[0];
+    const indent = (line.match(/^[\t ]*/) || [''])[0];
     const result = line.replace(/\$(clue_\w+)\$/g, (match, name) => {
       const clue = Object.values(state.cells).find(c => c.type === 'clue' && c.name === name);
       if (!clue || !clue.value) return match;
-      const cLines = clue.value.split('\n');
+      let cVal = clue.value.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+      const cLines = cVal.split('\n');
       if (cLines.length === 1) return '▶' + cLines[0] + '◀';
       let r = '▶' + cLines[0];
       for (let i = 1; i < cLines.length; i++) {
@@ -1641,8 +1713,7 @@ function exportJson() {
   state.bag_size = parseInt(document.getElementById('bag_size').value) || 2;
   state.end_text = document.getElementById('end_text').value;
 
-  renumberAll();
-
+  
   // Build map_grid, collect entities, and find start position
   const entityCells = {};  // name -> cell
   let startPos = null;
