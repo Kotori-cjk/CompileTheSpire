@@ -7,16 +7,21 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QDrag>
 #include <QEvent>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QListWidgetItem>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QMouseEvent>
 #include <QPixmap>
 #include <QQueue>
 #include <QRegularExpression>
+#include <QScrollArea>
 #include <QSlider>
 #include <QStyle>
 #include <QTextEdit>
@@ -24,6 +29,8 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
+
+#include <functional>
 
 namespace {
 void clearLayout(QLayout *layout)
@@ -96,6 +103,115 @@ QString codeTokenStyle()
            "color:#baf8ff;"
            "font-weight:700;";
 }
+
+constexpr const char *codeBlockMimeType = "application/x-compile-spire-code-block";
+
+class CodeBlockIcon : public QToolButton
+{
+public:
+    explicit CodeBlockIcon(const QString &blockId, QWidget *parent = nullptr)
+        : QToolButton(parent)
+        , m_blockId(blockId)
+    {
+        setFixedSize(74, 74);
+        setCursor(Qt::OpenHandCursor);
+        setToolButtonStyle(Qt::ToolButtonIconOnly);
+        setIcon(QIcon(":/images/assets/code_ring.png"));
+        setIconSize(QSize(62, 62));
+        setStyleSheet(
+            "QToolButton { background: rgba(7, 13, 19, 185); border: 2px solid #d7b75f; border-radius: 8px; }"
+            "QToolButton:hover { background: rgba(18, 45, 55, 220); border-color: #49e6ff; }"
+        );
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() != Qt::LeftButton) {
+            QToolButton::mousePressEvent(event);
+            return;
+        }
+
+        QDrag *drag = new QDrag(this);
+        QMimeData *mime = new QMimeData();
+        mime->setData(codeBlockMimeType, m_blockId.toUtf8());
+        mime->setText(m_blockId);
+        drag->setMimeData(mime);
+
+        QPixmap pixmap = icon().pixmap(iconSize());
+        drag->setPixmap(pixmap);
+        drag->setHotSpot(QPoint(pixmap.width() / 2, pixmap.height() / 2));
+        drag->exec(Qt::CopyAction);
+    }
+
+private:
+    QString m_blockId;
+};
+
+class CodeDropSlot : public QLabel
+{
+public:
+    explicit CodeDropSlot(QWidget *parent = nullptr)
+        : QLabel(parent)
+    {
+        setAcceptDrops(true);
+        setAlignment(Qt::AlignCenter);
+        setMinimumSize(132, 42);
+        setProperty("blockId", QString());
+        setText("DROP");
+        refreshStyle(false);
+    }
+
+    void setOnChanged(std::function<void()> callback)
+    {
+        m_onChanged = std::move(callback);
+    }
+
+protected:
+    void dragEnterEvent(QDragEnterEvent *event) override
+    {
+        if (event->mimeData()->hasFormat(codeBlockMimeType)) {
+            event->acceptProposedAction();
+            refreshStyle(true);
+        }
+    }
+
+    void dragLeaveEvent(QDragLeaveEvent *event) override
+    {
+        refreshStyle(false);
+        QLabel::dragLeaveEvent(event);
+    }
+
+    void dropEvent(QDropEvent *event) override
+    {
+        const QString blockId = QString::fromUtf8(event->mimeData()->data(codeBlockMimeType)).trimmed();
+        if (blockId.isEmpty()) {
+            return;
+        }
+
+        setProperty("blockId", blockId);
+        setText(blockId);
+        refreshStyle(false);
+        event->acceptProposedAction();
+        if (m_onChanged) {
+            m_onChanged();
+        }
+    }
+
+private:
+    void refreshStyle(bool hovered)
+    {
+        const bool filled = !property("blockId").toString().isEmpty();
+        const QString border = hovered ? "#49e6ff" : (filled ? "#d7b75f" : "#526170");
+        const QString background = filled ? "rgba(10, 38, 47, 225)" : "rgba(12, 18, 26, 215)";
+        setStyleSheet(QString(
+            "QLabel { color: %1; background: %2; border: 2px solid %3; border-radius: 7px;"
+            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 13px; font-weight: 700; padding: 4px 10px; }"
+        ).arg(filled ? "#f9f1d0" : "#6f7f8b", background, border));
+    }
+
+    std::function<void()> m_onChanged;
+};
 
 class HoverPopupFilter : public QObject
 {
@@ -332,12 +448,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(resetRunButton, &QPushButton::clicked, this, [this]() {
         resetLevel();
-    });
-
-    connect(handbookButton, &QPushButton::clicked, this, [this]() {
-        cancelAutoMove(true);
-        manualSelectedMonsterId.clear();
-        showManualDialog();
     });
 
     connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
@@ -981,13 +1091,17 @@ void MainWindow::buildRuntimeGameUi()
 
     ui->hpLabel->setText("Mode: Explore");
     ui->deckButton->setText("Bag");
-    ui->mapButton->setText("Manual");
-    ui->nextChallengeButton->setText("Undo");
+    ui->manualButton->setText("Manual");
     ui->challengeTitleLabel->setText("Interaction");
     ui->answerLabel->setText("Blocks");
     ui->answerLineEdit->setPlaceholderText("Example: block_add1, block_mul2");
     ui->submitAnswerButton->setText("Fill");
     ui->challengeFrame->hide();
+    ui->mapButton->hide();
+    ui->combatLogLabel->hide();
+    ui->nextChallengeButton->hide();
+    ui->bottomBarLayout->setStretch(0, 1);
+    ui->bottomBarLayout->setStretch(1, 1);
 
     ui->mapTitleLabel->hide();
     ui->mapLayout->setContentsMargins(28, 22, 28, 20);
@@ -1128,9 +1242,6 @@ void MainWindow::buildRuntimeGameUi()
     resetRunButton = new QPushButton("Reset", ui->topBarFrame);
     ui->topBarLayout->insertWidget(ui->topBarLayout->count() - 1, resetRunButton);
 
-    handbookButton = new QPushButton("Manual", ui->bottomBarFrame);
-    ui->bottomBarLayout->insertWidget(2, handbookButton);
-    ui->mapButton->hide();
 }
 
 void MainWindow::positionMainMenuButtons()
@@ -1970,16 +2081,39 @@ void MainWindow::showBagDialog()
     for (int i = 0; i < iconSlots; ++i) {
         QToolButton *icon = new QToolButton(board);
         icon->setFixedSize(86, 86);
-        icon->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        icon->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        icon->setIcon(QIcon(":/images/assets/code_ring.png"));
+        icon->setIconSize(QSize(70, 70));
         icon->setStyleSheet("QToolButton { background: rgba(31, 23, 16, 210); border: 2px solid #d7b06a; border-radius: 6px; color: #ffe8ad; font-weight: 700; }"
                             "QToolButton:hover { background: rgba(55, 40, 24, 235); border-color: #49e6ff; color: #ffffff; }");
         if (i < codeItems.size()) {
-            icon->setText(codeItems.at(i).first);
-            installHoverPopup(icon,
-                              QString("<b>%1</b><br><pre>%2</pre>")
-                                  .arg(codeItems.at(i).first.toHtmlEscaped(),
-                                       codeItems.at(i).second.toHtmlEscaped()));
+            const QString blockId = codeItems.at(i).first;
+            const QString code = codeItems.at(i).second;
+            icon->setToolTip(blockId);
+            connect(icon, &QToolButton::clicked, &dialog, [&dialog, blockId, code]() {
+                QDialog detail(&dialog);
+                detail.setWindowTitle(blockId);
+                QVBoxLayout *detailLayout = new QVBoxLayout(&detail);
+                QLabel *name = new QLabel(blockId, &detail);
+                QFont nameFont = name->font();
+                nameFont.setPointSize(16);
+                nameFont.setBold(true);
+                name->setFont(nameFont);
+                name->setAlignment(Qt::AlignCenter);
+                QTextBrowser *codeView = new QTextBrowser(&detail);
+                codeView->setReadOnly(true);
+                codeView->setHtml(QString("<pre style=\"font-family:Consolas; font-size:15px; color:#f9f1d0; background:#111827; padding:14px;\">%1</pre>")
+                                      .arg(code.toHtmlEscaped()));
+                QDialogButtonBox *close = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
+                QObject::connect(close, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
+                detailLayout->addWidget(name);
+                detailLayout->addWidget(codeView);
+                detailLayout->addWidget(close);
+                detail.resize(520, 360);
+                detail.exec();
+            });
         } else {
+            icon->setIcon(QIcon());
             icon->setText("-");
             icon->setEnabled(false);
         }
@@ -2266,8 +2400,7 @@ bool MainWindow::hasTileEvent(const QString &tileId) const
     }
     if (tileId.startsWith("chest")) {
         if (openedChests.contains(tileId)) {
-            const Chest chest = levels.at(currentLevelIndex).chests.value(tileId);
-            return chest.repeat && chestHasAvailableBlocks(tileId);
+            return false;
         }
         return chestHasAvailableBlocks(tileId);
     }
@@ -2396,9 +2529,6 @@ void MainWindow::handleChest(const QString &chestId)
             pushUndoState();
             bagBlocks.append(selectedBlockId);
             picked = selectedBlockId;
-        }
-
-        if (!chest.repeat || !chestHasAvailableBlocks(chestId)) {
             openedChests.insert(chestId);
         }
         ui->combatLogLabel->setText(picked.isEmpty()
@@ -2436,20 +2566,72 @@ void MainWindow::handleMonster(const QString &monsterId)
     hero->setPixmap(QPixmap(":/images/assets/jibao.png").scaled(hero->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     QTextBrowser *codeView = new QTextBrowser(&dialog);
     codeView->setReadOnly(true);
-    codeView->setHtml(renderMonsterCodeHtml(monster));
-    QLineEdit *answerEdit = new QLineEdit(&dialog);
-    answerEdit->setPlaceholderText("block_add1, block_mul2");
+    codeView->setMinimumHeight(270);
+
+    QVector<CodeDropSlot *> fillSlots;
+    auto filledBlocks = [&fillSlots]() {
+        QStringList blocks;
+        for (const CodeDropSlot *slot : fillSlots) {
+            blocks << slot->property("blockId").toString();
+        }
+        return blocks;
+    };
+    auto renderEncounterCode = [this, monster, &filledBlocks]() {
+        QString html = monster.codeTemplate.toHtmlEscaped();
+        html.replace('\n', "<br>");
+        html.replace(' ', "&nbsp;");
+        const QStringList blocks = filledBlocks();
+        for (int i = 0; i < monster.spaces.size(); ++i) {
+            const Space &space = monster.spaces.at(i);
+            const QString token = QString("$%1$").arg(space.spaceId).toHtmlEscaped();
+            const QString blockId = i < blocks.size() ? blocks.at(i) : QString();
+            const QString content = blockId.isEmpty()
+                                        ? "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                                        : blockId.toHtmlEscaped();
+            html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), content));
+        }
+        for (auto it = levels.at(currentLevelIndex).clues.constBegin(); it != levels.at(currentLevelIndex).clues.constEnd(); ++it) {
+            const QString token = QString("$%1$").arg(it.key()).toHtmlEscaped();
+            const bool unlocked = collectedClues.contains(it.key());
+            const QString value = unlocked ? it.value().val.toHtmlEscaped() : QString("display(hidden)");
+            html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), value));
+        }
+        return QString("<div style=\"font-family:Consolas,monospace;font-size:15px;color:#f9f1d0;background:#111827;padding:14px;\">%1</div>").arg(html);
+    };
+    auto refreshEncounterCode = [&]() {
+        codeView->setHtml(renderEncounterCode());
+    };
+
+    QFrame *slotPanel = new QFrame(&dialog);
+    slotPanel->setStyleSheet("QFrame { background: rgba(13, 18, 25, 235); border: 1px solid #3a4658; border-radius: 7px; }");
+    QHBoxLayout *slotLayout = new QHBoxLayout(slotPanel);
+    slotLayout->setContentsMargins(12, 10, 12, 10);
+    slotLayout->setSpacing(10);
+    for (int i = 0; i < monster.spaces.size(); ++i) {
+        CodeDropSlot *slot = new CodeDropSlot(slotPanel);
+        slot->setToolTip(monster.spaces.at(i).spaceId);
+        slot->setOnChanged(refreshEncounterCode);
+        fillSlots.append(slot);
+        slotLayout->addWidget(slot);
+    }
+    slotLayout->addStretch();
+    refreshEncounterCode();
+
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
     QPushButton *submitButton = buttons->addButton("Submit fill", QDialogButtonBox::ActionRole);
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, answerEdit, monster, monsterId]() {
-        const QStringList blocks = splitAnswerBlocks(answerEdit->text());
+    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &filledBlocks, monster, monsterId]() {
+        const QStringList blocks = filledBlocks();
         if (blocks.size() != monster.spaces.size()) {
             QMessageBox::warning(&dialog, "Wrong Fill", QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
             return;
         }
         for (int i = 0; i < blocks.size(); ++i) {
+            if (blocks.at(i).isEmpty()) {
+                QMessageBox::warning(&dialog, "Wrong Fill", QString("Fill %1 first.").arg(monster.spaces.at(i).spaceId));
+                return;
+            }
             if (!bagBlocks.contains(blocks.at(i)) && monsterId != "boss") {
                 QMessageBox::warning(&dialog, "Wrong Fill", QString("%1 is not in your bag.").arg(blocks.at(i)));
                 return;
@@ -2472,21 +2654,31 @@ void MainWindow::handleMonster(const QString &monsterId)
     combatTop->addWidget(codeView, 1);
     layout->addWidget(title);
     layout->addLayout(combatTop);
-    QHBoxLayout *bagIconRow = new QHBoxLayout();
+
+    layout->addWidget(slotPanel);
+
+    QScrollArea *bagScroll = new QScrollArea(&dialog);
+    bagScroll->setWidgetResizable(true);
+    bagScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    bagScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    bagScroll->setFixedHeight(100);
+    bagScroll->setStyleSheet("QScrollArea { background: rgba(9, 13, 18, 230); border: 1px solid #354255; border-radius: 7px; }");
+    QWidget *bagStrip = new QWidget(bagScroll);
+    QHBoxLayout *bagIconRow = new QHBoxLayout(bagStrip);
+    bagIconRow->setContentsMargins(12, 10, 12, 10);
+    bagIconRow->setSpacing(10);
     for (const QString &blockId : bagBlocks) {
-        QToolButton *blockIcon = new QToolButton(&dialog);
-        blockIcon->setFixedSize(96, 54);
-        blockIcon->setText(blockId);
+        CodeBlockIcon *blockIcon = new CodeBlockIcon(blockId, bagStrip);
         installHoverPopup(blockIcon,
                           QString("<b>%1</b><br><pre>%2</pre>")
                               .arg(blockId.toHtmlEscaped(), codeForBlock(blockId).toHtmlEscaped()));
         bagIconRow->addWidget(blockIcon);
     }
     bagIconRow->addStretch();
-    layout->addLayout(bagIconRow);
-    layout->addWidget(answerEdit);
+    bagScroll->setWidget(bagStrip);
+    layout->addWidget(bagScroll);
     layout->addWidget(buttons);
-    dialog.resize(620, 520);
+    dialog.resize(760, 620);
     dialog.exec();
     returnToPreviousTile();
 }
