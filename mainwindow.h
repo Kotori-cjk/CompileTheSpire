@@ -26,6 +26,7 @@ struct UiGameSnapshot
     int column = 0;
     QStringList bagBlocks;
     QMap<QString, CodeBlock> knownCodeBlocks;
+    QMap<QString, QSet<QString>> remainingChestBlocks;
     QSet<QString> collectedClues;
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
@@ -68,6 +69,7 @@ private:
     void refreshManualPage();
     void showBagDialog();
     void showManualDialog();
+    void showVictorySettlement();
 
     void movePlayer(int rowDelta, int columnDelta);
     void movePlayerTo(int targetRow, int targetColumn);
@@ -106,6 +108,7 @@ private:
     int playerColumn = 0;
     QStringList bagBlocks;
     QMap<QString, CodeBlock> knownCodeBlocks;
+    QMap<QString, QSet<QString>> remainingChestBlocks;
     QSet<QString> collectedClues;
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
