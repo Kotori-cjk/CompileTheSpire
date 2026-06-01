@@ -457,6 +457,18 @@ QPoint MapView::tileAtPosition(const QPoint &position) const
 
 QString MapView::monsterSpritePath(const QString &monsterId) const
 {
+    if (m_level && m_level->monsters.contains(monsterId)) {
+        const QString pic = m_level->monsters.value(monsterId).pic;
+        const int slash = qMax(pic.lastIndexOf('/'), pic.lastIndexOf('\\'));
+        const QString fileName = slash >= 0 ? pic.mid(slash + 1) : pic;
+        if (!fileName.isEmpty()) {
+            const QString resourcePath = ":/images/assets/" + fileName;
+            if (!QPixmap(resourcePath).isNull()) {
+                return resourcePath;
+            }
+        }
+    }
+
     static const QStringList sprites = {
         ":/images/assets/alice.png",
         ":/images/assets/cheshire_cat.png",
