@@ -34,6 +34,7 @@ struct Boss:public Monster{
 struct CodeBlock {
     QString blockId;
     QString code;
+    QString type;//"natural" "function" ”class“
 };
 
 struct Chest {
