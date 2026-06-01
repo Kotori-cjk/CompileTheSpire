@@ -243,7 +243,7 @@
             "space_class": {
                 "type": "match",
                 "val": [
-                    "class[block_intcon,block_tsrcon]",
+                    "class[block_intcon,block_strcon]",
                     "class[block_strcon,block_intcon]",
                     "class[block_strcon,block_emptycon]",
                     "class[block_emptycon,block_strcon]"
