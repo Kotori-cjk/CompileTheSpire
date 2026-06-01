@@ -4,7 +4,9 @@
 #include "gameengine.h"
 #include "leveldata.h"
 
+#include <QAudioOutput>
 #include <QLabel>
+#include <QMediaPlayer>
 #include <QMainWindow>
 #include <QMap>
 #include <QPushButton>
@@ -42,6 +44,9 @@ private:
     void buildRuntimeGameUi();
     void positionMainMenuButtons();
     void updateMainMenuBackground();
+    void playBgm(const QString &resourcePath);
+    void syncBgmToCurrentPage();
+    void updateBgmVolume();
     void loadLevels();
     void refreshLevelSelectUi();
     void startLevel(int levelIndex);
@@ -103,12 +108,15 @@ private:
     bool suppressNextMovePath = false;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
+    QString currentBgmResource;
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
     QWidget *mainMenuButtonBar = nullptr;
+    QMediaPlayer *bgmPlayer = nullptr;
+    QAudioOutput *bgmAudioOutput = nullptr;
 };
 
 #endif // MAINWINDOW_H
