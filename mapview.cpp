@@ -447,7 +447,7 @@ QPoint MapView::tileAtPosition(const QPoint &position) const
 
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
-            if (tileRect(row, column).contains(position)) {
+            if (tileOuterRect(row, column).contains(position)) {
                 return QPoint(column, row);
             }
         }

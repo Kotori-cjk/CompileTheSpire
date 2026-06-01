@@ -3,6 +3,7 @@
 #include "mapview.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -19,7 +20,6 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
-#include <QQueue>
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QSlider>
@@ -175,6 +175,13 @@ public:
     void setTextProvider(std::function<QString(const QString &)> provider)
     {
         m_textProvider = std::move(provider);
+    }
+
+    void clearBlock()
+    {
+        setProperty("blockId", QString());
+        setText("              ");
+        refreshStyle(false);
     }
 
 protected:
@@ -363,6 +370,76 @@ MainWindow::MainWindow(QWidget *parent)
     applyVisualStyle();
     applyDefaultSettings();
     buildRuntimeGameUi();
+    setupMovementShortcuts();
+    connect(&gameEngine, &GameEngine::levelLoaded, this, [this]() {
+        syncFromEngineState();
+        ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::moveCompleted, this, [this](const MoveResult &result) {
+        activeMovePath.clear();
+        for (const QPoint &step : result.movePath) {
+            activeMovePath.append(QPoint(step.y(), step.x()));
+        }
+        activeMovePathIndex = activeMovePath.size();
+        syncFromEngineState();
+        ui->combatLogLabel->setText(result.event == "empty"
+                                        ? QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow)
+                                        : QString("Triggered %1: %2").arg(result.event, result.eventId));
+        refreshGameUi();
+        if (result.event == "clue") {
+            QTimer::singleShot(0, this, [this, clueId = result.eventId]() {
+                if (gameEngine.m_map && !gameEngine.m_map->clueRevealed(clueId)) {
+                    gameEngine.revealClue(clueId);
+                    syncFromEngineState();
+                    refreshGameUi();
+                }
+            });
+        }
+    });
+    connect(&gameEngine, &GameEngine::forcedMove, this, [this](const QPoint &) {
+        activeMovePath.clear();
+        activeMovePathIndex = 0;
+        syncFromEngineState();
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::chestEntered, this, [this](const QString &chestId) {
+        QTimer::singleShot(0, this, [this, chestId]() {
+            handleChest(chestId);
+            syncFromEngineState();
+            refreshGameUi();
+        });
+    });
+    connect(&gameEngine, &GameEngine::combatStarted, this, [this](const QString &monsterId, Combat *) {
+        QTimer::singleShot(0, this, [this, monsterId]() {
+            if (monsterId != "boss" && !monsterId.startsWith("monster")) {
+                if (gameEngine.m_combat) {
+                    gameEngine.exitCombat();
+                }
+                syncFromEngineState();
+                refreshGameUi();
+                ui->combatLogLabel->setText("Ignored a stale cleared event tile.");
+                return;
+            }
+            if (!gameEngine.m_combat) {
+                syncFromEngineState();
+                refreshGameUi();
+                ui->combatLogLabel->setText("Combat event was ignored because no backend combat is active.");
+                return;
+            }
+            handleMonster(monsterId);
+            syncFromEngineState();
+            refreshGameUi();
+        });
+    });
+    connect(&gameEngine, &GameEngine::combatEnded, this, [this](const CombatResult &) {
+        syncFromEngineState();
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::levelUnlocked, this, [this](int levelIndex) {
+        completedStageIndexes.insert(levelIndex - 1);
+        refreshLevelSelectUi();
+    });
     loadLevels();
     refreshLevelSelectUi();
     ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
@@ -406,7 +483,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->deckButton, &QPushButton::clicked, this, [this]() {
-        cancelAutoMove(true);
+        clearDisplayedMovePath();
         showBagDialog();
     });
 
@@ -445,14 +522,6 @@ MainWindow::MainWindow(QWidget *parent)
         selectStage(ui->mapBossButton->property("levelIndex").toInt());
     });
 
-    connect(ui->submitAnswerButton, &QPushButton::clicked, this, [this]() {
-        submitFill();
-    });
-
-    connect(ui->answerLineEdit, &QLineEdit::returnPressed, this, [this]() {
-        submitFill();
-    });
-
     connect(ui->nextChallengeButton, &QPushButton::clicked, this, [this]() {
         undo();
     });
@@ -462,7 +531,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
-        cancelAutoMove(true);
+        clearDisplayedMovePath();
         showManualDialog();
     });
 
@@ -511,35 +580,67 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
+void MainWindow::setupMovementShortcuts()
+{
+    qApp->installEventFilter(this);
+    setFocusPolicy(Qt::StrongFocus);
+    if (mapView) {
+        mapView->setFocusPolicy(Qt::StrongFocus);
+    }
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress
+        && ui
+        && ui->stackedWidget->currentWidget() == ui->gamePage
+        && !QApplication::activeModalWidget()) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (handleGameMoveKey(keyEvent->key())) {
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+
+bool MainWindow::handleGameMoveKey(int key)
 {
     if (ui->stackedWidget->currentWidget() == ui->gamePage) {
-        switch (event->key()) {
+        switch (key) {
         case Qt::Key_W:
         case Qt::Key_Up:
             movePlayer(-1, 0);
-            return;
+            return true;
         case Qt::Key_S:
         case Qt::Key_Down:
             movePlayer(1, 0);
-            return;
+            return true;
         case Qt::Key_A:
         case Qt::Key_Left:
             movePlayer(0, -1);
-            return;
+            return true;
         case Qt::Key_D:
         case Qt::Key_Right:
             movePlayer(0, 1);
-            return;
-        case Qt::Key_Z:
-            if (event->modifiers() & Qt::ControlModifier) {
-                undo();
-                return;
-            }
-            break;
+            return true;
         default:
             break;
         }
+    }
+    return false;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if (!QApplication::activeModalWidget() && handleGameMoveKey(event->key())) {
+        return;
+    }
+    if (ui->stackedWidget->currentWidget() == ui->gamePage
+        && event->key() == Qt::Key_Z
+        && (event->modifiers() & Qt::ControlModifier)) {
+        undo();
+        return;
     }
 
     QMainWindow::keyPressEvent(event);
@@ -1278,9 +1379,10 @@ void MainWindow::loadLevels()
 {
     QStringList errors;
     for (const QString &path : fallbackLevelPaths()) {
-        QVector<LevelData> loaded = LoadDirectory(path, &errors);
-        if (!loaded.isEmpty()) {
-            levels = loaded;
+        Q_UNUSED(errors);
+        gameEngine.gameInit(path);
+        if (!gameEngine.levels.isEmpty()) {
+            levels = gameEngine.levels;
             statusBar()->showMessage(QString("Loaded %1 level(s) from %2").arg(levels.size()).arg(path), 3000);
             return;
         }
@@ -1291,11 +1393,17 @@ void MainWindow::loadLevels()
     const QString examplePath = QDir::current().filePath("example.json");
     if (single.LoadFromJson(examplePath, &error)) {
         levels.append(single);
+        gameEngine.levels = levels;
+        gameEngine.m_save.Init(levels.size());
+        gameEngine.m_save.Load(levels.size());
         statusBar()->showMessage("Loaded example.json.", 3000);
         return;
     }
 
     levels.append(createPreviewLevel());
+    gameEngine.levels = levels;
+    gameEngine.m_save.Init(levels.size());
+    gameEngine.m_save.Load(levels.size());
     statusBar()->showMessage("No valid level JSON was found. Loaded preview map for UI testing.", 5000);
 }
 
@@ -1408,6 +1516,14 @@ void MainWindow::refreshLevelSelectUi()
 
 bool MainWindow::isLevelUnlocked(int levelIndex) const
 {
+    if (levelIndex >= 0 && levelIndex < levels.size()) {
+        for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
+            if (meta.levelIndex == levelIndex) {
+                return meta.unlocked;
+            }
+        }
+    }
+
     const QVector<StageCard> allStages = stageCatalog();
     for (int i = 0; i < allStages.size(); ++i) {
         if (allStages.at(i).levelIndex != levelIndex) {
@@ -1465,9 +1581,17 @@ void MainWindow::startLevel(int levelIndex)
         levelIndex = 0;
     }
 
+    if (!gameEngine.startLevel(levelIndex)) {
+        statusBar()->showMessage("Backend refused to start this level.", 2500);
+        return;
+    }
     currentLevelIndex = levelIndex;
-    resetLevel();
+    syncFromEngineState();
     ui->stackedWidget->setCurrentWidget(ui->gamePage);
+    refreshGameUi();
+    if (mapView) {
+        mapView->setFocus(Qt::OtherFocusReason);
+    }
 }
 
 void MainWindow::resetLevel()
@@ -1476,74 +1600,26 @@ void MainWindow::resetLevel()
         return;
     }
 
-    const LevelData &level = levels.at(currentLevelIndex);
-    playerRow = 0;
-    playerColumn = 0;
-    for (int row = 0; row < level.mapGrid.size(); ++row) {
-        for (int column = 0; column < level.mapGrid.at(row).size(); ++column) {
-            if (level.mapGrid.at(row).at(column) == "start") {
-                playerRow = row;
-                playerColumn = column;
-            }
-        }
+    if (gameEngine.m_map && gameEngine.m_bag) {
+        gameEngine.resetLevel();
+    } else {
+        gameEngine.startLevel(currentLevelIndex);
     }
-
-    bagBlocks.clear();
-    knownCodeBlocks.clear();
-    remainingChestBlocks.clear();
-    for (auto chestIt = level.chests.cbegin(); chestIt != level.chests.cend(); ++chestIt) {
-        QSet<QString> remainingIds;
-        for (auto blockIt = chestIt.value().blocks.cbegin(); blockIt != chestIt.value().blocks.cend(); ++blockIt) {
-            remainingIds.insert(blockIt.key());
-        }
-        remainingChestBlocks.insert(chestIt.key(), remainingIds);
-    }
-    collectedClues.clear();
-    openedChests.clear();
-    defeatedMonsters.clear();
-    seenMonsters.clear();
-    history.clear();
-    previousPlayerRow = playerRow;
-    previousPlayerColumn = playerColumn;
+    syncFromEngineState();
     activeMovePath.clear();
     activeMovePathIndex = 0;
-    autoMoving = false;
     ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
     refreshGameUi();
 }
 
-void MainWindow::pushUndoState()
-{
-    UiGameSnapshot snapshot;
-    snapshot.row = playerRow;
-    snapshot.column = playerColumn;
-    snapshot.bagBlocks = bagBlocks;
-    snapshot.knownCodeBlocks = knownCodeBlocks;
-    snapshot.remainingChestBlocks = remainingChestBlocks;
-    snapshot.collectedClues = collectedClues;
-    snapshot.openedChests = openedChests;
-    snapshot.defeatedMonsters = defeatedMonsters;
-    snapshot.seenMonsters = seenMonsters;
-    history.append(snapshot);
-}
-
 void MainWindow::undo()
 {
-    if (history.isEmpty()) {
+    if (!gameEngine.m_map || !gameEngine.undo()) {
         ui->combatLogLabel->setText("Nothing to undo yet.");
         return;
     }
 
-    const UiGameSnapshot snapshot = history.takeLast();
-    playerRow = snapshot.row;
-    playerColumn = snapshot.column;
-    bagBlocks = snapshot.bagBlocks;
-    knownCodeBlocks = snapshot.knownCodeBlocks;
-    remainingChestBlocks = snapshot.remainingChestBlocks;
-    collectedClues = snapshot.collectedClues;
-    openedChests = snapshot.openedChests;
-    defeatedMonsters = snapshot.defeatedMonsters;
-    seenMonsters = snapshot.seenMonsters;
+    syncFromEngineState();
     ui->combatLogLabel->setText("Undo restored the previous state.");
     refreshGameUi();
 }
@@ -1554,13 +1630,66 @@ void MainWindow::refreshGameUi()
         return;
     }
 
+    syncFromEngineState();
     const LevelData &level = levels.at(currentLevelIndex);
     ui->hpLabel->setText(QString("Level: %1").arg(currentLevelIndex + 1));
     ui->goldLabel->setText(QString("Bag: %1/%2").arg(bagBlocks.size()).arg(level.bagSize));
     ui->floorLabel->setText(QString("Pos: %1,%2").arg(playerColumn).arg(playerRow));
-    ui->nextChallengeButton->setEnabled(!history.isEmpty());
+    ui->nextChallengeButton->setEnabled(gameEngine.snapshotStack.size() > 1);
     refreshMapGrid();
     refreshSidePanel();
+}
+
+void MainWindow::syncFromEngineState()
+{
+    if (gameEngine.m_level) {
+        currentLevelIndex = gameEngine.m_level->levelIndex;
+    }
+
+    if (!gameEngine.m_map || !gameEngine.m_bag || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+        return;
+    }
+
+    const QPoint playerPos = gameEngine.m_map->playerPos();
+    playerRow = playerPos.x();
+    playerColumn = playerPos.y();
+
+    bagBlocks.clear();
+    knownCodeBlocks.clear();
+    for (const CodeBlock &block : gameEngine.m_bag->bag()) {
+        bagBlocks.append(block.blockId);
+        knownCodeBlocks.insert(block.blockId, block);
+    }
+    openedChests.clear();
+    collectedClues.clear();
+    defeatedMonsters.clear();
+    const LevelData &level = levels.at(currentLevelIndex);
+    for (auto it = level.chests.cbegin(); it != level.chests.cend(); ++it) {
+        const QPoint pos = it.value().pos;
+        if (pos.x() >= 0 && pos.x() < gameEngine.m_map->cleared.size()
+            && pos.y() >= 0 && pos.y() < gameEngine.m_map->cleared.at(pos.x()).size()
+            && gameEngine.m_map->cleared.at(pos.x()).at(pos.y())) {
+            openedChests.insert(it.key());
+        }
+    }
+    for (auto it = level.clues.cbegin(); it != level.clues.cend(); ++it) {
+        if (gameEngine.m_map->clueRevealed(it.key())) {
+            collectedClues.insert(it.key());
+        }
+    }
+    for (auto it = level.monsters.cbegin(); it != level.monsters.cend(); ++it) {
+        const QPoint pos = it.value().pos;
+        if (pos.x() >= 0 && pos.x() < gameEngine.m_map->cleared.size()
+            && pos.y() >= 0 && pos.y() < gameEngine.m_map->cleared.at(pos.x()).size()
+            && gameEngine.m_map->cleared.at(pos.x()).at(pos.y())) {
+            defeatedMonsters.insert(it.key());
+        }
+    }
+    if (level.boss.pos.x() >= 0 && level.boss.pos.x() < gameEngine.m_map->cleared.size()
+        && level.boss.pos.y() >= 0 && level.boss.pos.y() < gameEngine.m_map->cleared.at(level.boss.pos.x()).size()
+        && gameEngine.m_map->cleared.at(level.boss.pos.x()).at(level.boss.pos.y())) {
+        defeatedMonsters.insert("boss");
+    }
 }
 
 void MainWindow::refreshMapGrid()
@@ -2432,150 +2561,59 @@ void MainWindow::showVictorySettlement()
 
 void MainWindow::movePlayer(int rowDelta, int columnDelta)
 {
-    if (autoMoving) {
-        cancelAutoMove(true);
+    clearDisplayedMovePath();
+    if (!gameEngine.m_map) {
+        ui->combatLogLabel->setText("No active map.");
+        return;
     }
-    stepPlayerTo(playerRow + rowDelta, playerColumn + columnDelta, true);
+
+    const QPoint backendPos = gameEngine.m_map->playerPos();
+    if (!moveThroughEngine(backendPos.x() + rowDelta, backendPos.y() + columnDelta)) {
+        ui->combatLogLabel->setText("Blocked.");
+    }
 }
 
 void MainWindow::movePlayerTo(int targetRow, int targetColumn)
 {
-    if (autoMoving) {
-        return;
-    }
-    if (!canEnter(targetRow, targetColumn)) {
-        ui->combatLogLabel->setText("That tile is blocked.");
-        return;
-    }
-
-    const LevelData &level = levels.at(currentLevelIndex);
-    QVector<QVector<bool>> visited(level.mapGrid.size());
-    QVector<QVector<QPoint>> parent(level.mapGrid.size());
-    for (int row = 0; row < level.mapGrid.size(); ++row) {
-        visited[row] = QVector<bool>(level.mapGrid.at(row).size(), false);
-        parent[row] = QVector<QPoint>(level.mapGrid.at(row).size(), QPoint(-1, -1));
-    }
-
-    QQueue<QPoint> queue;
-    queue.enqueue(QPoint(playerColumn, playerRow));
-    visited[playerRow][playerColumn] = true;
-    const QPoint directions[] = {QPoint(1, 0), QPoint(-1, 0), QPoint(0, 1), QPoint(0, -1)};
-    while (!queue.isEmpty()) {
-        const QPoint current = queue.dequeue();
-        if (current.y() == targetRow && current.x() == targetColumn) {
-            break;
-        }
-        for (const QPoint &direction : directions) {
-            const int nextColumn = current.x() + direction.x();
-            const int nextRow = current.y() + direction.y();
-            if (canUseAsPathNode(nextRow, nextColumn, QPoint(targetColumn, targetRow)) && !visited[nextRow][nextColumn]) {
-                visited[nextRow][nextColumn] = true;
-                parent[nextRow][nextColumn] = current;
-                queue.enqueue(QPoint(nextColumn, nextRow));
-            }
-        }
-    }
-
-    if (!visited[targetRow][targetColumn]) {
+    clearDisplayedMovePath();
+    if (!moveThroughEngine(targetRow, targetColumn)) {
         ui->combatLogLabel->setText("No path to that tile.");
-        return;
     }
-
-    QVector<QPoint> path;
-    QPoint cursor(targetColumn, targetRow);
-    while (cursor != QPoint(playerColumn, playerRow)) {
-        path.prepend(cursor);
-        cursor = parent[cursor.y()][cursor.x()];
-    }
-    if (path.isEmpty()) {
-        triggerTileEvent(false);
-        return;
-    }
-
-    pushUndoState();
-    activeMovePath = path;
-    activeMovePathIndex = 0;
-    autoMoving = true;
-    advanceAutoMove();
 }
 
-void MainWindow::advanceAutoMove()
+bool MainWindow::moveThroughEngine(int targetRow, int targetColumn)
 {
-    if (!autoMoving) {
-        return;
-    }
-    if (activeMovePathIndex >= activeMovePath.size()) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        triggerTileEvent(true);
-        return;
-    }
-
-    const QPoint next = activeMovePath.at(activeMovePathIndex++);
-    if (!stepPlayerTo(next.y(), next.x(), false)) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        ui->combatLogLabel->setText("Path was interrupted.");
-        return;
-    }
-
-    const QString tileId = tileAt(playerRow, playerColumn);
-    const bool finalStep = activeMovePathIndex >= activeMovePath.size();
-    if (hasTileEvent(tileId) && (finalStep || !isSkippablePathChest(tileId))) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        triggerTileEvent(true);
-        return;
-    }
-
-    QTimer::singleShot(115, this, &MainWindow::advanceAutoMove);
-}
-
-void MainWindow::cancelAutoMove(bool returnToPreviousPoint)
-{
-    if (!autoMoving && activeMovePath.isEmpty()) {
-        return;
-    }
-
-    autoMoving = false;
-    activeMovePath.clear();
-    activeMovePathIndex = 0;
-    if (returnToPreviousPoint) {
-        playerRow = previousPlayerRow;
-        playerColumn = previousPlayerColumn;
-    }
-    refreshGameUi();
-    ui->combatLogLabel->setText("Movement interrupted.");
-}
-
-bool MainWindow::stepPlayerTo(int row, int column, bool saveUndo)
-{
-    if (!canEnter(row, column)) {
-        ui->combatLogLabel->setText("Blocked.");
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return false;
     }
 
-    if (saveUndo) {
-        pushUndoState();
+    const LevelData &level = levels.at(currentLevelIndex);
+    if (targetRow < 0 || targetRow >= level.mapGrid.size()
+        || targetColumn < 0 || targetColumn >= level.mapGrid.at(targetRow).size()) {
+        return false;
     }
-    previousPlayerRow = playerRow;
-    previousPlayerColumn = playerColumn;
-    playerRow = row;
-    playerColumn = column;
-    ui->combatLogLabel->setText(QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow));
+
+    if (!gameEngine.m_map->canGoIn(targetRow, targetColumn)) {
+        return false;
+    }
+
+    return gameEngine.moveTo(targetRow, targetColumn);
+}
+
+void MainWindow::clearDisplayedMovePath()
+{
+    if (activeMovePath.isEmpty()) {
+        return;
+    }
+
+    activeMovePath.clear();
+    activeMovePathIndex = 0;
     refreshGameUi();
-    if (saveUndo) {
-        triggerTileEvent(false);
-    }
-    return true;
 }
 
 bool MainWindow::canEnter(int row, int column) const
 {
-    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return false;
     }
     const LevelData &level = levels.at(currentLevelIndex);
@@ -2583,26 +2621,7 @@ bool MainWindow::canEnter(int row, int column) const
            && row < level.mapGrid.size()
            && column >= 0
            && column < level.mapGrid.at(row).size()
-           && level.mapGrid.at(row).at(column) != "#";
-}
-
-bool MainWindow::canUseAsPathNode(int row, int column, const QPoint &target) const
-{
-    if (!canEnter(row, column)) {
-        return false;
-    }
-    if (QPoint(column, row) == target) {
-        return true;
-    }
-
-    const QString tileId = tileAt(row, column);
-    if (tileId.startsWith("monster") || tileId == "boss") {
-        return defeatedMonsters.contains(tileId);
-    }
-    if (tileId.startsWith("chest")) {
-        return isSkippablePathChest(tileId) || openedChests.contains(tileId);
-    }
-    return true;
+           && gameEngine.m_map->canGoIn(row, column);
 }
 
 QString MainWindow::tileAt(int row, int column) const
@@ -2610,7 +2629,7 @@ QString MainWindow::tileAt(int row, int column) const
     if (!canEnter(row, column)) {
         return "#";
     }
-    return levels.at(currentLevelIndex).mapGrid.at(row).at(column);
+    return gameEngine.m_map ? gameEngine.m_map->currentId(row, column) : levels.at(currentLevelIndex).mapGrid.at(row).at(column);
 }
 
 QString MainWindow::describeTile(const QString &tileId) const
@@ -2639,85 +2658,12 @@ QString MainWindow::describeTile(const QString &tileId) const
     return tileId;
 }
 
-bool MainWindow::hasTileEvent(const QString &tileId) const
-{
-    if ((tileId.startsWith("monster") || tileId == "boss") && defeatedMonsters.contains(tileId)) {
-        return false;
-    }
-    if (tileId.startsWith("chest")) {
-        if (openedChests.contains(tileId)) {
-            return false;
-        }
-        return chestHasAvailableBlocks(tileId);
-    }
-    if (tileId.startsWith("clue")) {
-        return !collectedClues.contains(tileId);
-    }
-    return tileId.startsWith("chest") || tileId.startsWith("monster") || tileId == "boss" || tileId.startsWith("clue");
-}
-
-bool MainWindow::isSkippablePathChest(const QString &tileId) const
-{
-    if (!tileId.startsWith("chest") || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
-        return false;
-    }
-    const Chest chest = levels.at(currentLevelIndex).chests.value(tileId);
-    return !chest.forcedPick;
-}
-
-void MainWindow::triggerTileEvent(bool fromAutoMove)
-{
-    Q_UNUSED(fromAutoMove);
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (!hasTileEvent(tileId)) {
-        return;
-    }
-    interactWithCurrentTile();
-}
-
-void MainWindow::returnToPreviousTile()
-{
-    playerRow = previousPlayerRow;
-    playerColumn = previousPlayerColumn;
-    refreshGameUi();
-}
-
-void MainWindow::interactWithCurrentTile()
-{
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (tileId.startsWith("chest")) {
-        handleChest(tileId);
-    } else if (tileId.startsWith("monster") || tileId == "boss") {
-        handleMonster(tileId);
-    } else if (tileId.startsWith("clue")) {
-        const Clue clue = levels.at(currentLevelIndex).clues.value(tileId);
-        if (collectedClues.contains(tileId)) {
-            ui->combatLogLabel->setText("Clue already recorded.");
-            return;
-        }
-        pushUndoState();
-        collectedClues.insert(tileId);
-        QMessageBox::information(this,
-                                 "Clue",
-                                 clue.val.isEmpty() ? "No clue text." : clue.val);
-        ui->combatLogLabel->setText(QString("%1 recorded in monster intel.").arg(tileId));
-    } else {
-        ui->combatLogLabel->setText("Nothing to interact with here.");
-    }
-    refreshGameUi();
-}
-
 void MainWindow::handleChest(const QString &chestId)
 {
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
-    if (!chestHasAvailableBlocks(chestId)) {
-        openedChests.insert(chestId);
+    if (!gameEngine.m_bag || !chestHasAvailableBlocks(chestId)) {
         ui->combatLogLabel->setText("This chest is already empty.");
         refreshGameUi();
-        return;
-    }
-    if (openedChests.contains(chestId) && !chest.repeat) {
-        ui->combatLogLabel->setText("This chest is already empty.");
         return;
     }
 
@@ -2735,16 +2681,7 @@ void MainWindow::handleChest(const QString &chestId)
     contentGrid->setSpacing(12);
     QString selectedBlockId;
     int blockIndex = 0;
-    QSet<QString> remainingIds = remainingChestBlocks.value(chestId);
-    if (!remainingChestBlocks.contains(chestId)) {
-        for (auto blockIt = chest.blocks.cbegin(); blockIt != chest.blocks.cend(); ++blockIt) {
-            remainingIds.insert(blockIt.key());
-        }
-    }
-    for (const CodeBlock &block : chest.blocks) {
-        if (!remainingIds.contains(block.blockId)) {
-            continue;
-        }
+    for (const CodeBlock &block : gameEngine.m_bag->blocksRemaining(chestId)) {
         QToolButton *blockIcon = new QToolButton(contents);
         blockIcon->setFixedSize(128, 68);
         blockIcon->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -2778,13 +2715,11 @@ void MainWindow::handleChest(const QString &chestId)
     QString picked;
     if (dialog.exec() == QDialog::Accepted) {
         if (!selectedBlockId.isEmpty()) {
-            pushUndoState();
-            knownCodeBlocks[selectedBlockId] = chest.blocks.value(selectedBlockId);
-            bagBlocks.append(selectedBlockId);
-            remainingChestBlocks[chestId].remove(selectedBlockId);
-            picked = selectedBlockId;
-            if (!chest.repeat || remainingChestBlocks.value(chestId).isEmpty()) {
-                openedChests.insert(chestId);
+            if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
+                picked = selectedBlockId;
+                syncFromEngineState();
+            } else {
+                QMessageBox::warning(&dialog, "Chest", "Unable to take this code block.");
             }
         }
         ui->combatLogLabel->setText(picked.isEmpty()
@@ -2794,8 +2729,8 @@ void MainWindow::handleChest(const QString &chestId)
         ui->combatLogLabel->setText(chest.forcedPick ? "Forced chest closed. Returned to the previous tile." : "Chest skipped.");
     }
 
-    if (chest.forcedPick) {
-        returnToPreviousTile();
+    if (chest.forcedPick && gameEngine.m_map) {
+        gameEngine.exitChest(chestId);
     }
 }
 
@@ -2820,15 +2755,6 @@ void MainWindow::handleMonster(const QString &monsterId)
     hero->setFixedSize(180, 220);
     hero->setAlignment(Qt::AlignCenter);
     hero->setPixmap(QPixmap(":/images/assets/jibao.png").scaled(hero->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    QVector<CodeDropSlot *> fillSlots;
-    auto filledBlocks = [&fillSlots]() {
-        QStringList blocks;
-        for (const CodeDropSlot *slot : fillSlots) {
-            blocks << slot->property("blockId").toString();
-        }
-        return blocks;
-    };
-
     QScrollArea *codeScroll = new QScrollArea(&dialog);
     codeScroll->setWidgetResizable(true);
     codeScroll->setMinimumHeight(330);
@@ -2870,7 +2796,15 @@ void MainWindow::handleMonster(const QString &monsterId)
                 slot->setTextProvider([this](const QString &blockId) {
                     return codeForBlock(blockId).simplified();
                 });
-                fillSlots.append(slot);
+                slot->setOnChanged([this, slot, tokenId, &dialog]() {
+                    const QString blockId = slot->property("blockId").toString();
+                    if (!gameEngine.fillSpace(tokenId, blockId)) {
+                        slot->clearBlock();
+                        QMessageBox::warning(&dialog, "Wrong Fill", QString("Unable to fill %1 with %2.").arg(tokenId, blockId));
+                        return;
+                    }
+                    syncFromEngineState();
+                });
                 lineLayout->addWidget(slot, 0, Qt::AlignVCenter);
             } else {
                 const bool unlocked = collectedClues.contains(tokenId);
@@ -2901,44 +2835,32 @@ void MainWindow::handleMonster(const QString &monsterId)
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     bool wonBoss = false;
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &filledBlocks, &wonBoss, monster, monsterId]() {
-        const QStringList blocks = filledBlocks();
-        if (blocks.size() != monster.spaces.size()) {
-            QMessageBox::warning(&dialog, "Wrong Fill", QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
+    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, monsterId]() {
+        if (!gameEngine.m_combat) {
+            QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
             return;
         }
-        for (int i = 0; i < blocks.size(); ++i) {
-            if (blocks.at(i).isEmpty()) {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("Fill %1 first.").arg(monster.spaces.at(i).spaceId));
-                return;
-            }
-            if (!bagBlocks.contains(blocks.at(i)) && monsterId != "boss") {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("%1 is not in your bag.").arg(blocks.at(i)));
-                return;
-            }
-            if (!blockMatchesSpace(blocks.at(i), monster.spaces.at(i))) {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("%1 does not match %2.").arg(blocks.at(i), monster.spaces.at(i).spaceId));
-                return;
-            }
+        const bool isBossCombat = gameEngine.m_combat->isBoss();
+        const CombatResult result = gameEngine.submitCombat();
+        if (result.resultType == "count_error") {
+            QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
+            return;
         }
-        pushUndoState();
-        defeatedMonsters.insert(monsterId);
-        seenMonsters.insert(monsterId);
-        if (monsterId == "boss") {
+        if (result.resultType == "space_error") {
+            QMessageBox::warning(&dialog, "Wrong Fill", QString("Wrong block in: %1").arg(result.errorSpaces.join(", ")));
+            return;
+        }
+        if (result.resultType != "success") {
+            QMessageBox::warning(&dialog, "Wrong Fill", "Combat submit failed.");
+            return;
+        }
+        wonBoss = isBossCombat;
+        if (wonBoss) {
             completedStageIndexes.insert(currentLevelIndex);
-            wonBoss = true;
-        } else {
-            for (const QString &blockId : blocks) {
-                bagBlocks.removeOne(blockId);
-            }
-            const CodeBlock synthesized = synthesizeMonsterBlock(monster, blocks);
-            if (!synthesized.blockId.isEmpty()) {
-                knownCodeBlocks[synthesized.blockId] = synthesized;
-                bagBlocks.append(synthesized.blockId);
-            }
         }
+        syncFromEngineState();
         refreshGameUi();
-        ui->combatLogLabel->setText(monsterId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
+        ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(monsterId));
         dialog.accept();
     });
     QHBoxLayout *combatTop = new QHBoxLayout();
@@ -2972,61 +2894,10 @@ void MainWindow::handleMonster(const QString &monsterId)
     layout->addWidget(buttons);
     dialog.resize(860, 660);
     dialog.exec();
-    returnToPreviousTile();
+    if (gameEngine.m_combat) {
+        gameEngine.exitCombat();
+    }
     if (wonBoss) {
-        showVictorySettlement();
-    }
-}
-
-void MainWindow::submitFill()
-{
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (!(tileId.startsWith("monster") || tileId == "boss")) {
-        ui->combatLogLabel->setText("Stand on a monster or boss tile first.");
-        return;
-    }
-    if (defeatedMonsters.contains(tileId)) {
-        ui->combatLogLabel->setText("Already defeated.");
-        return;
-    }
-
-    const Monster monster = monsterByTile(tileId);
-    const QStringList blocks = splitAnswerBlocks(ui->answerLineEdit->text());
-    if (blocks.size() != monster.spaces.size()) {
-        ui->combatLogLabel->setText(QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
-        return;
-    }
-
-    for (int i = 0; i < blocks.size(); ++i) {
-        if (!bagBlocks.contains(blocks.at(i)) && tileId != "boss") {
-            ui->combatLogLabel->setText(QString("%1 is not in your bag.").arg(blocks.at(i)));
-            return;
-        }
-        if (!blockMatchesSpace(blocks.at(i), monster.spaces.at(i))) {
-            ui->combatLogLabel->setText(QString("%1 does not match %2.").arg(blocks.at(i), monster.spaces.at(i).spaceId));
-            return;
-        }
-    }
-
-    pushUndoState();
-    defeatedMonsters.insert(tileId);
-    seenMonsters.insert(tileId);
-    if (tileId == "boss") {
-        completedStageIndexes.insert(currentLevelIndex);
-    } else {
-        for (const QString &blockId : blocks) {
-            bagBlocks.removeOne(blockId);
-        }
-        const CodeBlock synthesized = synthesizeMonsterBlock(monster, blocks);
-        if (!synthesized.blockId.isEmpty()) {
-            knownCodeBlocks[synthesized.blockId] = synthesized;
-            bagBlocks.append(synthesized.blockId);
-        }
-    }
-    ui->answerLineEdit->clear();
-    ui->combatLogLabel->setText(tileId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
-    refreshGameUi();
-    if (tileId == "boss") {
         showVictorySettlement();
     }
 }
@@ -3072,6 +2943,13 @@ QString MainWindow::renderMonsterCodeHtml(const Monster &monster) const
 
 QString MainWindow::codeForBlock(const QString &blockId) const
 {
+    if (gameEngine.m_combat) {
+        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+            if (block.blockId == blockId) {
+                return block.code;
+            }
+        }
+    }
     if (knownCodeBlocks.contains(blockId)) {
         return knownCodeBlocks.value(blockId).code;
     }
@@ -3097,6 +2975,13 @@ QString MainWindow::typeForBlock(const QString &blockId) const
 
 CodeBlock MainWindow::codeBlockForId(const QString &blockId) const
 {
+    if (gameEngine.m_combat) {
+        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+            if (block.blockId == blockId) {
+                return block;
+            }
+        }
+    }
     if (knownCodeBlocks.contains(blockId)) {
         return knownCodeBlocks.value(blockId);
     }
@@ -3127,93 +3012,13 @@ QString MainWindow::codeBlockIconPath(const QString &blockId) const
     return ":/images/assets/natural.png";
 }
 
-CodeBlock MainWindow::synthesizeMonsterBlock(const Monster &monster, const QStringList &blocks) const
-{
-    CodeBlock synthesized;
-    if (blocks.size() != monster.spaces.size()) {
-        return synthesized;
-    }
-
-    synthesized.blockId = monster.name.isEmpty() ? monster.monsterId : monster.name;
-    synthesized.blockId += "[";
-    for (int i = 0; i < blocks.size(); ++i) {
-        synthesized.blockId += blocks.at(i);
-        if (i + 1 < blocks.size()) {
-            synthesized.blockId += ",";
-        }
-    }
-    synthesized.blockId += "]";
-    synthesized.type = monster.type;
-
-    Synthesis synthesis = templateBreakdown(monster.codeTemplate);
-    QMap<QString, QString> filledCode;
-    for (int i = 0; i < monster.spaces.size(); ++i) {
-        filledCode[monster.spaces.at(i).spaceId] = codeForBlock(blocks.at(i));
-    }
-
-    for (int i = 0; i < synthesis.text.length(); ++i) {
-        synthesized.code += synthesis.text.at(i);
-        if (i >= synthesis.cell.length()) {
-            continue;
-        }
-        const SynthesisCell cell = synthesis.cell.at(i);
-        if (cell.type == "clue") {
-            synthesized.code += levels.at(currentLevelIndex).clues.value(cell.id).val;
-        } else if (cell.type == "space") {
-            synthesized.code += filledCode.value(cell.id);
-        }
-    }
-
-    if (synthesized.code.isEmpty()) {
-        synthesized.code = renderMonsterCode(monster);
-    }
-    return synthesized;
-}
-
 bool MainWindow::chestHasAvailableBlocks(const QString &chestId) const
 {
-    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
-        return false;
-    }
-    if (remainingChestBlocks.contains(chestId)) {
-        return !remainingChestBlocks.value(chestId).isEmpty();
+    if (gameEngine.m_bag) {
+        return !gameEngine.m_bag->chestIsEmpty(chestId);
     }
 
-    const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
-    return !chest.blocks.isEmpty();
-}
-
-bool MainWindow::blockMatchesSpace(const QString &blockId, const Space &space) const
-{
-    for (const QString &rule : space.values) {
-        if (space.type == "prefix" && blockId.startsWith(rule)) {
-            return true;
-        }
-        if (space.type == "find" && blockId.contains(rule)) {
-            return true;
-        }
-        if (space.type == "regex") {
-            const QRegularExpression regex(rule);
-            if (regex.isValid() && regex.match(blockId).hasMatch()) {
-                return true;
-            }
-        }
-        if ((space.type == "match" || space.type.isEmpty()) && blockId == rule) {
-            return true;
-        }
-    }
     return false;
-}
-
-QStringList MainWindow::splitAnswerBlocks(const QString &text) const
-{
-    QString normalized = text;
-    normalized.replace(';', ',');
-    QStringList parts = normalized.split(',', Qt::SkipEmptyParts);
-    for (QString &part : parts) {
-        part = part.trimmed();
-    }
-    return parts;
 }
 
 Monster MainWindow::monsterByTile(const QString &tileId) const
