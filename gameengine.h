@@ -19,12 +19,14 @@ struct GameSnapshot{
     QVector<QVector<int>>cleared;
     QVector<CodeBlock>bagBlocks;
     QMap<QString,QSet<QString>>leftBlocks;
+    QMap<QString,QString>defeatedCodes;
 };
 
 struct LevelMeta{
     int levelIndex;//the id in the vector
     const LevelData* level;
     bool unlocked;
+    bool cleared;
     QString levelType;
 };
 

@@ -2631,11 +2631,6 @@ void MainWindow::handleChest(const QString &chestId)
         if (!selectedBlockId.isEmpty()) {
             if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
                 picked = selectedBlockId;
-                if (chest.forcedPick && chest.repeat) {
-                    if (gameEngine.m_level) {
-                        gameEngine.m_level->chests[chestId].forcedPick = false;
-                    }
-                }
                 syncFromEngineState();
             } else {
                 QMessageBox::warning(&dialog, "Chest", "Unable to take this code block.");

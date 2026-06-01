@@ -167,7 +167,7 @@
             "repeat": false,
             "block_count": 1,
             "blocks": {
-                "block_namesapce": "using namespace std;"
+                "block_namesapce": "#include<cstdio>"
             }
         }
     },
