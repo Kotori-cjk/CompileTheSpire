@@ -14,6 +14,8 @@ public:
     bool Load(int currentLevelCount);
     bool isUnlocked(int levelIndex)const;
     bool Unlock(int levelIndex);
+    bool isCleared(int levelIndex)const;
+    bool Clear(int levelIndex);
     void UnlockAll();
     int levelCount();
     void deleteSave();
@@ -22,6 +24,7 @@ public:
 private:
     int totalLevelCount;
     QVector<int>unlockState;
+    QVector<int>clearedState;
 };
 
 #endif // SAVEMANAGER_H
