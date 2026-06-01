@@ -109,6 +109,68 @@ QString hiddenCodeMask()
     return "************";
 }
 
+QString formatCodeBlockForDisplay(QString code)
+{
+    code = code.trimmed();
+    if (code.isEmpty()) {
+        return code;
+    }
+
+    code.replace("\r\n", "\n");
+    code.replace('\r', '\n');
+
+    const bool alreadyMultiline = code.contains('\n');
+    const bool looksCompound = code.contains('{') || code.contains('}') || code.count(';') > 1;
+    if (!alreadyMultiline && !looksCompound) {
+        return code;
+    }
+
+    if (!alreadyMultiline) {
+        QString expanded;
+        for (int i = 0; i < code.size(); ++i) {
+            const QChar ch = code.at(i);
+            if (ch == '{') {
+                expanded += " {\n";
+            } else if (ch == '}') {
+                expanded += "\n}";
+                if (i + 1 < code.size() && code.at(i + 1) != ';') {
+                    expanded += '\n';
+                }
+            } else if (ch == ';') {
+                expanded += ";\n";
+            } else {
+                expanded += ch;
+            }
+        }
+        code = expanded;
+    }
+
+    QStringList formatted;
+    int indent = 0;
+    for (QString line : code.split('\n')) {
+        line = line.trimmed();
+        if (line.isEmpty()) {
+            continue;
+        }
+        if (line.startsWith('}')) {
+            indent = qMax(0, indent - 1);
+        }
+        formatted << QString(indent * 4, QLatin1Char(' ')) + line;
+        if (line.endsWith('{')) {
+            ++indent;
+        }
+    }
+
+    return formatted.join('\n');
+}
+
+QString codeBlockHtml(const QString &code)
+{
+    QString escaped = formatCodeBlockForDisplay(code).toHtmlEscaped();
+    escaped.replace(' ', "&nbsp;");
+    return escaped;
+}
+
 constexpr const char *codeBlockMimeType = "application/x-compile-spire-code-block";
 
 class CodeBlockIcon : public QToolButton
@@ -160,10 +222,11 @@ public:
         : QLabel(parent)
     {
         setAcceptDrops(true);
-        setAlignment(Qt::AlignCenter);
+        setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         setMinimumSize(132, 32);
         setProperty("blockId", QString());
         setText("              ");
+        setTextFormat(Qt::PlainText);
         refreshStyle(false);
     }
 
@@ -206,8 +269,10 @@ protected:
             return;
         }
 
+        const QString displayText = m_textProvider ? m_textProvider(blockId) : blockId;
         setProperty("blockId", blockId);
-        setText(m_textProvider ? m_textProvider(blockId) : blockId);
+        setText(displayText);
+        setMinimumWidth(displayText.contains('\n') ? 220 : 132);
         refreshStyle(false);
         event->acceptProposedAction();
         if (m_onChanged) {
@@ -223,7 +288,7 @@ private:
         const QString background = filled ? "rgba(10, 38, 47, 225)" : "rgba(12, 18, 26, 215)";
         setStyleSheet(QString(
             "QLabel { color: %1; background: %2; border: 2px solid %3; border-radius: 7px;"
-            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 15px; font-weight: 700; padding: 2px 9px; }"
+            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 15px; font-weight: 700; padding: 5px 9px; }"
         ).arg(filled ? "#f9f1d0" : "#6f7f8b", background, border));
     }
 
@@ -378,10 +443,13 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(&gameEngine, &GameEngine::moveCompleted, this, [this](const MoveResult &result) {
         activeMovePath.clear();
-        for (const QPoint &step : result.movePath) {
-            activeMovePath.append(QPoint(step.y(), step.x()));
+        if (!suppressNextMovePath) {
+            for (const QPoint &step : result.movePath) {
+                activeMovePath.append(QPoint(step.y(), step.x()));
+            }
+            activeMovePathIndex = activeMovePath.size();
         }
-        activeMovePathIndex = activeMovePath.size();
+        suppressNextMovePath = false;
         syncFromEngineState();
         ui->combatLogLabel->setText(result.event == "empty"
                                         ? QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow)
@@ -390,9 +458,15 @@ MainWindow::MainWindow(QWidget *parent)
         if (result.event == "clue") {
             QTimer::singleShot(0, this, [this, clueId = result.eventId]() {
                 if (gameEngine.m_map && !gameEngine.m_map->clueRevealed(clueId)) {
-                    gameEngine.revealClue(clueId);
+                    const bool revealed = gameEngine.revealClue(clueId);
                     syncFromEngineState();
                     refreshGameUi();
+                    if (revealed && currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+                        const QString clueText = levels.at(currentLevelIndex).clues.value(clueId).val.trimmed();
+                        QMessageBox::information(this,
+                                                 "Clue",
+                                                 clueText.isEmpty() ? QString("%1 recorded.").arg(clueId) : clueText);
+                    }
                 }
             });
         }
@@ -400,6 +474,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&gameEngine, &GameEngine::forcedMove, this, [this](const QPoint &) {
         activeMovePath.clear();
         activeMovePathIndex = 0;
+        movePlaybackActive = false;
+        suppressNextMovePath = false;
         syncFromEngineState();
         refreshGameUi();
     });
@@ -1516,6 +1592,10 @@ void MainWindow::refreshLevelSelectUi()
 
 bool MainWindow::isLevelUnlocked(int levelIndex) const
 {
+    if (levelIndex == 0 && !showingExLevels) {
+        return true;
+    }
+
     if (levelIndex >= 0 && levelIndex < levels.size()) {
         for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
             if (meta.levelIndex == levelIndex) {
@@ -1567,6 +1647,10 @@ void MainWindow::selectStage(int levelIndex)
 
 void MainWindow::startLevel(int levelIndex)
 {
+    if (levelIndex < 0) {
+        levelIndex = 0;
+    }
+
     if (!isLevelUnlocked(levelIndex)) {
         statusBar()->showMessage("This stage is locked by the path order.", 2500);
         return;
@@ -1581,7 +1665,14 @@ void MainWindow::startLevel(int levelIndex)
         levelIndex = 0;
     }
 
-    if (!gameEngine.startLevel(levelIndex)) {
+    bool started = gameEngine.startLevel(levelIndex);
+    if (!started && levelIndex == 0) {
+        gameEngine.m_save.Unlock(0);
+        gameEngine.m_save.Save();
+        started = gameEngine.startLevel(levelIndex);
+    }
+
+    if (!started) {
         statusBar()->showMessage("Backend refused to start this level.", 2500);
         return;
     }
@@ -1608,6 +1699,10 @@ void MainWindow::resetLevel()
     syncFromEngineState();
     activeMovePath.clear();
     activeMovePathIndex = 0;
+    movePlaybackActive = false;
+    suppressNextMovePath = false;
+    pendingMoveTargetRow = -1;
+    pendingMoveTargetColumn = -1;
     ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
     refreshGameUi();
 }
@@ -1630,7 +1725,9 @@ void MainWindow::refreshGameUi()
         return;
     }
 
-    syncFromEngineState();
+    if (!movePlaybackActive) {
+        syncFromEngineState();
+    }
     const LevelData &level = levels.at(currentLevelIndex);
     ui->hpLabel->setText(QString("Level: %1").arg(currentLevelIndex + 1));
     ui->goldLabel->setText(QString("Bag: %1/%2").arg(bagBlocks.size()).arg(level.bagSize));
@@ -1729,7 +1826,9 @@ void MainWindow::refreshSidePanel()
               << QString("Repeat: %1").arg(chest.repeat ? "yes" : "no")
               << "Blocks:";
         for (const CodeBlock &block : chest.blocks) {
-            lines << QString("  %1 = %2").arg(block.blockId, block.code);
+            QString formatted = formatCodeBlockForDisplay(block.code);
+            formatted.replace('\n', "\n    ");
+            lines << QString("  %1 = %2").arg(block.blockId, formatted);
         }
         ui->challengeTextEdit->setPlainText(lines.join('\n'));
     } else if (tileId.startsWith("clue")) {
@@ -1781,7 +1880,7 @@ void MainWindow::refreshBagPage()
             strip->setText(" ");
             strip->setStyleSheet("background: rgba(244, 218, 166, 210); border: 2px solid #20160d; border-radius: 4px;");
         } else {
-            strip->setText(QString("%1\n%2").arg(id, code));
+            strip->setText(QString("%1\n%2").arg(id, formatCodeBlockForDisplay(code)));
         }
         return strip;
     };
@@ -2165,7 +2264,7 @@ void MainWindow::showBagDialog()
                 QTextBrowser *codeView = new QTextBrowser(&detail);
                 codeView->setReadOnly(true);
                 codeView->setHtml(QString("<pre style=\"font-family:Consolas; font-size:15px; color:#f9f1d0; background:#111827; padding:14px;\">%1</pre>")
-                                      .arg(code.toHtmlEscaped()));
+                                      .arg(codeBlockHtml(code)));
                 QDialogButtonBox *close = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
                 QObject::connect(close, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
                 detailLayout->addWidget(name);
@@ -2541,7 +2640,20 @@ void MainWindow::showVictorySettlement()
     actions->addStretch();
     layout->addLayout(actions);
 
-    connect(stayButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(stayButton, &QPushButton::clicked, &dialog, [this, &dialog]() {
+        const int nextLevelIndex = currentLevelIndex + 1;
+        dialog.accept();
+        if (nextLevelIndex >= 0 && nextLevelIndex < levels.size() && isLevelUnlocked(nextLevelIndex)) {
+            QTimer::singleShot(0, this, [this, nextLevelIndex]() {
+                startLevel(nextLevelIndex);
+            });
+        } else {
+            QTimer::singleShot(0, this, [this]() {
+                refreshLevelSelectUi();
+                ui->stackedWidget->setCurrentWidget(ui->mapPage);
+            });
+        }
+    });
     connect(stageButton, &QPushButton::clicked, &dialog, [this, &dialog]() {
         refreshLevelSelectUi();
         ui->stackedWidget->setCurrentWidget(ui->mapPage);
@@ -2561,6 +2673,9 @@ void MainWindow::showVictorySettlement()
 
 void MainWindow::movePlayer(int rowDelta, int columnDelta)
 {
+    if (movePlaybackActive) {
+        return;
+    }
     clearDisplayedMovePath();
     if (!gameEngine.m_map) {
         ui->combatLogLabel->setText("No active map.");
@@ -2575,10 +2690,83 @@ void MainWindow::movePlayer(int rowDelta, int columnDelta)
 
 void MainWindow::movePlayerTo(int targetRow, int targetColumn)
 {
-    clearDisplayedMovePath();
-    if (!moveThroughEngine(targetRow, targetColumn)) {
-        ui->combatLogLabel->setText("No path to that tile.");
+    if (movePlaybackActive) {
+        return;
     }
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+        ui->combatLogLabel->setText("No path to that tile.");
+        return;
+    }
+
+    const LevelData &level = levels.at(currentLevelIndex);
+    if (targetRow < 0 || targetRow >= level.mapGrid.size()
+        || targetColumn < 0 || targetColumn >= level.mapGrid.at(targetRow).size()
+        || !gameEngine.m_map->canGoIn(targetRow, targetColumn)) {
+        ui->combatLogLabel->setText("No path to that tile.");
+        return;
+    }
+
+    bool success = false;
+    const QVector<QPoint> backendPath = gameEngine.m_map->findPath(targetRow, targetColumn, &success);
+    if (!success || backendPath.size() < 2) {
+        if (!moveThroughEngine(targetRow, targetColumn)) {
+            ui->combatLogLabel->setText("No path to that tile.");
+        }
+        return;
+    }
+
+    startMovePlayback(backendPath, targetRow, targetColumn);
+}
+
+void MainWindow::startMovePlayback(const QVector<QPoint> &backendPath, int targetRow, int targetColumn)
+{
+    activeMovePath.clear();
+    for (const QPoint &step : backendPath) {
+        activeMovePath.append(QPoint(step.y(), step.x()));
+    }
+    activeMovePathIndex = 1;
+    pendingMoveTargetRow = targetRow;
+    pendingMoveTargetColumn = targetColumn;
+    movePlaybackActive = true;
+
+    const QPoint start = backendPath.first();
+    playerRow = start.x();
+    playerColumn = start.y();
+    ui->combatLogLabel->setText(QString("Moving to %1,%2.").arg(targetColumn).arg(targetRow));
+    refreshGameUi();
+    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
+}
+
+void MainWindow::advanceMovePlayback()
+{
+    if (!movePlaybackActive) {
+        return;
+    }
+
+    if (activeMovePathIndex >= activeMovePath.size()) {
+        movePlaybackActive = false;
+        activeMovePath.clear();
+        activeMovePathIndex = 0;
+        const int targetRow = pendingMoveTargetRow;
+        const int targetColumn = pendingMoveTargetColumn;
+        pendingMoveTargetRow = -1;
+        pendingMoveTargetColumn = -1;
+        suppressNextMovePath = true;
+        if (!moveThroughEngine(targetRow, targetColumn)) {
+            suppressNextMovePath = false;
+            syncFromEngineState();
+            refreshGameUi();
+            ui->combatLogLabel->setText("No path to that tile.");
+        }
+        return;
+    }
+
+    const QPoint next = activeMovePath.at(activeMovePathIndex);
+    playerRow = next.y();
+    playerColumn = next.x();
+    ++activeMovePathIndex;
+    refreshGameUi();
+    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
 }
 
 bool MainWindow::moveThroughEngine(int targetRow, int targetColumn)
@@ -2602,10 +2790,13 @@ bool MainWindow::moveThroughEngine(int targetRow, int targetColumn)
 
 void MainWindow::clearDisplayedMovePath()
 {
-    if (activeMovePath.isEmpty()) {
+    if (!movePlaybackActive && activeMovePath.isEmpty()) {
         return;
     }
 
+    movePlaybackActive = false;
+    pendingMoveTargetRow = -1;
+    pendingMoveTargetColumn = -1;
     activeMovePath.clear();
     activeMovePathIndex = 0;
     refreshGameUi();
@@ -2690,7 +2881,7 @@ void MainWindow::handleChest(const QString &chestId)
         blockIcon->setToolTip(block.blockId);
         installHoverPopup(blockIcon,
                           QString("<b>%1</b><br><pre>%2</pre>")
-                              .arg(block.blockId.toHtmlEscaped(), block.code.toHtmlEscaped()));
+                              .arg(block.blockId.toHtmlEscaped(), codeBlockHtml(block.code)));
         blockIcon->setStyleSheet("QToolButton { background: #15242b; border: 2px solid #d7b06a; border-radius: 5px; color: #ffe8ad; font-weight: 700; }"
                                  "QToolButton:hover { border-color: #49e6ff; color: white; }");
         connect(blockIcon, &QToolButton::clicked, &dialog, [&dialog, &selectedBlockId, block]() {
@@ -2794,7 +2985,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
                 slot->setToolTip(tokenId);
                 slot->setTextProvider([this](const QString &blockId) {
-                    return codeForBlock(blockId).simplified();
+                    return formatCodeBlockForDisplay(codeForBlock(blockId));
                 });
                 slot->setOnChanged([this, slot, tokenId, &dialog]() {
                     const QString blockId = slot->property("blockId").toString();
@@ -2885,7 +3076,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                           QString("<b>%1</b><br>Type: %2<br><pre>%3</pre>")
                               .arg(blockId.toHtmlEscaped(),
                                    typeForBlock(blockId).toHtmlEscaped(),
-                                   codeForBlock(blockId).toHtmlEscaped()));
+                                   codeBlockHtml(codeForBlock(blockId))));
         bagIconRow->addWidget(blockIcon);
     }
     bagIconRow->addStretch();
