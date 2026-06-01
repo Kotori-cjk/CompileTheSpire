@@ -58,18 +58,19 @@ bool GameMap::moveAccessibility(QPoint target){
 QString GameMap::getEvent(int tarX,int tarY){
     QString s=levelData->mapGrid[tarX][tarY];
     int stat=cleared[tarX][tarY];
-    if(s=="."||s=="#"||s=="start")return "empty";
+    if(stat||s=="."||s=="#"||s=="start")return "empty";
     QString op=s.mid(0,3);
-    if(op=="clu"&&!stat){
+    if(op=="clu"){
         return "clue";
     }
-    if(op=="che"&&!stat){
+    if(op=="che"){
         return "chest";
     }
-    if(op=="mon"&&!stat){
+    if(op=="mon"){
         return "monster";
     }
-    return "boss";
+    if(s=="boss")return "boss";
+    return "empty";
 }
 QString GameMap::getEvent(QPoint target){
     return getEvent(target.x(),target.y());
@@ -90,7 +91,7 @@ QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
     QQueue<node>q;
     q.push_back(st);
     while(!q.empty()){
-        const auto& u=q.front();
+        node u=q.front();
         q.pop_front();
         if(u.x==tarX&&u.y==tarY){
             if(success!=nullptr)*success=true;
