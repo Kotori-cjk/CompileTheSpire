@@ -353,14 +353,14 @@ void MapView::paintEvent(QPaintEvent *event)
         }
     }
 
-    drawMovePath(painter);
-
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
             const QRect rect = tileRect(row, column);
             drawObject(painter, rect, m_level->mapGrid.at(row).at(column));
         }
     }
+
+    drawMovePath(painter);
 
     if (m_selectedTile.x() >= 0) {
         const QRect selected = tileRect(m_selectedTile.y(), m_selectedTile.x()).adjusted(2, 2, -2, -2);
@@ -447,7 +447,7 @@ QPoint MapView::tileAtPosition(const QPoint &position) const
 
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
-            if (tileRect(row, column).contains(position)) {
+            if (tileOuterRect(row, column).contains(position)) {
                 return QPoint(column, row);
             }
         }
@@ -600,10 +600,10 @@ void MapView::drawMovePath(QPainter &painter) const
         return;
     }
 
-    QPen glow(QColor(40, 224, 255, 90), 9, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
-    glow.setDashPattern({2.0, 2.7});
-    QPen core(QColor(224, 252, 255, 210), 3, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
-    core.setDashPattern({1.2, 4.0});
+    QPen glow(QColor(0, 0, 0, 120), 10, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+    glow.setDashPattern({1.2, 1.8});
+    QPen core(QColor(3, 4, 7, 230), 4, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin);
+    core.setDashPattern({1.0, 2.2});
 
     auto tileCenter = [this](const QPoint &tile) {
         return tileRect(tile.y(), tile.x()).center();

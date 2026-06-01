@@ -3,6 +3,7 @@
 #include "mapview.h"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -19,7 +20,6 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPixmap>
-#include <QQueue>
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QSlider>
@@ -104,19 +104,134 @@ QString codeTokenStyle()
            "font-weight:700;";
 }
 
+QString hiddenCodeMask()
+{
+    return "************";
+}
+
+QString formatCodeBlockForDisplay(QString code)
+{
+    code = code.trimmed();
+    if (code.isEmpty()) {
+        return code;
+    }
+
+    code.replace("\r\n", "\n");
+    code.replace('\r', '\n');
+
+    const bool alreadyMultiline = code.contains('\n');
+    const bool looksCompound = code.contains('{') || code.contains('}') || code.count(';') > 1;
+    if (!alreadyMultiline && !looksCompound) {
+        return code;
+    }
+
+    if (!alreadyMultiline) {
+        QString expanded;
+        for (int i = 0; i < code.size(); ++i) {
+            const QChar ch = code.at(i);
+            if (ch == '{') {
+                expanded += " {\n";
+            } else if (ch == '}') {
+                expanded += "\n}";
+                if (i + 1 < code.size() && code.at(i + 1) != ';') {
+                    expanded += '\n';
+                }
+            } else if (ch == ';') {
+                expanded += ";\n";
+            } else {
+                expanded += ch;
+            }
+        }
+        code = expanded;
+    }
+
+    QStringList formatted;
+    int indent = 0;
+    for (QString line : code.split('\n')) {
+        line = line.trimmed();
+        if (line.isEmpty()) {
+            continue;
+        }
+        if (line.startsWith('}')) {
+            indent = qMax(0, indent - 1);
+        }
+        formatted << QString(indent * 4, QLatin1Char(' ')) + line;
+        if (line.endsWith('{')) {
+            ++indent;
+        }
+    }
+
+    return formatted.join('\n');
+}
+
+QString indentContinuationLines(QString text, const QString &continuationIndent)
+{
+    text.replace("\r\n", "\n");
+    text.replace('\r', '\n');
+    QStringList lines = text.split('\n');
+    for (int i = 1; i < lines.size(); ++i) {
+        if (!lines[i].isEmpty()) {
+            lines[i].prepend(continuationIndent);
+        }
+    }
+    return lines.join('\n');
+}
+
+QString formatClueForCode(const QString &clue)
+{
+    return formatCodeBlockForDisplay(clue);
+}
+
+QString formatClueListLine(const QString &clueId, const QString &clueText)
+{
+    const QString prefix = QString("%1: ").arg(clueId);
+    return prefix + indentContinuationLines(formatClueForCode(clueText), QString(prefix.size(), QLatin1Char(' ')));
+}
+
+QString replaceCodeTemplateTokens(const QString &codeTemplate, const std::function<QString(const QString &)> &replacementForToken)
+{
+    QString rendered;
+    const QStringList lines = codeTemplate.split('\n');
+    const QRegularExpression tokenPattern("\\$([^$]+)\\$");
+    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+        const QString &line = lines.at(lineIndex);
+        int cursor = 0;
+        QRegularExpressionMatchIterator matches = tokenPattern.globalMatch(line);
+        while (matches.hasNext()) {
+            const QRegularExpressionMatch match = matches.next();
+            const int start = match.capturedStart();
+            rendered += line.mid(cursor, start - cursor);
+            rendered += indentContinuationLines(replacementForToken(match.captured(1)), QString(start, QLatin1Char(' ')));
+            cursor = match.capturedEnd();
+        }
+        rendered += line.mid(cursor);
+        if (lineIndex + 1 < lines.size()) {
+            rendered += '\n';
+        }
+    }
+    return rendered;
+}
+
+QString codeBlockHtml(const QString &code)
+{
+    QString escaped = formatCodeBlockForDisplay(code).toHtmlEscaped();
+    escaped.replace(' ', "&nbsp;");
+    return escaped;
+}
+
 constexpr const char *codeBlockMimeType = "application/x-compile-spire-code-block";
 
 class CodeBlockIcon : public QToolButton
 {
 public:
-    explicit CodeBlockIcon(const QString &blockId, QWidget *parent = nullptr)
+    explicit CodeBlockIcon(const QString &blockId, const QString &iconPath, QWidget *parent = nullptr)
         : QToolButton(parent)
         , m_blockId(blockId)
     {
         setFixedSize(74, 74);
         setCursor(Qt::OpenHandCursor);
         setToolButtonStyle(Qt::ToolButtonIconOnly);
-        setIcon(QIcon(":/images/assets/code_ring.png"));
+        setIcon(QIcon(iconPath));
         setIconSize(QSize(62, 62));
         setStyleSheet(
             "QToolButton { background: rgba(7, 13, 19, 185); border: 2px solid #d7b75f; border-radius: 8px; }"
@@ -155,16 +270,29 @@ public:
         : QLabel(parent)
     {
         setAcceptDrops(true);
-        setAlignment(Qt::AlignCenter);
-        setMinimumSize(132, 42);
+        setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        setMinimumSize(132, 32);
         setProperty("blockId", QString());
-        setText("DROP");
+        setText("              ");
+        setTextFormat(Qt::PlainText);
         refreshStyle(false);
     }
 
     void setOnChanged(std::function<void()> callback)
     {
         m_onChanged = std::move(callback);
+    }
+
+    void setTextProvider(std::function<QString(const QString &)> provider)
+    {
+        m_textProvider = std::move(provider);
+    }
+
+    void clearBlock()
+    {
+        setProperty("blockId", QString());
+        setText("              ");
+        refreshStyle(false);
     }
 
 protected:
@@ -189,8 +317,10 @@ protected:
             return;
         }
 
+        const QString displayText = m_textProvider ? m_textProvider(blockId) : blockId;
         setProperty("blockId", blockId);
-        setText(blockId);
+        setText(displayText);
+        setMinimumWidth(displayText.contains('\n') ? 220 : 132);
         refreshStyle(false);
         event->acceptProposedAction();
         if (m_onChanged) {
@@ -206,11 +336,12 @@ private:
         const QString background = filled ? "rgba(10, 38, 47, 225)" : "rgba(12, 18, 26, 215)";
         setStyleSheet(QString(
             "QLabel { color: %1; background: %2; border: 2px solid %3; border-radius: 7px;"
-            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 13px; font-weight: 700; padding: 4px 10px; }"
+            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 15px; font-weight: 700; padding: 5px 9px; }"
         ).arg(filled ? "#f9f1d0" : "#6f7f8b", background, border));
     }
 
     std::function<void()> m_onChanged;
+    std::function<QString(const QString &)> m_textProvider;
 };
 
 class HoverPopupFilter : public QObject
@@ -352,6 +483,87 @@ MainWindow::MainWindow(QWidget *parent)
     applyVisualStyle();
     applyDefaultSettings();
     buildRuntimeGameUi();
+    setupMovementShortcuts();
+    connect(&gameEngine, &GameEngine::levelLoaded, this, [this]() {
+        syncFromEngineState();
+        ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::moveCompleted, this, [this](const MoveResult &result) {
+        activeMovePath.clear();
+        if (!suppressNextMovePath) {
+            for (const QPoint &step : result.movePath) {
+                activeMovePath.append(QPoint(step.y(), step.x()));
+            }
+            activeMovePathIndex = activeMovePath.size();
+        }
+        suppressNextMovePath = false;
+        syncFromEngineState();
+        ui->combatLogLabel->setText(result.event == "empty"
+                                        ? QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow)
+                                        : QString("Triggered %1: %2").arg(result.event, result.eventId));
+        refreshGameUi();
+        if (result.event == "clue") {
+            QTimer::singleShot(0, this, [this, clueId = result.eventId]() {
+                if (gameEngine.m_map && !gameEngine.m_map->clueRevealed(clueId)) {
+                    const bool revealed = gameEngine.revealClue(clueId);
+                    syncFromEngineState();
+                    refreshGameUi();
+                    if (revealed && currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+                        const QString clueText = levels.at(currentLevelIndex).clues.value(clueId).val.trimmed();
+                        QMessageBox::information(this,
+                                                 "Clue",
+                                                 clueText.isEmpty() ? QString("%1 recorded.").arg(clueId) : clueText);
+                    }
+                }
+            });
+        }
+    });
+    connect(&gameEngine, &GameEngine::forcedMove, this, [this](const QPoint &) {
+        activeMovePath.clear();
+        activeMovePathIndex = 0;
+        movePlaybackActive = false;
+        suppressNextMovePath = false;
+        syncFromEngineState();
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::chestEntered, this, [this](const QString &chestId) {
+        QTimer::singleShot(0, this, [this, chestId]() {
+            handleChest(chestId);
+            syncFromEngineState();
+            refreshGameUi();
+        });
+    });
+    connect(&gameEngine, &GameEngine::combatStarted, this, [this](const QString &monsterId, Combat *) {
+        QTimer::singleShot(0, this, [this, monsterId]() {
+            if (monsterId != "boss" && !monsterId.startsWith("monster")) {
+                if (gameEngine.m_combat) {
+                    gameEngine.exitCombat();
+                }
+                syncFromEngineState();
+                refreshGameUi();
+                ui->combatLogLabel->setText("Ignored a stale cleared event tile.");
+                return;
+            }
+            if (!gameEngine.m_combat) {
+                syncFromEngineState();
+                refreshGameUi();
+                ui->combatLogLabel->setText("Combat event was ignored because no backend combat is active.");
+                return;
+            }
+            handleMonster(monsterId);
+            syncFromEngineState();
+            refreshGameUi();
+        });
+    });
+    connect(&gameEngine, &GameEngine::combatEnded, this, [this](const CombatResult &) {
+        syncFromEngineState();
+        refreshGameUi();
+    });
+    connect(&gameEngine, &GameEngine::levelUnlocked, this, [this](int levelIndex) {
+        completedStageIndexes.insert(levelIndex - 1);
+        refreshLevelSelectUi();
+    });
     loadLevels();
     refreshLevelSelectUi();
     ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
@@ -395,25 +607,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->deckButton, &QPushButton::clicked, this, [this]() {
-        cancelAutoMove(true);
+        clearDisplayedMovePath();
         showBagDialog();
-    });
-
-    connect(ui->deckBackButton, &QPushButton::clicked, this, [this]() {
-        if (!manualSelectedMonsterId.isEmpty()) {
-            manualSelectedMonsterId.clear();
-            refreshManualPage();
-        } else {
-            ui->stackedWidget->setCurrentWidget(ui->gamePage);
-        }
-    });
-
-    connect(ui->deckListWidget, &QListWidget::itemClicked, this, [this](QListWidgetItem *item) {
-        if (!manualSelectedMonsterId.isEmpty()) return;
-        const QString monsterId = item->data(Qt::UserRole).toString();
-        if (monsterId.isEmpty()) return;
-        manualSelectedMonsterId = monsterId;
-        refreshManualPage();
     });
 
     connect(ui->mapBackButton, &QPushButton::clicked, this, [this]() {
@@ -434,14 +629,6 @@ MainWindow::MainWindow(QWidget *parent)
         selectStage(ui->mapBossButton->property("levelIndex").toInt());
     });
 
-    connect(ui->submitAnswerButton, &QPushButton::clicked, this, [this]() {
-        submitFill();
-    });
-
-    connect(ui->answerLineEdit, &QLineEdit::returnPressed, this, [this]() {
-        submitFill();
-    });
-
     connect(ui->nextChallengeButton, &QPushButton::clicked, this, [this]() {
         undo();
     });
@@ -451,19 +638,8 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->manualButton, &QPushButton::clicked, this, [this]() {
-        cancelAutoMove(true);
-        manualSelectedMonsterId.clear();
-        refreshManualPage();
-        ui->stackedWidget->setCurrentWidget(ui->manualPage);
-    });
-
-    connect(ui->manualBackButton, &QPushButton::clicked, this, [this]() {
-        if (!manualSelectedMonsterId.isEmpty()) {
-            manualSelectedMonsterId.clear();
-            refreshManualPage();
-        } else {
-            ui->stackedWidget->setCurrentWidget(ui->gamePage);
-        }
+        clearDisplayedMovePath();
+        showManualDialog();
     });
 
     connect(ui->saveSettingsButton, &QPushButton::clicked, this, [this]() {
@@ -502,35 +678,67 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event)
+void MainWindow::setupMovementShortcuts()
+{
+    qApp->installEventFilter(this);
+    setFocusPolicy(Qt::StrongFocus);
+    if (mapView) {
+        mapView->setFocusPolicy(Qt::StrongFocus);
+    }
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::KeyPress
+        && ui
+        && ui->stackedWidget->currentWidget() == ui->gamePage
+        && !QApplication::activeModalWidget()) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        if (handleGameMoveKey(keyEvent->key())) {
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+
+bool MainWindow::handleGameMoveKey(int key)
 {
     if (ui->stackedWidget->currentWidget() == ui->gamePage) {
-        switch (event->key()) {
+        switch (key) {
         case Qt::Key_W:
         case Qt::Key_Up:
             movePlayer(-1, 0);
-            return;
+            return true;
         case Qt::Key_S:
         case Qt::Key_Down:
             movePlayer(1, 0);
-            return;
+            return true;
         case Qt::Key_A:
         case Qt::Key_Left:
             movePlayer(0, -1);
-            return;
+            return true;
         case Qt::Key_D:
         case Qt::Key_Right:
             movePlayer(0, 1);
-            return;
-        case Qt::Key_Z:
-            if (event->modifiers() & Qt::ControlModifier) {
-                undo();
-                return;
-            }
-            break;
+            return true;
         default:
             break;
         }
+    }
+    return false;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event)
+{
+    if (!QApplication::activeModalWidget() && handleGameMoveKey(event->key())) {
+        return;
+    }
+    if (ui->stackedWidget->currentWidget() == ui->gamePage
+        && event->key() == Qt::Key_Z
+        && (event->modifiers() & Qt::ControlModifier)) {
+        undo();
+        return;
     }
 
     QMainWindow::keyPressEvent(event);
@@ -585,10 +793,6 @@ void MainWindow::applyVisualStyle()
         QWidget#settingsPage {
             background-color: #15161a;
             border-image: url(:/images/assets/interface_background_fitted.png) 0 0 0 0 stretch stretch;
-        }
-
-        QWidget#deckPage {
-            background: #16120d;
         }
 
         QPushButton#startGameButton, QPushButton#settingsButton, QPushButton#exitButton {
@@ -648,21 +852,7 @@ void MainWindow::applyVisualStyle()
             border-radius: 6px;
         }
 
-        QListWidget#deckListWidget {
-            background: rgba(18, 14, 10, 238);
-            border: 4px solid #120e09;
-            border-radius: 6px;
-            padding: 16px;
-            outline: none;
-        }
-
-        QListWidget#deckListWidget::item {
-            background: transparent;
-            border: none;
-            margin: 4px;
-        }
-
-        QLabel#deckTitleLabel, QLabel#settingsTitleLabel {
+        QLabel#settingsTitleLabel {
             color: #f1d37c;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
             font-size: 26px;
@@ -1269,9 +1459,10 @@ void MainWindow::loadLevels()
 {
     QStringList errors;
     for (const QString &path : fallbackLevelPaths()) {
-        QVector<LevelData> loaded = LoadDirectory(path, &errors);
-        if (!loaded.isEmpty()) {
-            levels = loaded;
+        Q_UNUSED(errors);
+        gameEngine.gameInit(path);
+        if (!gameEngine.levels.isEmpty()) {
+            levels = gameEngine.levels;
             statusBar()->showMessage(QString("Loaded %1 level(s) from %2").arg(levels.size()).arg(path), 3000);
             return;
         }
@@ -1282,11 +1473,17 @@ void MainWindow::loadLevels()
     const QString examplePath = QDir::current().filePath("example.json");
     if (single.LoadFromJson(examplePath, &error)) {
         levels.append(single);
+        gameEngine.levels = levels;
+        gameEngine.m_save.Init(levels.size());
+        gameEngine.m_save.Load(levels.size());
         statusBar()->showMessage("Loaded example.json.", 3000);
         return;
     }
 
     levels.append(createPreviewLevel());
+    gameEngine.levels = levels;
+    gameEngine.m_save.Init(levels.size());
+    gameEngine.m_save.Load(levels.size());
     statusBar()->showMessage("No valid level JSON was found. Loaded preview map for UI testing.", 5000);
 }
 
@@ -1399,6 +1596,18 @@ void MainWindow::refreshLevelSelectUi()
 
 bool MainWindow::isLevelUnlocked(int levelIndex) const
 {
+    if (levelIndex == 0 && !showingExLevels) {
+        return true;
+    }
+
+    if (levelIndex >= 0 && levelIndex < levels.size()) {
+        for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
+            if (meta.levelIndex == levelIndex) {
+                return meta.unlocked;
+            }
+        }
+    }
+
     const QVector<StageCard> allStages = stageCatalog();
     for (int i = 0; i < allStages.size(); ++i) {
         if (allStages.at(i).levelIndex != levelIndex) {
@@ -1442,6 +1651,10 @@ void MainWindow::selectStage(int levelIndex)
 
 void MainWindow::startLevel(int levelIndex)
 {
+    if (levelIndex < 0) {
+        levelIndex = 0;
+    }
+
     if (!isLevelUnlocked(levelIndex)) {
         statusBar()->showMessage("This stage is locked by the path order.", 2500);
         return;
@@ -1456,9 +1669,24 @@ void MainWindow::startLevel(int levelIndex)
         levelIndex = 0;
     }
 
+    bool started = gameEngine.startLevel(levelIndex);
+    if (!started && levelIndex == 0) {
+        gameEngine.m_save.Unlock(0);
+        gameEngine.m_save.Save();
+        started = gameEngine.startLevel(levelIndex);
+    }
+
+    if (!started) {
+        statusBar()->showMessage("Backend refused to start this level.", 2500);
+        return;
+    }
     currentLevelIndex = levelIndex;
-    resetLevel();
+    syncFromEngineState();
     ui->stackedWidget->setCurrentWidget(ui->gamePage);
+    refreshGameUi();
+    if (mapView) {
+        mapView->setFocus(Qt::OtherFocusReason);
+    }
 }
 
 void MainWindow::resetLevel()
@@ -1467,61 +1695,30 @@ void MainWindow::resetLevel()
         return;
     }
 
-    const LevelData &level = levels.at(currentLevelIndex);
-    playerRow = 0;
-    playerColumn = 0;
-    for (int row = 0; row < level.mapGrid.size(); ++row) {
-        for (int column = 0; column < level.mapGrid.at(row).size(); ++column) {
-            if (level.mapGrid.at(row).at(column) == "start") {
-                playerRow = row;
-                playerColumn = column;
-            }
-        }
+    if (gameEngine.m_map && gameEngine.m_bag) {
+        gameEngine.resetLevel();
+    } else {
+        gameEngine.startLevel(currentLevelIndex);
     }
-
-    bagBlocks.clear();
-    collectedClues.clear();
-    openedChests.clear();
-    defeatedMonsters.clear();
-    seenMonsters.clear();
-    history.clear();
-    previousPlayerRow = playerRow;
-    previousPlayerColumn = playerColumn;
+    syncFromEngineState();
     activeMovePath.clear();
     activeMovePathIndex = 0;
-    autoMoving = false;
+    movePlaybackActive = false;
+    suppressNextMovePath = false;
+    pendingMoveTargetRow = -1;
+    pendingMoveTargetColumn = -1;
     ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
     refreshGameUi();
 }
 
-void MainWindow::pushUndoState()
-{
-    UiGameSnapshot snapshot;
-    snapshot.row = playerRow;
-    snapshot.column = playerColumn;
-    snapshot.bagBlocks = bagBlocks;
-    snapshot.collectedClues = collectedClues;
-    snapshot.openedChests = openedChests;
-    snapshot.defeatedMonsters = defeatedMonsters;
-    snapshot.seenMonsters = seenMonsters;
-    history.append(snapshot);
-}
-
 void MainWindow::undo()
 {
-    if (history.isEmpty()) {
+    if (!gameEngine.m_map || !gameEngine.undo()) {
         ui->combatLogLabel->setText("Nothing to undo yet.");
         return;
     }
 
-    const UiGameSnapshot snapshot = history.takeLast();
-    playerRow = snapshot.row;
-    playerColumn = snapshot.column;
-    bagBlocks = snapshot.bagBlocks;
-    collectedClues = snapshot.collectedClues;
-    openedChests = snapshot.openedChests;
-    defeatedMonsters = snapshot.defeatedMonsters;
-    seenMonsters = snapshot.seenMonsters;
+    syncFromEngineState();
     ui->combatLogLabel->setText("Undo restored the previous state.");
     refreshGameUi();
 }
@@ -1532,13 +1729,68 @@ void MainWindow::refreshGameUi()
         return;
     }
 
+    if (!movePlaybackActive) {
+        syncFromEngineState();
+    }
     const LevelData &level = levels.at(currentLevelIndex);
     ui->hpLabel->setText(QString("Level: %1").arg(currentLevelIndex + 1));
     ui->goldLabel->setText(QString("Bag: %1/%2").arg(bagBlocks.size()).arg(level.bagSize));
     ui->floorLabel->setText(QString("Pos: %1,%2").arg(playerColumn).arg(playerRow));
-    ui->nextChallengeButton->setEnabled(!history.isEmpty());
+    ui->nextChallengeButton->setEnabled(gameEngine.snapshotStack.size() > 1);
     refreshMapGrid();
     refreshSidePanel();
+}
+
+void MainWindow::syncFromEngineState()
+{
+    if (gameEngine.m_level) {
+        currentLevelIndex = gameEngine.m_level->levelIndex;
+    }
+
+    if (!gameEngine.m_map || !gameEngine.m_bag || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+        return;
+    }
+
+    const QPoint playerPos = gameEngine.m_map->playerPos();
+    playerRow = playerPos.x();
+    playerColumn = playerPos.y();
+
+    bagBlocks.clear();
+    knownCodeBlocks.clear();
+    for (const CodeBlock &block : gameEngine.m_bag->bag()) {
+        bagBlocks.append(block.blockId);
+        knownCodeBlocks.insert(block.blockId, block);
+    }
+    openedChests.clear();
+    collectedClues.clear();
+    defeatedMonsters.clear();
+    const LevelData &level = levels.at(currentLevelIndex);
+    for (auto it = level.chests.cbegin(); it != level.chests.cend(); ++it) {
+        const QPoint pos = it.value().pos;
+        if (pos.x() >= 0 && pos.x() < gameEngine.m_map->cleared.size()
+            && pos.y() >= 0 && pos.y() < gameEngine.m_map->cleared.at(pos.x()).size()
+            && gameEngine.m_map->cleared.at(pos.x()).at(pos.y())) {
+            openedChests.insert(it.key());
+        }
+    }
+    for (auto it = level.clues.cbegin(); it != level.clues.cend(); ++it) {
+        if (gameEngine.m_map->clueRevealed(it.key())) {
+            collectedClues.insert(it.key());
+        }
+    }
+    for (auto it = level.monsters.cbegin(); it != level.monsters.cend(); ++it) {
+        const QPoint pos = it.value().pos;
+        if (pos.x() >= 0 && pos.x() < gameEngine.m_map->cleared.size()
+            && pos.y() >= 0 && pos.y() < gameEngine.m_map->cleared.at(pos.x()).size()
+            && gameEngine.m_map->cleared.at(pos.x()).at(pos.y())) {
+            defeatedMonsters.insert(it.key());
+        }
+    }
+    if (level.boss.pos.x() >= 0 && level.boss.pos.x() < gameEngine.m_map->cleared.size()
+        && level.boss.pos.y() >= 0 && level.boss.pos.y() < gameEngine.m_map->cleared.at(level.boss.pos.x()).size()
+        && gameEngine.m_map->cleared.at(level.boss.pos.x()).at(level.boss.pos.y())) {
+        defeatedMonsters.insert("boss");
+    }
 }
 
 void MainWindow::refreshMapGrid()
@@ -1578,7 +1830,9 @@ void MainWindow::refreshSidePanel()
               << QString("Repeat: %1").arg(chest.repeat ? "yes" : "no")
               << "Blocks:";
         for (const CodeBlock &block : chest.blocks) {
-            lines << QString("  %1 = %2").arg(block.blockId, block.code);
+            QString formatted = formatCodeBlockForDisplay(block.code);
+            formatted.replace('\n', "\n    ");
+            lines << QString("  %1 = %2").arg(block.blockId, formatted);
         }
         ui->challengeTextEdit->setPlainText(lines.join('\n'));
     } else if (tileId.startsWith("clue")) {
@@ -1586,367 +1840,6 @@ void MainWindow::refreshSidePanel()
         ui->challengeTextEdit->setPlainText(clue.val.isEmpty() ? "No clue text." : clue.val);
     } else {
         ui->challengeTextEdit->setPlainText("Move onto a chest, clue, monster, or boss tile and interact.");
-    }
-}
-
-void MainWindow::refreshBagPage()
-{
-    ui->deckTitleLabel->setText("Bag");
-    ui->deckListWidget->clear();
-    ui->deckListWidget->setStyleSheet("QListWidget#deckListWidget { background: rgba(18, 14, 10, 238); border: 4px solid #120e09; border-radius: 6px; padding: 10px; outline: none; }");
-    ui->deckListWidget->setSpacing(0);
-    ui->deckListWidget->setSelectionMode(QAbstractItemView::NoSelection);
-
-    QVector<QPair<QString, QString>> codeItems;
-    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
-        const LevelData &level = levels.at(currentLevelIndex);
-        for (const QString &blockId : bagBlocks) {
-            QString code = blockId;
-            for (const Chest &chest : level.chests) {
-                if (chest.blocks.contains(blockId)) {
-                    code = chest.blocks.value(blockId).code;
-                    break;
-                }
-            }
-            codeItems.append(qMakePair(blockId, code));
-        }
-    }
-
-    if (codeItems.isEmpty()) {
-        codeItems.append(qMakePair(QString("waiting"), QString("open chest")));
-    }
-
-    constexpr int slotsPerPage = 5;
-    constexpr int bagPageCount = 2;
-    currentBagPage = qBound(0, currentBagPage, bagPageCount - 1);
-    const int pageStart = currentBagPage * slotsPerPage;
-
-    const auto makeCodeStrip = [](const QString &id, const QString &code, QWidget *parent) {
-        QLabel *strip = new QLabel(parent);
-        strip->setProperty("codeStrip", "true");
-        strip->setWordWrap(true);
-        strip->setAlignment(Qt::AlignCenter);
-        if (id.isEmpty()) {
-            strip->setText(" ");
-            strip->setStyleSheet("background: rgba(244, 218, 166, 210); border: 2px solid #20160d; border-radius: 4px;");
-        } else {
-            strip->setText(QString("%1\n%2").arg(id, code));
-        }
-        return strip;
-    };
-
-    QFrame *board = new QFrame(ui->deckListWidget);
-    board->setObjectName("bagBoardFrame");
-    board->setProperty("bagBoard", "true");
-    board->setMinimumSize(1180, 665);
-    board->setStyleSheet("QFrame#bagBoardFrame { border-image: url(:/images/assets/bag_background.png) 0 0 0 0 stretch stretch; border: none; }");
-
-    QPushButton *prevPage = new QPushButton("<", board);
-    QPushButton *nextPage = new QPushButton(">", board);
-    QLabel *pageLabel = new QLabel(QString("%1 / %2").arg(currentBagPage + 1).arg(bagPageCount), board);
-    prevPage->setProperty("bagPageButton", "true");
-    nextPage->setProperty("bagPageButton", "true");
-    prevPage->setGeometry(930, 50, 46, 32);
-    nextPage->setGeometry(1035, 50, 46, 32);
-    pageLabel->setGeometry(980, 50, 52, 32);
-    pageLabel->setAlignment(Qt::AlignCenter);
-    pageLabel->setProperty("bagSection", "true");
-    prevPage->setEnabled(currentBagPage > 0);
-    nextPage->setEnabled(currentBagPage + 1 < bagPageCount);
-    connect(prevPage, &QPushButton::clicked, this, [this]() {
-        currentBagPage = qMax(0, currentBagPage - 1);
-        refreshBagPage();
-    });
-    connect(nextPage, &QPushButton::clicked, this, [this]() {
-        currentBagPage = qMin(1, currentBagPage + 1);
-        refreshBagPage();
-    });
-
-    const QVector<QRect> stripRects = {
-        QRect(212, 94, 745, 78),
-        QRect(212, 195, 745, 78),
-        QRect(212, 296, 745, 78),
-        QRect(212, 397, 745, 78),
-        QRect(212, 498, 745, 78)
-    };
-    for (int i = 0; i < stripRects.size(); ++i) {
-        const int itemIndex = pageStart + i;
-        QLabel *strip = itemIndex < codeItems.size()
-                            ? makeCodeStrip(codeItems.at(itemIndex).first, codeItems.at(itemIndex).second, board)
-                            : makeCodeStrip(QString(), QString(), board);
-        strip->setGeometry(stripRects.at(i));
-        strip->show();
-    }
-
-    QListWidgetItem *item = new QListWidgetItem(ui->deckListWidget);
-    item->setSizeHint(QSize(1180, 665));
-    ui->deckListWidget->setItemWidget(item, board);
-}
-
-void MainWindow::refreshManualPage()
-{
-    //---pageInit---
-    ui->manualListWidget->clear();
-    QString manualListStyle =
-        "QListWidget#manualListWidget { "
-        "background: rgba(16, 18, 24, 255); "
-        "border: 2px solid #485162; "
-        "border-radius: 6px; "
-        "padding: 18px; "
-        "outline: none; "
-        "} "
-        "QListWidget#manualListWidget::item { "
-        "padding: 8px 10px; "
-        "border-radius: 4px; "
-        "color: #E0E0E0; "
-        "} "
-        "QListWidget#manualListWidget::item:hover { "
-        "background-color: rgba(72, 81, 98, 150); "
-        "} "
-        "QListWidget#manualListWidget::item:selected { "
-        "background-color: #485162; "
-        "color: white; "
-        "}";
-    ui->manualListWidget->setStyleSheet(manualListStyle);
-    ui->manualListWidget->setSpacing(6);
-
-    if(currentLevelIndex < 0 || currentLevelIndex >= levels.size()){
-        return;
-    }
-    const LevelData &level = levels.at(currentLevelIndex);
-
-    // --- detail view ---
-    if (!manualSelectedMonsterId.isEmpty()) {
-        if (!level.monsters.contains(manualSelectedMonsterId)) {
-            manualSelectedMonsterId.clear();
-            refreshManualPage();
-            return;
-        }
-
-        const Monster &m = level.monsters[manualSelectedMonsterId];
-        const bool isBoss = (manualSelectedMonsterId == "boss");
-        const bool seen = seenMonsters.contains(manualSelectedMonsterId)
-                       || defeatedMonsters.contains(manualSelectedMonsterId);
-        const bool defeated = defeatedMonsters.contains(manualSelectedMonsterId);
-
-        ui->manualTitleLabel->setText(seen ? (m.nickname.isEmpty() ? m.name : m.nickname) : "???");
-
-        QFrame *detailCard = new QFrame();
-        detailCard->setObjectName("manualDetailCard");
-        detailCard->setStyleSheet(
-            "QFrame#manualDetailCard { background: #1a1d26; border: 2px solid #353a47; border-radius: 8px; }"
-        );
-
-        QVBoxLayout *root = new QVBoxLayout(detailCard);
-        root->setContentsMargins(20, 18, 20, 18);
-        root->setSpacing(14);
-
-        if (!seen) {
-            QLabel *unknown = new QLabel("???  —  Undiscovered");
-            unknown->setStyleSheet("color: #5b5f6b; font-size: 22px; font-weight: bold;");
-            unknown->setAlignment(Qt::AlignCenter);
-            root->addWidget(unknown);
-            QLabel *hint = new QLabel("Encounter this enemy in the tower to reveal its details.");
-            hint->setStyleSheet("color: #464a55; font-size: 13px;");
-            hint->setAlignment(Qt::AlignCenter);
-            hint->setWordWrap(true);
-            root->addWidget(hint);
-        } else {
-            // header row: sprite + badges
-            QHBoxLayout *headerRow = new QHBoxLayout();
-            headerRow->setSpacing(18);
-
-            QLabel *spriteLabel = new QLabel();
-            spriteLabel->setFixedSize(112, 112);
-            spriteLabel->setAlignment(Qt::AlignCenter);
-            spriteLabel->setScaledContents(true);
-            QPixmap pix(":/images/assets/" + m.pic);
-            if (!pix.isNull()) {
-                spriteLabel->setPixmap(pix.scaled(104, 104, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            } else {
-                spriteLabel->setText(isBoss ? "BOSS" : "M");
-                spriteLabel->setStyleSheet("color: #d99cff; font-size: 20px; font-weight: bold; background: #2d2040; border-radius: 6px;");
-            }
-            headerRow->addWidget(spriteLabel);
-
-            QWidget *headerInfo = new QWidget();
-            QVBoxLayout *hiLayout = new QVBoxLayout(headerInfo);
-            hiLayout->setContentsMargins(0, 0, 0, 0);
-            hiLayout->setSpacing(5);
-
-            QLabel *nameLabel = new QLabel(m.nickname.isEmpty() ? m.name : m.nickname);
-            nameLabel->setStyleSheet("color: #f1d37c; font-size: 22px; font-weight: bold;");
-            hiLayout->addWidget(nameLabel);
-
-            QHBoxLayout *badgeRow = new QHBoxLayout();
-            badgeRow->setSpacing(8);
-            QString typeColor = (m.type == "function") ? "#5dade2"
-                              : (m.type == "class") ? "#58d68d"
-                              : "#d99cff";
-            QLabel *typeBadge = new QLabel(m.type.toUpper());
-            typeBadge->setStyleSheet(QString(
-                "color: %1; font-size: 11px; font-weight: bold;"
-                "background: transparent; border: 1px solid %1;"
-                "border-radius: 3px; padding: 2px 8px;"
-            ).arg(typeColor));
-            badgeRow->addWidget(typeBadge);
-
-            if (defeated) {
-                QLabel *defBadge = new QLabel("DEFEATED");
-                defBadge->setStyleSheet(
-                    "color: #f6d878; font-size: 11px; font-weight: bold;"
-                    "background: transparent; border: 1px solid #f6d878;"
-                    "border-radius: 3px; padding: 2px 8px;"
-                );
-                badgeRow->addWidget(defBadge);
-            }
-            QLabel *idLabel = new QLabel(manualSelectedMonsterId);
-            idLabel->setStyleSheet("color: #5e6370; font-size: 11px;");
-            badgeRow->addWidget(idLabel);
-            badgeRow->addStretch();
-            hiLayout->addLayout(badgeRow);
-
-            if (isBoss) {
-                const Boss &boss = level.boss;
-                if (!boss.input.isEmpty() || !boss.output.isEmpty()) {
-                    QLabel *ioLabel = new QLabel(QString("Input: %1    Output: %2").arg(boss.input, boss.output));
-                    ioLabel->setStyleSheet("color: #78c8e2; font-size: 12px; font-family: 'Consolas', monospace;");
-                    hiLayout->addWidget(ioLabel);
-                }
-            }
-
-            hiLayout->addStretch();
-            headerRow->addWidget(headerInfo, 1);
-            root->addLayout(headerRow);
-
-            // code template
-            QLabel *codeSection = new QLabel("Code Template");
-            codeSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
-            root->addWidget(codeSection);
-
-            QString renderedCode = renderMonsterCode(m);
-            QLabel *codeLabel = new QLabel(renderedCode);
-            codeLabel->setWordWrap(true);
-            codeLabel->setTextFormat(Qt::PlainText);
-            codeLabel->setStyleSheet(
-                "color: #c8d6e5; font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;"
-                "font-size: 13px; background: #11131a; border: 1px solid #282c36;"
-                "border-radius: 4px; padding: 10px 12px;"
-            );
-            root->addWidget(codeLabel);
-
-            // spaces table
-            if (!m.spaces.isEmpty()) {
-                QLabel *spacesSection = new QLabel("Spaces");
-                spacesSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
-                root->addWidget(spacesSection);
-
-                QFrame *spacesTable = new QFrame();
-                spacesTable->setStyleSheet("QFrame { background: #11131a; border: 1px solid #282c36; border-radius: 4px; }");
-                QVBoxLayout *spacesLayout = new QVBoxLayout(spacesTable);
-                spacesLayout->setContentsMargins(12, 8, 12, 8);
-                spacesLayout->setSpacing(4);
-
-                for (const Space &sp : m.spaces) {
-                    QHBoxLayout *spaceRow = new QHBoxLayout();
-                    spaceRow->setSpacing(10);
-
-                    QLabel *idLbl = new QLabel(sp.spaceId);
-                    idLbl->setStyleSheet("color: #f1d37c; font-size: 12px; font-weight: bold; font-family: 'Consolas', monospace;");
-                    idLbl->setFixedWidth(100);
-                    spaceRow->addWidget(idLbl);
-
-                    QLabel *typeLbl = new QLabel(sp.type);
-                    typeLbl->setStyleSheet("color: #78c8e2; font-size: 11px; font-family: 'Consolas', monospace;");
-                    typeLbl->setFixedWidth(60);
-                    spaceRow->addWidget(typeLbl);
-
-                    QLabel *valLbl = new QLabel(sp.values.join(", "));
-                    valLbl->setStyleSheet("color: #a0a8b8; font-size: 11px; font-family: 'Consolas', monospace;");
-                    valLbl->setWordWrap(true);
-                    spaceRow->addWidget(valLbl, 1);
-
-                    spacesLayout->addLayout(spaceRow);
-                }
-                root->addWidget(spacesTable);
-            }
-
-            // referenced clues
-            if (!m.referencedClues.isEmpty()) {
-                QLabel *cluesSection = new QLabel("Referenced Clues");
-                cluesSection->setStyleSheet("color: #8e94a0; font-size: 12px; font-weight: bold; margin-top: 4px;");
-                root->addWidget(cluesSection);
-
-                QFrame *cluesFrame = new QFrame();
-                cluesFrame->setStyleSheet("QFrame { background: #11131a; border: 1px solid #282c36; border-radius: 4px; }");
-                QVBoxLayout *cluesLayout = new QVBoxLayout(cluesFrame);
-                cluesLayout->setContentsMargins(12, 8, 12, 8);
-                cluesLayout->setSpacing(4);
-
-                for (const QString &clueId : m.referencedClues) {
-                    QString clueText = level.clues.contains(clueId) ? level.clues[clueId].val : "(missing)";
-                    QLabel *clueLine = new QLabel(QString("%1  →  %2").arg(clueId, clueText.trimmed()));
-                    clueLine->setStyleSheet("color: #78e2a0; font-size: 12px; font-family: 'Consolas', monospace;");
-                    clueLine->setWordWrap(true);
-                    cluesLayout->addWidget(clueLine);
-                }
-                root->addWidget(cluesFrame);
-            }
-        }
-
-        root->addStretch();
-
-        QListWidgetItem *detailItem = new QListWidgetItem();
-        detailItem->setFlags(Qt::NoItemFlags);
-        ui->manualListWidget->addItem(detailItem);
-        ui->manualListWidget->setItemWidget(detailItem, detailCard);
-        return;
-    }
-
-    //---list view---
-    ui->manualTitleLabel->setText("Monster Manual");
-    ui->manualListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    QString cardStyle =
-        "QFrame {"
-        "background-color: #2b2d30;"
-        "border-radius: 8px;"
-        "border: 1px solid #44474a;"
-        "padding: 5px;"
-        "}";
-    for(auto it = level.monsters.constBegin(); it != level.monsters.constEnd(); ++it){
-        const Monster &m = it.value();
-        const bool isSeen = seenMonsters.contains(m.monsterId) || defeatedMonsters.contains(m.monsterId);
-
-        //---init card for monsters---
-        QFrame *card = new QFrame();
-        card->setObjectName(m.nickname);
-        card->setStyleSheet(cardStyle);
-
-        QHBoxLayout *cardLayout = new QHBoxLayout(card);
-        cardLayout->setContentsMargins(8, 8, 8, 8);
-        cardLayout->setSpacing(10);
-        QLabel *iconLabel = new QLabel(card);
-        iconLabel->setFixedSize(64, 64);
-        iconLabel->setScaledContents(true);
-        QString imgPath = ":/images/assets/" + m.pic;
-        iconLabel->setPixmap(QPixmap(imgPath));
-        cardLayout->addWidget(iconLabel);
-        QWidget *textContainer = new QWidget(card);
-        QVBoxLayout *textLayout = new QVBoxLayout(textContainer);
-        textLayout->setContentsMargins(0, 0, 0, 0);
-        textLayout->setSpacing(4);
-        QLabel *nameLabel = new QLabel(m.nickname, textContainer);
-        nameLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #FFFFFF;");
-        QLabel *descLabel = new QLabel(isSeen ? m.name : "???", textContainer);
-        descLabel->setStyleSheet("font-size: 12px; color: #AAAAAA;");
-        textLayout->addWidget(nameLabel);
-        textLayout->addWidget(descLabel);
-        cardLayout->addWidget(textContainer, 1);
-
-        QListWidgetItem *item = new QListWidgetItem(ui->manualListWidget);
-        item->setSizeHint(card->sizeHint());
-        ui->manualListWidget->setItemWidget(item, card);
-        item->setData(Qt::UserRole, m.monsterId);
     }
 }
 
@@ -1983,7 +1876,8 @@ void MainWindow::showBagDialog()
         QToolButton *icon = new QToolButton(board);
         icon->setFixedSize(86, 86);
         icon->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        icon->setIcon(QIcon(":/images/assets/code_ring.png"));
+        icon->setIcon(QIcon(i < codeItems.size() ? codeBlockIconPath(codeItems.at(i).first)
+                                                  : ":/images/assets/natural.png"));
         icon->setIconSize(QSize(70, 70));
         icon->setStyleSheet("QToolButton { background: rgba(31, 23, 16, 210); border: 2px solid #d7b06a; border-radius: 6px; color: #ffe8ad; font-weight: 700; }"
                             "QToolButton:hover { background: rgba(55, 40, 24, 235); border-color: #49e6ff; color: #ffffff; }");
@@ -2004,7 +1898,7 @@ void MainWindow::showBagDialog()
                 QTextBrowser *codeView = new QTextBrowser(&detail);
                 codeView->setReadOnly(true);
                 codeView->setHtml(QString("<pre style=\"font-family:Consolas; font-size:15px; color:#f9f1d0; background:#111827; padding:14px;\">%1</pre>")
-                                      .arg(code.toHtmlEscaped()));
+                                      .arg(codeBlockHtml(code)));
                 QDialogButtonBox *close = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
                 QObject::connect(close, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
                 detailLayout->addWidget(name);
@@ -2036,201 +1930,512 @@ void MainWindow::showManualDialog()
     dialog.setWindowTitle("Monster Manual");
     dialog.setModal(true);
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
-    QLabel *title = new QLabel("Monster Manual", &dialog);
-    QFont titleFont = title->font();
-    titleFont.setPointSize(18);
-    titleFont.setBold(true);
-    title->setFont(titleFont);
-    title->setAlignment(Qt::AlignCenter);
+    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setSpacing(12);
 
-    QGridLayout *grid = new QGridLayout();
-    grid->setHorizontalSpacing(18);
-    grid->setVerticalSpacing(18);
-    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
-        const LevelData &level = levels.at(currentLevelIndex);
-        int row = 0;
-        for (const QString &monsterId : level.monsters.keys()) {
-            const Monster monster = level.monsters.value(monsterId);
-            const bool seen = seenMonsters.contains(monsterId) || defeatedMonsters.contains(monsterId);
-            QToolButton *icon = new QToolButton(&dialog);
-            icon->setFixedSize(180, 82);
-            icon->setText(seen ? (monster.nickname.isEmpty() ? monsterId : monster.nickname) : "display(hidden)");
-            QStringList clueLines;
+    auto spriteForMonster = [](const QString &monsterId, const Monster &monster) {
+        if (monsterId == "boss" || monster.monsterId == "boss") {
+            return QString(":/images/assets/marry_ann.png");
+        }
+        const QString normalizedPic = monster.pic.mid(monster.pic.lastIndexOf(QRegularExpression("[/\\\\]")) + 1);
+        if (!normalizedPic.isEmpty()) {
+            const QString resourcePath = ":/images/assets/" + normalizedPic;
+            if (!QPixmap(resourcePath).isNull()) {
+                return resourcePath;
+            }
+        }
+        static const QStringList sprites = {
+            ":/images/assets/alice.png",
+            ":/images/assets/cheshire_cat.png",
+            ":/images/assets/dodo.png",
+            ":/images/assets/gerda.png",
+            ":/images/assets/jabberwock.png",
+            ":/images/assets/mabel.png",
+            ":/images/assets/node.png",
+            ":/images/assets/red_hood.png"
+        };
+        return sprites.at(qHash(monsterId) % sprites.size());
+    };
+
+    auto monsterDisplayName = [](const QString &monsterId, const Monster &monster) {
+        return monster.nickname.isEmpty() ? monsterId : monster.nickname;
+    };
+
+    auto showMonsterDetail = [this, &dialog, &spriteForMonster, &monsterDisplayName](const QString &monsterId, const Monster &monster) {
+        QDialog detail(&dialog);
+        detail.setWindowTitle(monsterDisplayName(monsterId, monster));
+        detail.setModal(true);
+        QVBoxLayout *detailRoot = new QVBoxLayout(&detail);
+        detailRoot->setContentsMargins(0, 0, 0, 0);
+
+        QFrame *board = new QFrame(&detail);
+        board->setObjectName("manualDetailBoard");
+        board->setMinimumSize(980, 620);
+        board->setStyleSheet(
+            "QFrame#manualDetailBoard { border-image: url(:/images/assets/manul_background.png) 0 0 0 0 stretch stretch; }"
+            "QLabel { color: #f6e7bd; }"
+        );
+        QHBoxLayout *boardLayout = new QHBoxLayout(board);
+        boardLayout->setContentsMargins(70, 72, 70, 70);
+        boardLayout->setSpacing(26);
+
+        QFrame *portraitPanel = new QFrame(board);
+        portraitPanel->setStyleSheet("QFrame { background: rgba(13, 16, 20, 170); border: 2px solid rgba(215, 176, 106, 190); border-radius: 8px; }");
+        QVBoxLayout *portraitLayout = new QVBoxLayout(portraitPanel);
+        portraitLayout->setContentsMargins(18, 18, 18, 18);
+        QLabel *sprite = new QLabel(portraitPanel);
+        sprite->setAlignment(Qt::AlignCenter);
+        sprite->setMinimumSize(260, 310);
+        const QPixmap pix(spriteForMonster(monsterId, monster));
+        if (!pix.isNull()) {
+            sprite->setPixmap(pix.scaled(250, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }
+        portraitLayout->addWidget(sprite, 1);
+        boardLayout->addWidget(portraitPanel, 0);
+
+        QFrame *infoPanel = new QFrame(board);
+        infoPanel->setStyleSheet("QFrame { background: rgba(8, 10, 14, 178); border: 2px solid rgba(79, 234, 255, 145); border-radius: 8px; }");
+        QVBoxLayout *infoLayout = new QVBoxLayout(infoPanel);
+        infoLayout->setContentsMargins(22, 18, 22, 18);
+        infoLayout->setSpacing(10);
+
+        QLabel *name = new QLabel(monsterDisplayName(monsterId, monster), infoPanel);
+        name->setStyleSheet("QLabel { color: #ffd86b; font-size: 28px; font-weight: 900; }");
+        name->setWordWrap(true);
+        infoLayout->addWidget(name);
+
+        QTextBrowser *codeView = new QTextBrowser(infoPanel);
+        codeView->setHtml(renderMonsterCodeHtml(monster));
+        codeView->setStyleSheet(
+            "QTextBrowser { background: rgba(7, 12, 20, 218); border: 1px solid rgba(215, 176, 106, 135);"
+            "border-radius: 6px; padding: 4px; color: #f9f1d0; }"
+        );
+        codeView->setMinimumHeight(285);
+        infoLayout->addWidget(codeView, 1);
+
+        QLabel *clueTitle = new QLabel("Clues", infoPanel);
+        clueTitle->setStyleSheet("QLabel { color: #4feaff; font-size: 15px; font-weight: 800; }");
+        infoLayout->addWidget(clueTitle);
+        QStringList clueLines;
+        if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+            const LevelData &level = levels.at(currentLevelIndex);
             for (const QString &clueId : monster.referencedClues) {
                 const bool unlocked = collectedClues.contains(clueId);
-                clueLines << QString("%1: %2")
-                                 .arg(clueId.toHtmlEscaped(),
-                                      unlocked ? level.clues.value(clueId).val.toHtmlEscaped() : "display(hidden)");
+                clueLines << (unlocked
+                                  ? formatClueListLine(clueId, level.clues.value(clueId).val)
+                                  : QString("%1: %2").arg(clueId, hiddenCodeMask()));
             }
-            installHoverPopup(icon,
-                              seen
-                                  ? QString("<b>%1</b><br>Type: %2<br>Clues:<br>%3")
-                                        .arg(monster.nickname.toHtmlEscaped(),
-                                             monster.type.toHtmlEscaped(),
-                                             clueLines.isEmpty() ? "No referenced clue." : clueLines.join("<br>"))
-                                  : "Monster information is hidden.");
-            grid->addWidget(icon, row / 3, row % 3);
-            ++row;
+        }
+        QLabel *clues = new QLabel(clueLines.isEmpty() ? "No referenced clue." : clueLines.join("\n"), infoPanel);
+        clues->setStyleSheet("QLabel { color: #a8f4bf; font-family: 'Consolas', monospace; font-size: 13px; }");
+        clues->setWordWrap(true);
+        infoLayout->addWidget(clues);
+
+        boardLayout->addWidget(infoPanel, 1);
+        detailRoot->addWidget(board);
+        detail.resize(1080, 700);
+        detail.exec();
+    };
+
+    QLabel *title = new QLabel("Monster Manual", &dialog);
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet(
+        "QLabel { color: #ffd86b; font-size: 30px; font-weight: 900;"
+        "background: rgba(18, 21, 28, 210); border: 2px solid #d7b06a; border-radius: 8px; padding: 8px; }"
+    );
+
+    QFrame *board = new QFrame(&dialog);
+    board->setObjectName("manualBoard");
+    board->setMinimumSize(900, 560);
+    board->setStyleSheet("QFrame#manualBoard { border-image: url(:/images/assets/manul_background.png) 0 0 0 0 stretch stretch; }");
+    QVBoxLayout *boardLayout = new QVBoxLayout(board);
+    boardLayout->setContentsMargins(80, 78, 80, 70);
+    boardLayout->setSpacing(14);
+
+    QLabel *pageLabel = new QLabel(board);
+    pageLabel->setAlignment(Qt::AlignCenter);
+    pageLabel->setStyleSheet("QLabel { color: #4feaff; font-size: 18px; font-weight: 800; background: rgba(9, 12, 18, 170); border: 1px solid rgba(79, 234, 255, 135); border-radius: 6px; padding: 6px; }");
+    boardLayout->addWidget(pageLabel);
+
+    QWidget *gridHolder = new QWidget(board);
+    QGridLayout *grid = new QGridLayout(gridHolder);
+    grid->setContentsMargins(4, 4, 4, 4);
+    grid->setHorizontalSpacing(22);
+    grid->setVerticalSpacing(18);
+    boardLayout->addWidget(gridHolder, 1);
+
+    QHBoxLayout *pager = new QHBoxLayout();
+    pager->setSpacing(18);
+    QPushButton *prevButton = new QPushButton("<", board);
+    QPushButton *nextButton = new QPushButton(">", board);
+    const QString pagerButtonStyle =
+        "QPushButton { min-width: 86px; min-height: 40px; color: #4feaff; font-size: 22px; font-weight: 900;"
+        "background: rgba(7, 17, 25, 210); border: 2px solid #24dff5; border-radius: 8px; }"
+        "QPushButton:hover { background: rgba(35, 102, 117, 225); }"
+        "QPushButton:disabled { color: #5f6570; border-color: #4a515d; background: rgba(15, 18, 24, 160); }";
+    prevButton->setStyleSheet(pagerButtonStyle);
+    nextButton->setStyleSheet(pagerButtonStyle);
+    pager->addStretch();
+    pager->addWidget(prevButton);
+    pager->addWidget(nextButton);
+    pager->addStretch();
+    boardLayout->addLayout(pager);
+
+    QVector<QPair<QString, Monster>> monsterItems;
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        const LevelData &level = levels.at(currentLevelIndex);
+        QSet<QString> listedMonsterIds;
+        for (auto it = level.monsters.cbegin(); it != level.monsters.cend(); ++it) {
+            const QString monsterId = (it.key() == "boss" || it.value().monsterId == "boss") ? QString("boss") : it.key();
+            if (listedMonsterIds.contains(monsterId)) {
+                continue;
+            }
+            listedMonsterIds.insert(monsterId);
+            monsterItems.append(qMakePair(monsterId, it.value()));
+        }
+        if (!level.boss.monsterId.isEmpty() && !listedMonsterIds.contains("boss")) {
+            monsterItems.append(qMakePair(QString("boss"), static_cast<Monster>(level.boss)));
         }
     }
 
-    QWidget *gridHolder = new QWidget(&dialog);
-    gridHolder->setLayout(grid);
+    const int itemsPerPage = 4;
+    const int totalPages = qMax(2, (monsterItems.size() + itemsPerPage - 1) / itemsPerPage);
+    int currentPage = 0;
+
+    std::function<void()> refreshPage = [&]() {
+        clearLayout(grid);
+        pageLabel->setText(QString("PAGE %1 / %2").arg(currentPage + 1).arg(totalPages));
+        prevButton->setEnabled(currentPage > 0);
+        nextButton->setEnabled(currentPage + 1 < totalPages);
+
+        const int start = currentPage * itemsPerPage;
+        for (int i = 0; i < itemsPerPage; ++i) {
+            const int itemIndex = start + i;
+            QToolButton *card = new QToolButton(gridHolder);
+            card->setFixedSize(330, 150);
+            card->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            card->setIconSize(QSize(92, 92));
+            card->setStyleSheet(
+                "QToolButton { color: #f6e7bd; font-size: 16px; font-weight: 800; text-align: left;"
+                "background: rgba(9, 12, 18, 190); border: 2px solid rgba(215, 176, 106, 190); border-radius: 8px; padding: 12px; }"
+                "QToolButton:hover { border-color: #4feaff; background: rgba(15, 35, 45, 220); }"
+            );
+            if (itemIndex < monsterItems.size()) {
+                const QString monsterId = monsterItems.at(itemIndex).first;
+                const Monster monster = monsterItems.at(itemIndex).second;
+                card->setText(monsterDisplayName(monsterId, monster));
+                card->setIcon(QIcon(spriteForMonster(monsterId, monster)));
+                QStringList clueLines;
+                if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+                    const LevelData &level = levels.at(currentLevelIndex);
+                    for (const QString &clueId : monster.referencedClues) {
+                        clueLines << QString("<pre style=\"margin:0;font-family:Consolas,monospace;\">%1</pre>")
+                                         .arg((collectedClues.contains(clueId)
+                                                   ? formatClueListLine(clueId, level.clues.value(clueId).val)
+                                                   : QString("%1: %2").arg(clueId, hiddenCodeMask()))
+                                                  .toHtmlEscaped());
+                    }
+                }
+                installHoverPopup(card,
+                                  QString("<b>%1</b><br>Clues:<br>%2")
+                                      .arg(monsterDisplayName(monsterId, monster).toHtmlEscaped(),
+                                           clueLines.isEmpty() ? "No referenced clue." : clueLines.join("<br>")));
+                connect(card, &QToolButton::clicked, &dialog, [&, monsterId, monster]() {
+                    showMonsterDetail(monsterId, monster);
+                });
+            } else {
+                card->setText("EMPTY SLOT");
+                card->setEnabled(false);
+            }
+            grid->addWidget(card, i / 2, i % 2);
+        }
+    };
+
+    connect(prevButton, &QPushButton::clicked, &dialog, [&]() {
+        if (currentPage > 0) {
+            --currentPage;
+            refreshPage();
+        }
+    });
+    connect(nextButton, &QPushButton::clicked, &dialog, [&]() {
+        if (currentPage + 1 < totalPages) {
+            ++currentPage;
+            refreshPage();
+        }
+    });
+    refreshPage();
+
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     layout->addWidget(title);
-    layout->addWidget(gridHolder);
+    layout->addWidget(board);
     layout->addWidget(buttons);
-    dialog.resize(720, 520);
+    dialog.resize(1040, 760);
+    dialog.exec();
+}
+
+void MainWindow::showVictorySettlement()
+{
+    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+        return;
+    }
+
+    QDialog dialog(this);
+    dialog.setWindowTitle("Victory Settlement");
+    dialog.setModal(true);
+    dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
+
+    QVBoxLayout *root = new QVBoxLayout(&dialog);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QFrame *board = new QFrame(&dialog);
+    board->setObjectName("victoryBoard");
+    board->setMinimumSize(980, 620);
+    board->setStyleSheet(
+        "QFrame#victoryBoard { border-image: url(:/images/assets/victory_settlement.png) 0 0 0 0 stretch stretch; }"
+        "QLabel { color: #f7e7bd; }"
+    );
+
+    QVBoxLayout *layout = new QVBoxLayout(board);
+    layout->setContentsMargins(110, 210, 110, 50);
+    layout->setSpacing(14);
+
+    QFrame *summaryPanel = new QFrame(board);
+    summaryPanel->setObjectName("victorySummaryPanel");
+    summaryPanel->setStyleSheet(
+        "QFrame#victorySummaryPanel { background: rgba(7, 8, 12, 92);"
+        "border: 1px solid rgba(226, 181, 86, 110); border-radius: 8px; }"
+    );
+    QVBoxLayout *summaryLayout = new QVBoxLayout(summaryPanel);
+    summaryLayout->setContentsMargins(24, 14, 24, 14);
+    summaryLayout->setSpacing(10);
+
+    const LevelData &level = levels.at(currentLevelIndex);
+    QLabel *stageLine = new QLabel(QString("Stage %1 Cleared").arg(currentLevelIndex + 1), summaryPanel);
+    stageLine->setAlignment(Qt::AlignCenter);
+    stageLine->setStyleSheet("QLabel { color: #4feaff; font-size: 26px; font-weight: 900; background: transparent; }");
+    summaryLayout->addWidget(stageLine);
+
+    QLabel *message = new QLabel(level.endText.isEmpty() ? "The spire compiled successfully." : level.endText, summaryPanel);
+    message->setAlignment(Qt::AlignCenter);
+    message->setWordWrap(true);
+    message->setStyleSheet("QLabel { color: #fff1c2; font-size: 18px; font-weight: 800; background: rgba(7, 8, 12, 70); border: 1px solid rgba(226, 181, 86, 80); border-radius: 6px; padding: 10px; }");
+    summaryLayout->addWidget(message);
+
+    QFrame *stats = new QFrame(summaryPanel);
+    stats->setStyleSheet("QFrame { background: rgba(5, 7, 10, 92); border: 1px solid rgba(79, 234, 255, 95); border-radius: 6px; }");
+    QGridLayout *statsLayout = new QGridLayout(stats);
+    statsLayout->setContentsMargins(20, 14, 20, 14);
+    statsLayout->setHorizontalSpacing(24);
+    statsLayout->setVerticalSpacing(10);
+
+    auto addStat = [statsLayout](int row, int column, const QString &label, const QString &value) {
+        QLabel *labelWidget = new QLabel(label);
+        labelWidget->setStyleSheet("QLabel { color: rgba(247, 231, 189, 190); font-size: 13px; font-weight: 700; }");
+        QLabel *valueWidget = new QLabel(value);
+        valueWidget->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        valueWidget->setStyleSheet("QLabel { color: #ffe082; font-size: 20px; font-weight: 900; }");
+        statsLayout->addWidget(labelWidget, row, column * 2);
+        statsLayout->addWidget(valueWidget, row, column * 2 + 1);
+    };
+
+    addStat(0, 0, "Collected Blocks", QString::number(bagBlocks.size()));
+    addStat(0, 1, "Clues Revealed", QString("%1 / %2").arg(collectedClues.size()).arg(level.clues.size()));
+    addStat(1, 0, "Enemies Cleared", QString("%1 / %2").arg(defeatedMonsters.size()).arg(level.monsters.size() + 1));
+    addStat(1, 1, "Unlocked", isLevelUnlocked(currentLevelIndex + 1) ? "Next Stage" : "Current Stage");
+    summaryLayout->addWidget(stats);
+
+    layout->addWidget(summaryPanel, 0);
+    layout->addStretch(1);
+
+    QHBoxLayout *actions = new QHBoxLayout();
+    actions->setSpacing(18);
+    auto makeButton = [board](const QString &text) {
+        QPushButton *button = new QPushButton(text, board);
+        button->setMinimumSize(190, 54);
+        button->setStyleSheet(
+            "QPushButton { color: #fff1c2; font-size: 18px; font-weight: 900;"
+            "background: rgba(9, 13, 18, 175); border: 2px solid #d7b06a; border-radius: 7px; }"
+            "QPushButton:hover { color: white; border-color: #4feaff; background: rgba(18, 47, 58, 225); }"
+            "QPushButton:pressed { background: rgba(6, 10, 15, 235); }"
+        );
+        return button;
+    };
+    QPushButton *stayButton = makeButton("Continue");
+    QPushButton *stageButton = makeButton("Select Stage");
+    QPushButton *menuButton = makeButton("Main Menu");
+    actions->addStretch();
+    actions->addWidget(stayButton);
+    actions->addWidget(stageButton);
+    actions->addWidget(menuButton);
+    actions->addStretch();
+    layout->addLayout(actions);
+
+    connect(stayButton, &QPushButton::clicked, &dialog, [this, &dialog]() {
+        const int nextLevelIndex = currentLevelIndex + 1;
+        dialog.accept();
+        if (nextLevelIndex >= 0 && nextLevelIndex < levels.size() && isLevelUnlocked(nextLevelIndex)) {
+            QTimer::singleShot(0, this, [this, nextLevelIndex]() {
+                startLevel(nextLevelIndex);
+            });
+        } else {
+            QTimer::singleShot(0, this, [this]() {
+                refreshLevelSelectUi();
+                ui->stackedWidget->setCurrentWidget(ui->mapPage);
+            });
+        }
+    });
+    connect(stageButton, &QPushButton::clicked, &dialog, [this, &dialog]() {
+        refreshLevelSelectUi();
+        ui->stackedWidget->setCurrentWidget(ui->mapPage);
+        dialog.accept();
+    });
+    connect(menuButton, &QPushButton::clicked, &dialog, [this, &dialog]() {
+        ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
+        mainMenuButtonBar->show();
+        positionMainMenuButtons();
+        dialog.accept();
+    });
+
+    root->addWidget(board);
+    dialog.resize(1080, 700);
     dialog.exec();
 }
 
 void MainWindow::movePlayer(int rowDelta, int columnDelta)
 {
-    if (autoMoving) {
-        cancelAutoMove(true);
+    if (movePlaybackActive) {
+        return;
     }
-    stepPlayerTo(playerRow + rowDelta, playerColumn + columnDelta, true);
+    clearDisplayedMovePath();
+    if (!gameEngine.m_map) {
+        ui->combatLogLabel->setText("No active map.");
+        return;
+    }
+
+    const QPoint backendPos = gameEngine.m_map->playerPos();
+    if (!moveThroughEngine(backendPos.x() + rowDelta, backendPos.y() + columnDelta)) {
+        ui->combatLogLabel->setText("Blocked.");
+    }
 }
 
 void MainWindow::movePlayerTo(int targetRow, int targetColumn)
 {
-    if (autoMoving) {
+    if (movePlaybackActive) {
         return;
     }
-    if (!canEnter(targetRow, targetColumn)) {
-        ui->combatLogLabel->setText("That tile is blocked.");
-        return;
-    }
-
-    const LevelData &level = levels.at(currentLevelIndex);
-    QVector<QVector<bool>> visited(level.mapGrid.size());
-    QVector<QVector<QPoint>> parent(level.mapGrid.size());
-    for (int row = 0; row < level.mapGrid.size(); ++row) {
-        visited[row] = QVector<bool>(level.mapGrid.at(row).size(), false);
-        parent[row] = QVector<QPoint>(level.mapGrid.at(row).size(), QPoint(-1, -1));
-    }
-
-    QQueue<QPoint> queue;
-    queue.enqueue(QPoint(playerColumn, playerRow));
-    visited[playerRow][playerColumn] = true;
-    const QPoint directions[] = {QPoint(1, 0), QPoint(-1, 0), QPoint(0, 1), QPoint(0, -1)};
-    while (!queue.isEmpty()) {
-        const QPoint current = queue.dequeue();
-        if (current.y() == targetRow && current.x() == targetColumn) {
-            break;
-        }
-        for (const QPoint &direction : directions) {
-            const int nextColumn = current.x() + direction.x();
-            const int nextRow = current.y() + direction.y();
-            if (canUseAsPathNode(nextRow, nextColumn, QPoint(targetColumn, targetRow)) && !visited[nextRow][nextColumn]) {
-                visited[nextRow][nextColumn] = true;
-                parent[nextRow][nextColumn] = current;
-                queue.enqueue(QPoint(nextColumn, nextRow));
-            }
-        }
-    }
-
-    if (!visited[targetRow][targetColumn]) {
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         ui->combatLogLabel->setText("No path to that tile.");
         return;
     }
 
-    QVector<QPoint> path;
-    QPoint cursor(targetColumn, targetRow);
-    while (cursor != QPoint(playerColumn, playerRow)) {
-        path.prepend(cursor);
-        cursor = parent[cursor.y()][cursor.x()];
-    }
-    if (path.isEmpty()) {
-        triggerTileEvent(false);
+    const LevelData &level = levels.at(currentLevelIndex);
+    if (targetRow < 0 || targetRow >= level.mapGrid.size()
+        || targetColumn < 0 || targetColumn >= level.mapGrid.at(targetRow).size()
+        || !gameEngine.m_map->canGoIn(targetRow, targetColumn)) {
+        ui->combatLogLabel->setText("No path to that tile.");
         return;
     }
 
-    pushUndoState();
-    activeMovePath = path;
-    activeMovePathIndex = 0;
-    autoMoving = true;
-    advanceAutoMove();
+    bool success = false;
+    const QVector<QPoint> backendPath = gameEngine.m_map->findPath(targetRow, targetColumn, &success);
+    if (!success || backendPath.size() < 2) {
+        if (!moveThroughEngine(targetRow, targetColumn)) {
+            ui->combatLogLabel->setText("No path to that tile.");
+        }
+        return;
+    }
+
+    startMovePlayback(backendPath, targetRow, targetColumn);
 }
 
-void MainWindow::advanceAutoMove()
+void MainWindow::startMovePlayback(const QVector<QPoint> &backendPath, int targetRow, int targetColumn)
 {
-    if (!autoMoving) {
-        return;
-    }
-    if (activeMovePathIndex >= activeMovePath.size()) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        triggerTileEvent(true);
-        return;
-    }
-
-    const QPoint next = activeMovePath.at(activeMovePathIndex++);
-    if (!stepPlayerTo(next.y(), next.x(), false)) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        ui->combatLogLabel->setText("Path was interrupted.");
-        return;
-    }
-
-    const QString tileId = tileAt(playerRow, playerColumn);
-    const bool finalStep = activeMovePathIndex >= activeMovePath.size();
-    if (hasTileEvent(tileId) && (finalStep || !isSkippablePathChest(tileId))) {
-        autoMoving = false;
-        activeMovePath.clear();
-        activeMovePathIndex = 0;
-        triggerTileEvent(true);
-        return;
-    }
-
-    QTimer::singleShot(115, this, &MainWindow::advanceAutoMove);
-}
-
-void MainWindow::cancelAutoMove(bool returnToPreviousPoint)
-{
-    if (!autoMoving && activeMovePath.isEmpty()) {
-        return;
-    }
-
-    autoMoving = false;
     activeMovePath.clear();
-    activeMovePathIndex = 0;
-    if (returnToPreviousPoint) {
-        playerRow = previousPlayerRow;
-        playerColumn = previousPlayerColumn;
+    for (const QPoint &step : backendPath) {
+        activeMovePath.append(QPoint(step.y(), step.x()));
     }
+    activeMovePathIndex = 1;
+    pendingMoveTargetRow = targetRow;
+    pendingMoveTargetColumn = targetColumn;
+    movePlaybackActive = true;
+
+    const QPoint start = backendPath.first();
+    playerRow = start.x();
+    playerColumn = start.y();
+    ui->combatLogLabel->setText(QString("Moving to %1,%2.").arg(targetColumn).arg(targetRow));
     refreshGameUi();
-    ui->combatLogLabel->setText("Movement interrupted.");
+    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
 }
 
-bool MainWindow::stepPlayerTo(int row, int column, bool saveUndo)
+void MainWindow::advanceMovePlayback()
 {
-    if (!canEnter(row, column)) {
-        ui->combatLogLabel->setText("Blocked.");
+    if (!movePlaybackActive) {
+        return;
+    }
+
+    if (activeMovePathIndex >= activeMovePath.size()) {
+        movePlaybackActive = false;
+        activeMovePath.clear();
+        activeMovePathIndex = 0;
+        const int targetRow = pendingMoveTargetRow;
+        const int targetColumn = pendingMoveTargetColumn;
+        pendingMoveTargetRow = -1;
+        pendingMoveTargetColumn = -1;
+        suppressNextMovePath = true;
+        if (!moveThroughEngine(targetRow, targetColumn)) {
+            suppressNextMovePath = false;
+            syncFromEngineState();
+            refreshGameUi();
+            ui->combatLogLabel->setText("No path to that tile.");
+        }
+        return;
+    }
+
+    const QPoint next = activeMovePath.at(activeMovePathIndex);
+    playerRow = next.y();
+    playerColumn = next.x();
+    ++activeMovePathIndex;
+    refreshGameUi();
+    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
+}
+
+bool MainWindow::moveThroughEngine(int targetRow, int targetColumn)
+{
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return false;
     }
 
-    if (saveUndo) {
-        pushUndoState();
+    const LevelData &level = levels.at(currentLevelIndex);
+    if (targetRow < 0 || targetRow >= level.mapGrid.size()
+        || targetColumn < 0 || targetColumn >= level.mapGrid.at(targetRow).size()) {
+        return false;
     }
-    previousPlayerRow = playerRow;
-    previousPlayerColumn = playerColumn;
-    playerRow = row;
-    playerColumn = column;
-    ui->combatLogLabel->setText(QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow));
+
+    if (!gameEngine.m_map->canGoIn(targetRow, targetColumn)) {
+        return false;
+    }
+
+    return gameEngine.moveTo(targetRow, targetColumn);
+}
+
+void MainWindow::clearDisplayedMovePath()
+{
+    if (!movePlaybackActive && activeMovePath.isEmpty()) {
+        return;
+    }
+
+    movePlaybackActive = false;
+    pendingMoveTargetRow = -1;
+    pendingMoveTargetColumn = -1;
+    activeMovePath.clear();
+    activeMovePathIndex = 0;
     refreshGameUi();
-    if (saveUndo) {
-        triggerTileEvent(false);
-    }
-    return true;
 }
 
 bool MainWindow::canEnter(int row, int column) const
 {
-    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
+    if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         return false;
     }
     const LevelData &level = levels.at(currentLevelIndex);
@@ -2238,26 +2443,7 @@ bool MainWindow::canEnter(int row, int column) const
            && row < level.mapGrid.size()
            && column >= 0
            && column < level.mapGrid.at(row).size()
-           && level.mapGrid.at(row).at(column) != "#";
-}
-
-bool MainWindow::canUseAsPathNode(int row, int column, const QPoint &target) const
-{
-    if (!canEnter(row, column)) {
-        return false;
-    }
-    if (QPoint(column, row) == target) {
-        return true;
-    }
-
-    const QString tileId = tileAt(row, column);
-    if (tileId.startsWith("monster") || tileId == "boss") {
-        return defeatedMonsters.contains(tileId);
-    }
-    if (tileId.startsWith("chest")) {
-        return isSkippablePathChest(tileId) || openedChests.contains(tileId);
-    }
-    return true;
+           && gameEngine.m_map->canGoIn(row, column);
 }
 
 QString MainWindow::tileAt(int row, int column) const
@@ -2265,7 +2451,7 @@ QString MainWindow::tileAt(int row, int column) const
     if (!canEnter(row, column)) {
         return "#";
     }
-    return levels.at(currentLevelIndex).mapGrid.at(row).at(column);
+    return gameEngine.m_map ? gameEngine.m_map->currentId(row, column) : levels.at(currentLevelIndex).mapGrid.at(row).at(column);
 }
 
 QString MainWindow::describeTile(const QString &tileId) const
@@ -2294,85 +2480,12 @@ QString MainWindow::describeTile(const QString &tileId) const
     return tileId;
 }
 
-bool MainWindow::hasTileEvent(const QString &tileId) const
-{
-    if ((tileId.startsWith("monster") || tileId == "boss") && defeatedMonsters.contains(tileId)) {
-        return false;
-    }
-    if (tileId.startsWith("chest")) {
-        if (openedChests.contains(tileId)) {
-            return false;
-        }
-        return chestHasAvailableBlocks(tileId);
-    }
-    if (tileId.startsWith("clue")) {
-        return !collectedClues.contains(tileId);
-    }
-    return tileId.startsWith("chest") || tileId.startsWith("monster") || tileId == "boss" || tileId.startsWith("clue");
-}
-
-bool MainWindow::isSkippablePathChest(const QString &tileId) const
-{
-    if (!tileId.startsWith("chest") || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
-        return false;
-    }
-    const Chest chest = levels.at(currentLevelIndex).chests.value(tileId);
-    return !chest.forcedPick;
-}
-
-void MainWindow::triggerTileEvent(bool fromAutoMove)
-{
-    Q_UNUSED(fromAutoMove);
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (!hasTileEvent(tileId)) {
-        return;
-    }
-    interactWithCurrentTile();
-}
-
-void MainWindow::returnToPreviousTile()
-{
-    playerRow = previousPlayerRow;
-    playerColumn = previousPlayerColumn;
-    refreshGameUi();
-}
-
-void MainWindow::interactWithCurrentTile()
-{
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (tileId.startsWith("chest")) {
-        handleChest(tileId);
-    } else if (tileId.startsWith("monster") || tileId == "boss") {
-        handleMonster(tileId);
-    } else if (tileId.startsWith("clue")) {
-        const Clue clue = levels.at(currentLevelIndex).clues.value(tileId);
-        if (collectedClues.contains(tileId)) {
-            ui->combatLogLabel->setText("Clue already recorded.");
-            return;
-        }
-        pushUndoState();
-        collectedClues.insert(tileId);
-        QMessageBox::information(this,
-                                 "Clue",
-                                 clue.val.isEmpty() ? "No clue text." : clue.val);
-        ui->combatLogLabel->setText(QString("%1 recorded in monster intel.").arg(tileId));
-    } else {
-        ui->combatLogLabel->setText("Nothing to interact with here.");
-    }
-    refreshGameUi();
-}
-
 void MainWindow::handleChest(const QString &chestId)
 {
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
-    if (!chestHasAvailableBlocks(chestId)) {
-        openedChests.insert(chestId);
+    if (!gameEngine.m_bag || !chestHasAvailableBlocks(chestId)) {
         ui->combatLogLabel->setText("This chest is already empty.");
         refreshGameUi();
-        return;
-    }
-    if (openedChests.contains(chestId) && !chest.repeat) {
-        ui->combatLogLabel->setText("This chest is already empty.");
         return;
     }
 
@@ -2390,25 +2503,22 @@ void MainWindow::handleChest(const QString &chestId)
     contentGrid->setSpacing(12);
     QString selectedBlockId;
     int blockIndex = 0;
-    for (const CodeBlock &block : chest.blocks) {
+    for (const CodeBlock &block : gameEngine.m_bag->blocksRemaining(chestId)) {
         QToolButton *blockIcon = new QToolButton(contents);
         blockIcon->setFixedSize(128, 68);
-        blockIcon->setText(block.blockId);
+        blockIcon->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        blockIcon->setIcon(QIcon(codeBlockIconPath(block.blockId)));
+        blockIcon->setIconSize(QSize(58, 58));
+        blockIcon->setToolTip(block.blockId);
         installHoverPopup(blockIcon,
                           QString("<b>%1</b><br><pre>%2</pre>")
-                              .arg(block.blockId.toHtmlEscaped(), block.code.toHtmlEscaped()));
-        const bool alreadyPicked = bagBlocks.contains(block.blockId);
-        blockIcon->setEnabled(!alreadyPicked);
-        blockIcon->setStyleSheet(alreadyPicked
-                                     ? "QToolButton { background: #20242a; border: 2px solid #5e6470; border-radius: 5px; color: #89909a; font-weight: 700; }"
-                                     : "QToolButton { background: #15242b; border: 2px solid #d7b06a; border-radius: 5px; color: #ffe8ad; font-weight: 700; }"
-                                       "QToolButton:hover { border-color: #49e6ff; color: white; }");
-        if (!alreadyPicked) {
-            connect(blockIcon, &QToolButton::clicked, &dialog, [&dialog, &selectedBlockId, block]() {
-                selectedBlockId = block.blockId;
-                dialog.accept();
-            });
-        }
+                              .arg(block.blockId.toHtmlEscaped(), codeBlockHtml(block.code)));
+        blockIcon->setStyleSheet("QToolButton { background: #15242b; border: 2px solid #d7b06a; border-radius: 5px; color: #ffe8ad; font-weight: 700; }"
+                                 "QToolButton:hover { border-color: #49e6ff; color: white; }");
+        connect(blockIcon, &QToolButton::clicked, &dialog, [&dialog, &selectedBlockId, block]() {
+            selectedBlockId = block.blockId;
+            dialog.accept();
+        });
         contentGrid->addWidget(blockIcon, blockIndex / 3, blockIndex % 3);
         ++blockIndex;
     }
@@ -2427,10 +2537,12 @@ void MainWindow::handleChest(const QString &chestId)
     QString picked;
     if (dialog.exec() == QDialog::Accepted) {
         if (!selectedBlockId.isEmpty()) {
-            pushUndoState();
-            bagBlocks.append(selectedBlockId);
-            picked = selectedBlockId;
-            openedChests.insert(chestId);
+            if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
+                picked = selectedBlockId;
+                syncFromEngineState();
+            } else {
+                QMessageBox::warning(&dialog, "Chest", "Unable to take this code block.");
+            }
         }
         ui->combatLogLabel->setText(picked.isEmpty()
                                         ? "No new block was picked."
@@ -2439,8 +2551,8 @@ void MainWindow::handleChest(const QString &chestId)
         ui->combatLogLabel->setText(chest.forcedPick ? "Forced chest closed. Returned to the previous tile." : "Chest skipped.");
     }
 
-    if (chest.forcedPick) {
-        returnToPreviousTile();
+    if (chest.forcedPick && gameEngine.m_map) {
+        gameEngine.exitChest(chestId);
     }
 }
 
@@ -2465,98 +2577,121 @@ void MainWindow::handleMonster(const QString &monsterId)
     hero->setFixedSize(180, 220);
     hero->setAlignment(Qt::AlignCenter);
     hero->setPixmap(QPixmap(":/images/assets/jibao.png").scaled(hero->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    QTextBrowser *codeView = new QTextBrowser(&dialog);
-    codeView->setReadOnly(true);
-    codeView->setMinimumHeight(270);
+    QScrollArea *codeScroll = new QScrollArea(&dialog);
+    codeScroll->setWidgetResizable(true);
+    codeScroll->setMinimumHeight(330);
+    codeScroll->setStyleSheet("QScrollArea { background: #111827; border: 1px solid #3a4658; border-radius: 7px; }");
+    QFrame *codePanel = new QFrame(codeScroll);
+    codePanel->setStyleSheet("QFrame { background: #111827; }");
+    QVBoxLayout *codeLayout = new QVBoxLayout(codePanel);
+    codeLayout->setContentsMargins(16, 14, 16, 14);
+    codeLayout->setSpacing(3);
 
-    QVector<CodeDropSlot *> fillSlots;
-    auto filledBlocks = [&fillSlots]() {
-        QStringList blocks;
-        for (const CodeDropSlot *slot : fillSlots) {
-            blocks << slot->property("blockId").toString();
-        }
-        return blocks;
-    };
-    auto renderEncounterCode = [this, monster, &filledBlocks]() {
-        QString html = monster.codeTemplate.toHtmlEscaped();
-        html.replace('\n', "<br>");
-        html.replace(' ', "&nbsp;");
-        const QStringList blocks = filledBlocks();
-        for (int i = 0; i < monster.spaces.size(); ++i) {
-            const Space &space = monster.spaces.at(i);
-            const QString token = QString("$%1$").arg(space.spaceId).toHtmlEscaped();
-            const QString blockId = i < blocks.size() ? blocks.at(i) : QString();
-            const QString content = blockId.isEmpty()
-                                        ? "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                                        : blockId.toHtmlEscaped();
-            html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), content));
-        }
-        for (auto it = levels.at(currentLevelIndex).clues.constBegin(); it != levels.at(currentLevelIndex).clues.constEnd(); ++it) {
-            const QString token = QString("$%1$").arg(it.key()).toHtmlEscaped();
-            const bool unlocked = collectedClues.contains(it.key());
-            const QString value = unlocked ? it.value().val.toHtmlEscaped() : QString("display(hidden)");
-            html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), value));
-        }
-        return QString("<div style=\"font-family:Consolas,monospace;font-size:15px;color:#f9f1d0;background:#111827;padding:14px;\">%1</div>").arg(html);
-    };
-    auto refreshEncounterCode = [&]() {
-        codeView->setHtml(renderEncounterCode());
-    };
-
-    QFrame *slotPanel = new QFrame(&dialog);
-    slotPanel->setStyleSheet("QFrame { background: rgba(13, 18, 25, 235); border: 1px solid #3a4658; border-radius: 7px; }");
-    QHBoxLayout *slotLayout = new QHBoxLayout(slotPanel);
-    slotLayout->setContentsMargins(12, 10, 12, 10);
-    slotLayout->setSpacing(10);
+    QMap<QString, int> spaceIndexById;
     for (int i = 0; i < monster.spaces.size(); ++i) {
-        CodeDropSlot *slot = new CodeDropSlot(slotPanel);
-        slot->setToolTip(monster.spaces.at(i).spaceId);
-        slot->setOnChanged(refreshEncounterCode);
-        fillSlots.append(slot);
-        slotLayout->addWidget(slot);
+        spaceIndexById.insert(monster.spaces.at(i).spaceId, i);
     }
-    slotLayout->addStretch();
-    refreshEncounterCode();
+
+    const QStringList templateLines = monster.codeTemplate.split('\n');
+    const QRegularExpression tokenPattern("\\$([^$]+)\\$");
+    for (const QString &line : templateLines) {
+        QWidget *lineWidget = new QWidget(codePanel);
+        QHBoxLayout *lineLayout = new QHBoxLayout(lineWidget);
+        lineLayout->setContentsMargins(0, 0, 0, 0);
+        lineLayout->setSpacing(0);
+        int cursor = 0;
+        QRegularExpressionMatchIterator matches = tokenPattern.globalMatch(line);
+        while (matches.hasNext()) {
+            const QRegularExpressionMatch match = matches.next();
+            const int start = match.capturedStart();
+            if (start > cursor) {
+                QLabel *text = new QLabel(line.mid(cursor, start - cursor), lineWidget);
+                text->setTextFormat(Qt::PlainText);
+                text->setStyleSheet("QLabel { color: #f9f1d0; font-family: Consolas, 'Cascadia Mono', monospace; font-size: 16px; background: transparent; }");
+                lineLayout->addWidget(text, 0, Qt::AlignVCenter);
+            }
+
+            const QString tokenId = match.captured(1);
+            if (spaceIndexById.contains(tokenId)) {
+                CodeDropSlot *slot = new CodeDropSlot(lineWidget);
+                slot->setToolTip(tokenId);
+                slot->setTextProvider([this](const QString &blockId) {
+                    return formatCodeBlockForDisplay(codeForBlock(blockId));
+                });
+                slot->setOnChanged([this, slot, tokenId, &dialog]() {
+                    const QString blockId = slot->property("blockId").toString();
+                    if (!gameEngine.fillSpace(tokenId, blockId)) {
+                        slot->clearBlock();
+                        QMessageBox::warning(&dialog, "Wrong Fill", QString("Unable to fill %1 with %2.").arg(tokenId, blockId));
+                        return;
+                    }
+                    syncFromEngineState();
+                });
+                lineLayout->addWidget(slot, 0, Qt::AlignVCenter);
+            } else {
+                const bool unlocked = collectedClues.contains(tokenId);
+                QLabel *clue = new QLabel(lineWidget);
+                const QString clueText = unlocked ? formatClueForCode(levels.at(currentLevelIndex).clues.value(tokenId).val) : hiddenCodeMask();
+                clue->setText(clueText);
+                clue->setTextFormat(Qt::PlainText);
+                clue->setWordWrap(false);
+                clue->setStyleSheet(unlocked
+                                        ? "QLabel { color: #a8f4bf; font-family: Consolas, monospace; font-size: 16px; background: rgba(10, 38, 47, 150); border-radius: 5px; padding: 2px 8px; }"
+                                        : "QLabel { color: rgba(249, 241, 208, 80); font-family: Consolas, monospace; font-size: 16px; background: rgba(26, 29, 38, 210); border: 1px solid rgba(120, 130, 145, 120); border-radius: 5px; padding: 2px 8px; }");
+                lineLayout->addWidget(clue, 0, clueText.contains('\n') ? Qt::AlignTop : Qt::AlignVCenter);
+            }
+            cursor = match.capturedEnd();
+        }
+        if (cursor < line.size()) {
+            QLabel *text = new QLabel(line.mid(cursor), lineWidget);
+            text->setTextFormat(Qt::PlainText);
+            text->setStyleSheet("QLabel { color: #f9f1d0; font-family: Consolas, 'Cascadia Mono', monospace; font-size: 16px; background: transparent; }");
+            lineLayout->addWidget(text, 0, Qt::AlignVCenter);
+        }
+        lineLayout->addStretch(1);
+        codeLayout->addWidget(lineWidget);
+    }
+    codeLayout->addStretch(1);
+    codeScroll->setWidget(codePanel);
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
     QPushButton *submitButton = buttons->addButton("Submit fill", QDialogButtonBox::ActionRole);
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &filledBlocks, monster, monsterId]() {
-        const QStringList blocks = filledBlocks();
-        if (blocks.size() != monster.spaces.size()) {
-            QMessageBox::warning(&dialog, "Wrong Fill", QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
+    bool wonBoss = false;
+    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, monsterId]() {
+        if (!gameEngine.m_combat) {
+            QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
             return;
         }
-        for (int i = 0; i < blocks.size(); ++i) {
-            if (blocks.at(i).isEmpty()) {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("Fill %1 first.").arg(monster.spaces.at(i).spaceId));
-                return;
-            }
-            if (!bagBlocks.contains(blocks.at(i)) && monsterId != "boss") {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("%1 is not in your bag.").arg(blocks.at(i)));
-                return;
-            }
-            if (!blockMatchesSpace(blocks.at(i), monster.spaces.at(i))) {
-                QMessageBox::warning(&dialog, "Wrong Fill", QString("%1 does not match %2.").arg(blocks.at(i), monster.spaces.at(i).spaceId));
-                return;
-            }
+        const bool isBossCombat = gameEngine.m_combat->isBoss();
+        const CombatResult result = gameEngine.submitCombat();
+        if (result.resultType == "count_error") {
+            QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
+            return;
         }
-        defeatedMonsters.insert(monsterId);
-        seenMonsters.insert(monsterId);
-        if (monsterId == "boss") {
+        if (result.resultType == "space_error") {
+            QMessageBox::warning(&dialog, "Wrong Fill", QString("Wrong block in: %1").arg(result.errorSpaces.join(", ")));
+            return;
+        }
+        if (result.resultType != "success") {
+            QMessageBox::warning(&dialog, "Wrong Fill", "Combat submit failed.");
+            return;
+        }
+        wonBoss = isBossCombat;
+        if (wonBoss) {
             completedStageIndexes.insert(currentLevelIndex);
         }
-        ui->combatLogLabel->setText(monsterId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
+        syncFromEngineState();
+        refreshGameUi();
+        ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(monsterId));
         dialog.accept();
     });
     QHBoxLayout *combatTop = new QHBoxLayout();
     combatTop->addWidget(hero);
-    combatTop->addWidget(codeView, 1);
+    combatTop->addWidget(codeScroll, 1);
     layout->addWidget(title);
     layout->addLayout(combatTop);
-
-    layout->addWidget(slotPanel);
 
     QScrollArea *bagScroll = new QScrollArea(&dialog);
     bagScroll->setWidgetResizable(true);
@@ -2569,96 +2704,105 @@ void MainWindow::handleMonster(const QString &monsterId)
     bagIconRow->setContentsMargins(12, 10, 12, 10);
     bagIconRow->setSpacing(10);
     for (const QString &blockId : bagBlocks) {
-        CodeBlockIcon *blockIcon = new CodeBlockIcon(blockId, bagStrip);
+        CodeBlockIcon *blockIcon = new CodeBlockIcon(blockId, codeBlockIconPath(blockId), bagStrip);
         installHoverPopup(blockIcon,
-                          QString("<b>%1</b><br><pre>%2</pre>")
-                              .arg(blockId.toHtmlEscaped(), codeForBlock(blockId).toHtmlEscaped()));
+                          QString("<b>%1</b><br>Type: %2<br><pre>%3</pre>")
+                              .arg(blockId.toHtmlEscaped(),
+                                   typeForBlock(blockId).toHtmlEscaped(),
+                                   codeBlockHtml(codeForBlock(blockId))));
         bagIconRow->addWidget(blockIcon);
     }
     bagIconRow->addStretch();
     bagScroll->setWidget(bagStrip);
     layout->addWidget(bagScroll);
     layout->addWidget(buttons);
-    dialog.resize(760, 620);
+    dialog.resize(860, 660);
     dialog.exec();
-    returnToPreviousTile();
-}
-
-void MainWindow::submitFill()
-{
-    const QString tileId = tileAt(playerRow, playerColumn);
-    if (!(tileId.startsWith("monster") || tileId == "boss")) {
-        ui->combatLogLabel->setText("Stand on a monster or boss tile first.");
-        return;
+    if (gameEngine.m_combat) {
+        gameEngine.exitCombat();
     }
-    if (defeatedMonsters.contains(tileId)) {
-        ui->combatLogLabel->setText("Already defeated.");
-        return;
+    if (wonBoss) {
+        showVictorySettlement();
     }
-
-    const Monster monster = monsterByTile(tileId);
-    const QStringList blocks = splitAnswerBlocks(ui->answerLineEdit->text());
-    if (blocks.size() != monster.spaces.size()) {
-        ui->combatLogLabel->setText(QString("Need %1 block(s), got %2.").arg(monster.spaces.size()).arg(blocks.size()));
-        return;
-    }
-
-    for (int i = 0; i < blocks.size(); ++i) {
-        if (!bagBlocks.contains(blocks.at(i)) && tileId != "boss") {
-            ui->combatLogLabel->setText(QString("%1 is not in your bag.").arg(blocks.at(i)));
-            return;
-        }
-        if (!blockMatchesSpace(blocks.at(i), monster.spaces.at(i))) {
-            ui->combatLogLabel->setText(QString("%1 does not match %2.").arg(blocks.at(i), monster.spaces.at(i).spaceId));
-            return;
-        }
-    }
-
-    pushUndoState();
-    defeatedMonsters.insert(tileId);
-    seenMonsters.insert(tileId);
-    if (tileId == "boss") {
-        completedStageIndexes.insert(currentLevelIndex);
-    }
-    ui->answerLineEdit->clear();
-    ui->combatLogLabel->setText(tileId == "boss" ? levels.at(currentLevelIndex).endText : "Correct fill. Enemy defeated.");
-    refreshGameUi();
 }
 
 QString MainWindow::renderMonsterCode(const Monster &monster) const
 {
-    QString code = monster.codeTemplate;
+    QSet<QString> spaceIds;
     for (const Space &space : monster.spaces) {
-        code.replace(QString("$%1$").arg(space.spaceId), QString("[%1]").arg(space.spaceId));
+        spaceIds.insert(space.spaceId);
     }
-    for (auto it = levels.at(currentLevelIndex).clues.constBegin(); it != levels.at(currentLevelIndex).clues.constEnd(); ++it) {
-        code.replace(QString("$%1$").arg(it.key()), it.value().val);
-    }
-    return code;
+    const LevelData &level = levels.at(currentLevelIndex);
+    return replaceCodeTemplateTokens(monster.codeTemplate, [this, &level, &spaceIds](const QString &tokenId) {
+        if (spaceIds.contains(tokenId)) {
+            return QString("____________");
+        }
+        return collectedClues.contains(tokenId)
+                   ? formatClueForCode(level.clues.value(tokenId).val)
+                   : hiddenCodeMask();
+    });
 }
 
 QString MainWindow::renderMonsterCodeHtml(const Monster &monster) const
 {
-    QString html = monster.codeTemplate.toHtmlEscaped();
-    html.replace('\n', "<br>");
-    html.replace(' ', "&nbsp;");
+    QSet<QString> spaceIds;
     for (const Space &space : monster.spaces) {
-        const QString token = QString("$%1$").arg(space.spaceId).toHtmlEscaped();
-        const QString cell = QString("<span style=\"%1\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>")
-                                 .arg(codeTokenStyle());
-        html.replace(token, cell);
+        spaceIds.insert(space.spaceId);
     }
-    for (auto it = levels.at(currentLevelIndex).clues.constBegin(); it != levels.at(currentLevelIndex).clues.constEnd(); ++it) {
-        const QString token = QString("$%1$").arg(it.key()).toHtmlEscaped();
-        const bool unlocked = collectedClues.contains(it.key());
-        const QString value = unlocked ? it.value().val.toHtmlEscaped() : QString("display(hidden)");
-        html.replace(token, QString("<span style=\"%1\">%2</span>").arg(codeTokenStyle(), value));
+
+    QString html;
+    const LevelData &level = levels.at(currentLevelIndex);
+    const QStringList lines = monster.codeTemplate.split('\n');
+    const QRegularExpression tokenPattern("\\$([^$]+)\\$");
+    for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+        const QString &line = lines.at(lineIndex);
+        int cursor = 0;
+        QRegularExpressionMatchIterator matches = tokenPattern.globalMatch(line);
+        while (matches.hasNext()) {
+            const QRegularExpressionMatch match = matches.next();
+            const int start = match.capturedStart();
+            html += line.mid(cursor, start - cursor).toHtmlEscaped();
+
+            const QString tokenId = match.captured(1);
+            if (spaceIds.contains(tokenId)) {
+                html += QString("<span style=\"%1\">              </span>").arg(codeTokenStyle());
+            } else {
+                const bool unlocked = collectedClues.contains(tokenId);
+                QString value = unlocked ? formatClueForCode(level.clues.value(tokenId).val) : hiddenCodeMask();
+                value = indentContinuationLines(value, QString(start, QLatin1Char(' '))).toHtmlEscaped();
+                value.replace('\t', "    ");
+                const QString style = unlocked
+                                          ? codeTokenStyle()
+                                          : QString("display:inline-block;padding:3px 8px;margin:0 3px;border:1px solid #5e6470;border-radius:5px;background:#1a1d26;color:#59606c;font-weight:700;");
+                html += QString("<span style=\"%1\">%2</span>").arg(style, value);
+            }
+            cursor = match.capturedEnd();
+        }
+        html += line.mid(cursor).toHtmlEscaped();
+        if (lineIndex + 1 < lines.size()) {
+            html += '\n';
+        }
     }
-    return QString("<div style=\"font-family:Consolas,monospace;font-size:15px;color:#f9f1d0;background:#111827;padding:14px;\">%1</div>").arg(html);
+    html.replace('\t', "    ");
+    return QString(
+               "<pre style=\"font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
+               "font-size:14px;line-height:1.58;color:#fff4cf;background:#0b1320;"
+               "padding:16px 18px;margin:0;white-space:pre-wrap;tab-size:4;\">%1</pre>")
+        .arg(html);
 }
 
 QString MainWindow::codeForBlock(const QString &blockId) const
 {
+    if (gameEngine.m_combat) {
+        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+            if (block.blockId == blockId) {
+                return block.code;
+            }
+        }
+    }
+    if (knownCodeBlocks.contains(blockId)) {
+        return knownCodeBlocks.value(blockId).code;
+    }
     if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
         const LevelData &level = levels.at(currentLevelIndex);
         for (const Chest &chest : level.chests) {
@@ -2670,51 +2814,61 @@ QString MainWindow::codeForBlock(const QString &blockId) const
     return blockId;
 }
 
-bool MainWindow::chestHasAvailableBlocks(const QString &chestId) const
+QString MainWindow::typeForBlock(const QString &blockId) const
 {
-    if (currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
-        return false;
+    const QString type = codeBlockForId(blockId).type.trimmed().toLower();
+    if (type == "class" || type == "function" || type == "natural") {
+        return type;
     }
-    const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
-    for (const CodeBlock &block : chest.blocks) {
-        if (!bagBlocks.contains(block.blockId)) {
-            return true;
-        }
-    }
-    return false;
+    return "natural";
 }
 
-bool MainWindow::blockMatchesSpace(const QString &blockId, const Space &space) const
+CodeBlock MainWindow::codeBlockForId(const QString &blockId) const
 {
-    for (const QString &rule : space.values) {
-        if (space.type == "prefix" && blockId.startsWith(rule)) {
-            return true;
-        }
-        if (space.type == "find" && blockId.contains(rule)) {
-            return true;
-        }
-        if (space.type == "regex") {
-            const QRegularExpression regex(rule);
-            if (regex.isValid() && regex.match(blockId).hasMatch()) {
-                return true;
+    if (gameEngine.m_combat) {
+        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+            if (block.blockId == blockId) {
+                return block;
             }
         }
-        if ((space.type == "match" || space.type.isEmpty()) && blockId == rule) {
-            return true;
+    }
+    if (knownCodeBlocks.contains(blockId)) {
+        return knownCodeBlocks.value(blockId);
+    }
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        const LevelData &level = levels.at(currentLevelIndex);
+        for (const Chest &chest : level.chests) {
+            if (chest.blocks.contains(blockId)) {
+                return chest.blocks.value(blockId);
+            }
         }
     }
-    return false;
+    CodeBlock fallback;
+    fallback.blockId = blockId;
+    fallback.code = blockId;
+    fallback.type = "natural";
+    return fallback;
 }
 
-QStringList MainWindow::splitAnswerBlocks(const QString &text) const
+QString MainWindow::codeBlockIconPath(const QString &blockId) const
 {
-    QString normalized = text;
-    normalized.replace(';', ',');
-    QStringList parts = normalized.split(',', Qt::SkipEmptyParts);
-    for (QString &part : parts) {
-        part = part.trimmed();
+    const QString type = typeForBlock(blockId);
+    if (type == "class") {
+        return ":/images/assets/class.png";
     }
-    return parts;
+    if (type == "function") {
+        return ":/images/assets/function.png";
+    }
+    return ":/images/assets/natural.png";
+}
+
+bool MainWindow::chestHasAvailableBlocks(const QString &chestId) const
+{
+    if (gameEngine.m_bag) {
+        return !gameEngine.m_bag->chestIsEmpty(chestId);
+    }
+
+    return false;
 }
 
 Monster MainWindow::monsterByTile(const QString &tileId) const
