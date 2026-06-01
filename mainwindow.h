@@ -56,8 +56,6 @@ private:
     void syncFromEngineState();
     void refreshMapGrid();
     void refreshSidePanel();
-    void refreshBagPage();
-    void refreshManualPage();
     void showBagDialog();
     void showManualDialog();
     void showVictorySettlement();
@@ -97,7 +95,6 @@ private:
     QSet<QString> seenMonsters;
     QSet<int> completedStageIndexes;
     int currentLevelSelectPage = 0;
-    int currentBagPage = 0;
     QVector<QPoint> activeMovePath;
     int activeMovePathIndex = 0;
     int pendingMoveTargetRow = -1;
@@ -106,9 +103,6 @@ private:
     bool suppressNextMovePath = false;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
-
-    //---manual part---
-    QString manualSelectedMonsterId;
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
