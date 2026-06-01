@@ -1957,9 +1957,13 @@ void MainWindow::showManualDialog()
         return sprites.at(qHash(monsterId) % sprites.size());
     };
 
-    auto showMonsterDetail = [this, &dialog, &spriteForMonster](const QString &monsterId, const Monster &monster) {
+    auto monsterDisplayName = [](const QString &monsterId, const Monster &monster) {
+        return monster.nickname.isEmpty() ? monsterId : monster.nickname;
+    };
+
+    auto showMonsterDetail = [this, &dialog, &spriteForMonster, &monsterDisplayName](const QString &monsterId, const Monster &monster) {
         QDialog detail(&dialog);
-        detail.setWindowTitle(monster.nickname.isEmpty() ? monsterId : monster.nickname);
+        detail.setWindowTitle(monsterDisplayName(monsterId, monster));
         detail.setModal(true);
         QVBoxLayout *detailRoot = new QVBoxLayout(&detail);
         detailRoot->setContentsMargins(0, 0, 0, 0);
@@ -1987,10 +1991,6 @@ void MainWindow::showManualDialog()
             sprite->setPixmap(pix.scaled(250, 300, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
         portraitLayout->addWidget(sprite, 1);
-        QLabel *typeBadge = new QLabel(monster.type.toUpper(), portraitPanel);
-        typeBadge->setAlignment(Qt::AlignCenter);
-        typeBadge->setStyleSheet("QLabel { color: #4feaff; font-size: 18px; font-weight: 800; letter-spacing: 0px; }");
-        portraitLayout->addWidget(typeBadge);
         boardLayout->addWidget(portraitPanel, 0);
 
         QFrame *infoPanel = new QFrame(board);
@@ -1999,15 +1999,10 @@ void MainWindow::showManualDialog()
         infoLayout->setContentsMargins(22, 18, 22, 18);
         infoLayout->setSpacing(10);
 
-        QLabel *name = new QLabel(monster.nickname.isEmpty() ? monster.name : monster.nickname, infoPanel);
+        QLabel *name = new QLabel(monsterDisplayName(monsterId, monster), infoPanel);
         name->setStyleSheet("QLabel { color: #ffd86b; font-size: 28px; font-weight: 900; }");
         name->setWordWrap(true);
         infoLayout->addWidget(name);
-
-        QLabel *idLine = new QLabel(QString("%1   |   %2").arg(monsterId, monster.name), infoPanel);
-        idLine->setStyleSheet("QLabel { color: rgba(246, 231, 189, 190); font-size: 14px; }");
-        idLine->setWordWrap(true);
-        infoLayout->addWidget(idLine);
 
         QTextBrowser *codeView = new QTextBrowser(infoPanel);
         codeView->setHtml(renderMonsterCodeHtml(monster));
@@ -2089,10 +2084,16 @@ void MainWindow::showManualDialog()
     QVector<QPair<QString, Monster>> monsterItems;
     if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
         const LevelData &level = levels.at(currentLevelIndex);
+        QSet<QString> listedMonsterIds;
         for (auto it = level.monsters.cbegin(); it != level.monsters.cend(); ++it) {
-            monsterItems.append(qMakePair(it.key(), it.value()));
+            const QString monsterId = (it.key() == "boss" || it.value().monsterId == "boss") ? QString("boss") : it.key();
+            if (listedMonsterIds.contains(monsterId)) {
+                continue;
+            }
+            listedMonsterIds.insert(monsterId);
+            monsterItems.append(qMakePair(monsterId, it.value()));
         }
-        if (!level.boss.monsterId.isEmpty()) {
+        if (!level.boss.monsterId.isEmpty() && !listedMonsterIds.contains("boss")) {
             monsterItems.append(qMakePair(QString("boss"), static_cast<Monster>(level.boss)));
         }
     }
@@ -2122,10 +2123,7 @@ void MainWindow::showManualDialog()
             if (itemIndex < monsterItems.size()) {
                 const QString monsterId = monsterItems.at(itemIndex).first;
                 const Monster monster = monsterItems.at(itemIndex).second;
-                card->setText(QString("%1\n%2\n%3")
-                                  .arg(monster.nickname.isEmpty() ? monsterId : monster.nickname,
-                                       monster.name,
-                                       monster.type.toUpper()));
+                card->setText(monsterDisplayName(monsterId, monster));
                 card->setIcon(QIcon(spriteForMonster(monsterId, monster)));
                 QStringList clueLines;
                 if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
@@ -2139,9 +2137,8 @@ void MainWindow::showManualDialog()
                     }
                 }
                 installHoverPopup(card,
-                                  QString("<b>%1</b><br>Type: %2<br>Clues:<br>%3")
-                                      .arg((monster.nickname.isEmpty() ? monsterId : monster.nickname).toHtmlEscaped(),
-                                           monster.type.toHtmlEscaped(),
+                                  QString("<b>%1</b><br>Clues:<br>%2")
+                                      .arg(monsterDisplayName(monsterId, monster).toHtmlEscaped(),
                                            clueLines.isEmpty() ? "No referenced clue." : clueLines.join("<br>")));
                 connect(card, &QToolButton::clicked, &dialog, [&, monsterId, monster]() {
                     showMonsterDetail(monsterId, monster);
