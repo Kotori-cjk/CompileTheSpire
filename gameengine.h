@@ -42,6 +42,7 @@ public:
     LevelData* m_level;
     //warn:deal with memory-related operation carefully
     QVector<GameSnapshot>snapshotStack;
+    bool m_locked=false;
 
 signals:
     void levelLoaded();
