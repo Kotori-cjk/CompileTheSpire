@@ -64,6 +64,8 @@ private:
 
     void movePlayer(int rowDelta, int columnDelta);
     void movePlayerTo(int targetRow, int targetColumn);
+    void startMovePlayback(const QVector<QPoint> &backendPath, int targetRow, int targetColumn);
+    void advanceMovePlayback();
     bool moveThroughEngine(int targetRow, int targetColumn);
     void clearDisplayedMovePath();
     bool canEnter(int row, int column) const;
@@ -98,6 +100,10 @@ private:
     int currentBagPage = 0;
     QVector<QPoint> activeMovePath;
     int activeMovePathIndex = 0;
+    int pendingMoveTargetRow = -1;
+    int pendingMoveTargetColumn = -1;
+    bool movePlaybackActive = false;
+    bool suppressNextMovePath = false;
     bool showingExLevels = false;
     int selectedStageIndex = 0;
 
