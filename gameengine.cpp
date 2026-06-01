@@ -71,6 +71,7 @@ bool GameEngine::startLevel(int levelIndex){
     return true;
 }
 bool GameEngine::moveTo(int tarX,int tarY){
+    if(m_locked||m_combat!=nullptr)return false;
     bool success=false;
     MoveResult res=m_map->moveTo(tarX,tarY,&success);
     if(!success){
@@ -90,6 +91,7 @@ bool GameEngine::moveTo(int tarX,int tarY){
             }
         }
         else if(res.event=="chest"){
+            if(m_level->chests[res.eventId].forcedPick)m_locked=true;
             emit chestEntered(res.eventId);
         }
         else{
@@ -154,6 +156,7 @@ bool GameEngine::revealClue(const QString& clueId){
     return true;
 }
 bool GameEngine::exitChest(const QString& chestId){
+    m_locked=false;
     snapshotStack.removeLast();
     m_map->setPlayerPos(m_map->prevPos());
     emit forcedMove(m_map->prevPos());
