@@ -35,6 +35,7 @@ class GameMap
 public:
     GameMap(const LevelData* ptr);
     QVector<QVector<int>>cleared;
+    QMap<QString,QString>defeatedCodes;
 
     QString currentId(int tarX,int tarY);
     QString currentId(QPoint target);
@@ -58,6 +59,8 @@ public:
     QPoint playerPos()const;
     QPoint prevPos()const;
     bool ifDefeated(const QString& monsterId)const;
+    QString defeatedCode(const QString& monsterId)const;
+    void setDefeatedCode(const QString& monsterId,const QString& code);
     QVector<Monster>monsterLeft()const;
     void setPlayerPos(int x,int y);
     void setPlayerPos(QPoint pos);

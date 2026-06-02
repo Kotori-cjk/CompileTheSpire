@@ -20,6 +20,7 @@ Synthesis templateBreakdown(QString codeTemplate){
             ss+=s[i];
             continue;
         }
+        if(i+1>=s.length())break;
         ret.text.append(ss);
         ss="";
         SynthesisCell tmp;
