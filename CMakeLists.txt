@@ -15,8 +15,15 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia)
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
+        mainwindow_levelselect.cpp
+        mainwindow_gameplay.cpp
+        mainwindow_dialogs.cpp
         mainwindow.h
         mainwindow.ui
+        codeblockui.cpp
+        codeblockui.h
+        stagecatalog.cpp
+        stagecatalog.h
         resources.qrc
         leveldata.cpp
         leveldata.h
