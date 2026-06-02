@@ -146,10 +146,8 @@ QString codeBlockHtml(const QString &code)
 
 QString codeBlockPopupHtml(const QString &code, const QString &type)
 {
-    const QString typeLine = type.isEmpty()
-                                 ? QString()
-                                 : QString("Type: %1<br>").arg(type.toHtmlEscaped());
-    return QString("%1<pre>%2</pre>").arg(typeLine, codeBlockHtml(code));
+    Q_UNUSED(type);
+    return QString("<pre>%1</pre>").arg(codeBlockHtml(code));
 }
 
 void installHoverPopup(QWidget *widget, const QString &html)

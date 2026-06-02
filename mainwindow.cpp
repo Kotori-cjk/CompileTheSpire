@@ -278,6 +278,27 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
         if (handleGameMoveKey(keyEvent->key())) {
             return true;
         }
+        switch (keyEvent->key()) {
+        case Qt::Key_Z:
+            undo();
+            return true;
+        case Qt::Key_R:
+            resetLevel();
+            return true;
+        case Qt::Key_B:
+            clearDisplayedMovePath();
+            showBagDialog();
+            return true;
+        case Qt::Key_M:
+            clearDisplayedMovePath();
+            showManualDialog();
+            return true;
+        case Qt::Key_Escape:
+            ui->stackedWidget->setCurrentWidget(ui->pausePage);
+            return true;
+        default:
+            break;
+        }
     }
 
     return QMainWindow::eventFilter(watched, event);
@@ -315,11 +336,28 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     if (!QApplication::activeModalWidget() && handleGameMoveKey(event->key())) {
         return;
     }
-    if (ui->stackedWidget->currentWidget() == ui->gamePage
-        && event->key() == Qt::Key_Z
-        && (event->modifiers() & Qt::ControlModifier)) {
-        undo();
-        return;
+    if (ui->stackedWidget->currentWidget() == ui->gamePage && !QApplication::activeModalWidget()) {
+        switch (event->key()) {
+        case Qt::Key_Z:
+            undo();
+            return;
+        case Qt::Key_R:
+            resetLevel();
+            return;
+        case Qt::Key_B:
+            clearDisplayedMovePath();
+            showBagDialog();
+            return;
+        case Qt::Key_M:
+            clearDisplayedMovePath();
+            showManualDialog();
+            return;
+        case Qt::Key_Escape:
+            ui->stackedWidget->setCurrentWidget(ui->pausePage);
+            return;
+        default:
+            break;
+        }
     }
 
     QMainWindow::keyPressEvent(event);
@@ -906,8 +944,11 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapButton->hide();
     ui->combatLogLabel->show();
     ui->nextChallengeButton->setText("Undo");
-    ui->nextChallengeButton->show();
+    ui->nextChallengeButton->hide();
     ui->nextChallengeButton->setEnabled(false);
+    ui->pauseButton->setText("Menu");
+    ui->pauseTitleLabel->setText("Menu");
+    ui->resumeButton->setText("Return");
     ui->bottomBarLayout->setStretch(0, 0);
     ui->bottomBarLayout->setStretch(1, 0);
     ui->bottomBarLayout->setStretch(2, 0);
@@ -1034,21 +1075,15 @@ void MainWindow::buildRuntimeGameUi()
     });
     ui->combatLayout->addWidget(mapView, 1);
 
-    QFrame *sideFrame = new QFrame(ui->combatFrame);
-    sideFrame->setObjectName("sideFrame");
-    QVBoxLayout *sideLayout = new QVBoxLayout(sideFrame);
-    QLabel *sideTitle = new QLabel("Tile Info", sideFrame);
-    QFont sideFont = sideTitle->font();
-    sideFont.setPointSize(16);
-    sideFont.setBold(true);
-    sideTitle->setFont(sideFont);
-    tileInfoLabel = new QLabel("Choose a level to enter the map.", sideFrame);
-    tileInfoLabel->setObjectName("tileInfoLabel");
-    tileInfoLabel->setWordWrap(true);
-    sideLayout->addWidget(sideTitle);
-    sideLayout->addWidget(tileInfoLabel, 1);
-    sideFrame->setMaximumWidth(220);
-    ui->combatLayout->addWidget(sideFrame, 0);
+    tileInfoLabel = new QLabel(ui->combatFrame);
+    tileInfoLabel->hide();
+
+    undoRunButton = new QPushButton("Undo", ui->topBarFrame);
+    undoRunButton->setEnabled(false);
+    connect(undoRunButton, &QPushButton::clicked, this, [this]() {
+        undo();
+    });
+    ui->topBarLayout->insertWidget(ui->topBarLayout->count() - 1, undoRunButton);
 
     resetRunButton = new QPushButton("Reset", ui->topBarFrame);
     ui->topBarLayout->insertWidget(ui->topBarLayout->count() - 1, resetRunButton);

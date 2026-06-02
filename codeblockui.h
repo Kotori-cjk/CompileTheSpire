@@ -101,6 +101,11 @@ public:
         m_onChanged = std::move(callback);
     }
 
+    void setOnRemoveRequested(std::function<void()> callback)
+    {
+        m_onRemoveRequested = std::move(callback);
+    }
+
     void setTextProvider(std::function<QString(const QString &)> provider)
     {
         m_textProvider = std::move(provider);
@@ -153,6 +158,18 @@ protected:
         }
     }
 
+    void mouseDoubleClickEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton
+            && !property("blockId").toString().isEmpty()
+            && m_onRemoveRequested) {
+            m_onRemoveRequested();
+            event->accept();
+            return;
+        }
+        QLabel::mouseDoubleClickEvent(event);
+    }
+
 private:
     void refreshStyle(bool hovered)
     {
@@ -166,6 +183,7 @@ private:
     }
 
     std::function<void()> m_onChanged;
+    std::function<void()> m_onRemoveRequested;
     std::function<QString(const QString &)> m_textProvider;
 };
 
