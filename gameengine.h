@@ -91,6 +91,8 @@ public:
     //call it when player submit a combat
     QVector<CodeBlock> bagBlocks();
     //call it to get blocks in bag
+    bool discardBlock(const QString& blockId);
+    //call it when player discard a block, push snapshot
     monsterClueDetail getMonsterDetail(const QString& monsterId);
     //call it to get monster detail, struct in gamemap.h, use it with templateBreakdown() thanks meow
     //btw, when in combat, you may combine two method to deal with the esapes(another is filling state in combat.h)
