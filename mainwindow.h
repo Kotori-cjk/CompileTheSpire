@@ -54,6 +54,7 @@ private:
     void changeLevelPage(int delta);
     void selectStage(int levelIndex);
     bool isLevelUnlocked(int levelIndex) const;
+    bool isLevelCleared(int levelIndex) const;
     void resetLevel();
     void undo();
 
@@ -99,6 +100,7 @@ private:
     QSet<QString> defeatedMonsters;
     QSet<QString> seenMonsters;
     QSet<int> completedStageIndexes;
+    QVector<int> newlyUnlockedStageIndexes;
     int currentLevelSelectPage = 0;
     QVector<QPoint> activeMovePath;
     int activeMovePathIndex = 0;

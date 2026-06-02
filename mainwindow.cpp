@@ -137,7 +137,9 @@ MainWindow::MainWindow(QWidget *parent)
         refreshGameUi();
     });
     connect(&gameEngine, &GameEngine::levelUnlocked, this, [this](int levelIndex) {
-        completedStageIndexes.insert(levelIndex - 1);
+        if (levelIndex >= 0 && !newlyUnlockedStageIndexes.contains(levelIndex)) {
+            newlyUnlockedStageIndexes.append(levelIndex);
+        }
         refreshLevelSelectUi();
     });
     loadLevels();
@@ -589,6 +591,38 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(2, 15, 24, 255));
             color: #ffffff;
             border: 5px solid #f7d75b;
+            border-radius: 42px;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 34px;
+            font-weight: 900;
+            padding: 4px;
+            text-align: center;
+        }
+
+        QPushButton[levelCard="selectedUnlocked"] {
+            background: qradialgradient(cx:0.5, cy:0.43, radius:0.75,
+                                        stop:0 rgba(255, 252, 188, 255),
+                                        stop:0.28 rgba(71, 238, 255, 255),
+                                        stop:0.62 rgba(14, 111, 143, 250),
+                                        stop:1 rgba(2, 15, 24, 255));
+            color: #ffffff;
+            border: 5px solid #f7d75b;
+            border-radius: 42px;
+            font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
+            font-size: 34px;
+            font-weight: 900;
+            padding: 4px;
+            text-align: center;
+        }
+
+        QPushButton[levelCard="selectedCleared"] {
+            background: qradialgradient(cx:0.5, cy:0.42, radius:0.74,
+                                        stop:0 rgba(255, 248, 190, 255),
+                                        stop:0.34 rgba(224, 158, 35, 252),
+                                        stop:0.68 rgba(88, 56, 17, 252),
+                                        stop:1 rgba(9, 10, 13, 255));
+            color: #fff2b8;
+            border: 5px solid #fff07a;
             border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
             font-size: 34px;
