@@ -1,4 +1,6 @@
 #include "leveldata.h"
+#include<QDebug>
+#include<QMessageBox>
 #include<QVector>
 #include<QString>
 #include<QMap>
@@ -27,7 +29,15 @@ Synthesis templateBreakdown(QString codeTemplate){
         if(s[i+1]=='c')tmp.type="clue",ret.cluecnt++;
         else tmp.type="space",ret.spacecnt++;
         while(s[++i]!='$'){
-            ss+=s[i];
+            if(i>=s.length())throw QString("unclosed template token: $%1...").arg(ss);
+            QChar ch=s[i];
+            if(!ch.isLetterOrNumber()&&ch!='_'){
+                throw QString("invalid char '%1' in template token '$%2...'").arg(ch).arg(ss);
+            }
+            ss+=ch;
+            if(ss.length()>20){
+                throw QString("template token '$%1...' too long").arg(ss);
+            }
         }
         tmp.id=ss;
         ret.cell.append(tmp);
@@ -194,11 +204,19 @@ QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors){
         QString filePath=dir.absoluteFilePath(file);
         QString errorMsg;
         LevelData data;
-        if(data.LoadFromJson(filePath,&errorMsg)){
-            levels.append(std::move(data));
+        try{
+            if(data.LoadFromJson(filePath,&errorMsg)){
+                levels.append(std::move(data));
+            }
+            else if(errors){
+                errors->append(QString("%1: %2").arg(file,errorMsg));
+            }
         }
-        else if(errors){
-            errors->append(QString("%1: %2").arg(file,errorMsg));
+        catch(const QString& e){
+            QString msg=QString("Failed to load %1: %2").arg(file,e);
+            qDebug()<<msg;
+            QMessageBox::warning(nullptr,"Level Load Error",msg);
+            if(errors)errors->append(msg);
         }
     }
     return levels;
