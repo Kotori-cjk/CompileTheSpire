@@ -1,5 +1,7 @@
 #include "savemanager.h"
+#include<QDir>
 #include<QFile>
+#include<QFileInfo>
 #include<QJsonDocument>
 #include<QJsonObject>
 #include<QJsonArray>
@@ -9,6 +11,7 @@ const QString SaveManager::SAVE_PATH="savedata/save.json";
 
 void SaveManager::Init(int totalLevels){
     unlockState=QVector<int>(totalLevels,0);
+    clearedState=QVector<int>(totalLevels,0);
     if (totalLevels>0){
         totalLevelCount=totalLevels;
         unlockState[0]=1;
@@ -18,11 +21,16 @@ void SaveManager::Init(int totalLevels){
 bool SaveManager::Save()const{
     QJsonObject save;
     save["totalLevelCount"]=totalLevelCount;
-    QJsonArray unlocks;
+    QJsonArray unlocks,clears;
     for(const auto& unlock:unlockState){
         unlocks.append(unlock);
     }
+    for(const auto& clear:clearedState){
+        clears.append(clear);
+    }
     save["unlockState"]=unlocks;
+    save["clearedState"]=clears;
+    QDir().mkpath(QFileInfo(SAVE_PATH).absolutePath());
     QFile file(SAVE_PATH);
     if(!file.open(QIODevice::WriteOnly)){
         return false;
@@ -48,23 +56,31 @@ bool SaveManager::Load(int currentLevelCount){
     QJsonArray unlocks=root["unlockState"].toArray();
     unlockState=QVector<int>();
     for(const auto& unlock:unlocks){
-        unlockState.push_back(unlock.toBool());
+        unlockState.push_back(unlock.toInt());
     }
     for(int i=0;i<currentLevelCount-root["totalLevelCount"].toInt();i++){
         unlockState.push_back(0);
+    }
+    QJsonArray clears=root["clearedState"].toArray();
+    clearedState=QVector<int>();
+    for(const auto& clear:clears){
+        clearedState.push_back(clear.toInt());
+    }
+    for(int i=clearedState.size();i<currentLevelCount;i++){
+        clearedState.push_back(0);
     }
     return true;
 }
 
 bool SaveManager::isUnlocked(int levelIndex)const{
-    if(levelIndex>unlockState.size()||levelIndex>totalLevelCount){
+    if(levelIndex>=unlockState.size()||levelIndex>totalLevelCount){
         return false;
     }
     return unlockState[levelIndex];
 }
 
 bool SaveManager::Unlock(int levelIndex){
-    if(levelIndex>unlockState.size()||levelIndex>totalLevelCount){
+    if(levelIndex>=unlockState.size()||levelIndex>totalLevelCount){
         return false;
     }
     if(unlockState[levelIndex]){
@@ -74,8 +90,29 @@ bool SaveManager::Unlock(int levelIndex){
     return true;
 }
 
+bool SaveManager::isCleared(int levelIndex)const{
+    if(levelIndex>=clearedState.size()||levelIndex>totalLevelCount){
+        return false;
+    }
+    return clearedState[levelIndex];
+}
+
+bool SaveManager::Clear(int levelIndex){
+    if(levelIndex>=clearedState.size()||levelIndex>totalLevelCount){
+        return false;
+    }
+    if(clearedState[levelIndex]){
+        return false;
+    }
+    clearedState[levelIndex]=1;
+    return true;
+}
+
 void SaveManager::UnlockAll(){
     for(auto& i:unlockState){
+        i=1;
+    }
+    for(auto& i:clearedState){
         i=1;
     }
 }
@@ -91,6 +128,7 @@ void SaveManager::deleteSave(){
 
 void SaveManager::hardReset(){
     unlockState=QVector<int>(totalLevelCount,0);
+    clearedState=QVector<int>(totalLevelCount,0);
     if(totalLevelCount>0)unlockState[0]=1;
     Save();
 }
