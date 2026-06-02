@@ -40,6 +40,18 @@ Synthesis templateBreakdown(QString codeTemplate){
             }
         }
         tmp.id=ss;
+        QString pre=ret.text.isEmpty()?QString():ret.text.last();
+        int lineStart=pre.lastIndexOf('\n');
+        QString linePrefix=lineStart>=0?pre.mid(lineStart+1):pre;
+        bool soleBefore=true;
+        for(int k=0;k<linePrefix.length();k++){
+            if(linePrefix[k]!=' '&&linePrefix[k]!='\t'){soleBefore=false;break;}
+        }
+        if(soleBefore){
+            int j=i+1;
+            while(j<s.length()&&(s[j]==' '||s[j]=='\t'))j++;
+            if(j>=s.length()||s[j]=='\n')tmp.tabCount=linePrefix.length();
+        }
         ret.cell.append(tmp);
         ss="";
     }
