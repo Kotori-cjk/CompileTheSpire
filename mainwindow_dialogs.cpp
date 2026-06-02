@@ -207,7 +207,16 @@ void MainWindow::showManualDialog()
         infoLayout->addWidget(name);
 
         QTextBrowser *codeView = new QTextBrowser(infoPanel);
-        codeView->setHtml(renderMonsterCodeHtml(monster));
+        QString codeHtml = renderMonsterCodeHtml(monster);
+        const QString defeatedCode = gameEngine.m_map ? gameEngine.m_map->defeatedCode(monsterId) : QString();
+        if (!defeatedCode.isEmpty()) {
+            codeHtml = QString(
+                           "<pre style=\"font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
+                           "font-size:14px;line-height:1.58;color:#fff4cf;background:#0b1320;"
+                           "padding:16px 18px;margin:0;white-space:pre-wrap;tab-size:4;\">%1</pre>")
+                           .arg(codeBlockHtml(defeatedCode));
+        }
+        codeView->setHtml(codeHtml);
         codeView->setContextMenuPolicy(Qt::NoContextMenu);
         codeView->setTextInteractionFlags(Qt::NoTextInteraction);
         codeView->setStyleSheet(
@@ -758,7 +767,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                         } else {
                             slot->setBlock(previousBlockId, formatCodeBlockForDisplay(codeForBlock(previousBlockId)));
                         }
-                        QMessageBox::warning(&dialog, "Wrong Fill", "Fill space with this block.");
+                        QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
                         return;
                     }
                     syncFromEngineState();
@@ -817,7 +826,7 @@ void MainWindow::handleMonster(const QString &monsterId)
             return;
         }
         if (result.resultType == "space_error") {
-            QMessageBox::warning(&dialog, "Wrong Fill", "Fill space with this block.");
+            QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
             return;
         }
         if (result.resultType != "success") {
