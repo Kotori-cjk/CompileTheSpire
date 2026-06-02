@@ -320,6 +320,11 @@ QSize MapView::minimumSizeHint() const
     return QSize(640, 480);
 }
 
+bool MapView::isPlayerAnimating() const
+{
+    return m_playerWalking;
+}
+
 void MapView::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
@@ -455,17 +460,35 @@ QPoint MapView::tileAtPosition(const QPoint &position) const
     return QPoint(-1, -1);
 }
 
+QString MapView::spritePathForPic(const QString &pic) const
+{
+    QString normalized = pic.trimmed();
+    normalized.replace('\\', '/');
+    while (normalized.startsWith("./")) {
+        normalized.remove(0, 2);
+    }
+
+    const int slash = normalized.lastIndexOf('/');
+    const QString fileName = slash >= 0 ? normalized.mid(slash + 1) : normalized;
+    const QStringList candidates = {
+        normalized.startsWith(":/") ? normalized : QString(":/images/%1").arg(normalized),
+        fileName.isEmpty() ? QString() : QString(":/images/assets/%1").arg(fileName)
+    };
+
+    for (const QString &candidate : candidates) {
+        if (!candidate.isEmpty() && !QPixmap(candidate).isNull()) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
 QString MapView::monsterSpritePath(const QString &monsterId) const
 {
     if (m_level && m_level->monsters.contains(monsterId)) {
-        const QString pic = m_level->monsters.value(monsterId).pic;
-        const int slash = qMax(pic.lastIndexOf('/'), pic.lastIndexOf('\\'));
-        const QString fileName = slash >= 0 ? pic.mid(slash + 1) : pic;
-        if (!fileName.isEmpty()) {
-            const QString resourcePath = ":/images/assets/" + fileName;
-            if (!QPixmap(resourcePath).isNull()) {
-                return resourcePath;
-            }
+        const QString picPath = spritePathForPic(m_level->monsters.value(monsterId).pic);
+        if (!picPath.isEmpty()) {
+            return picPath;
         }
     }
 
@@ -595,6 +618,15 @@ void MapView::drawTile(QPainter &painter, int row, int column, const QRect &rect
     if (!isOpenTile(row, column + 1)) {
         painter.fillRect(rect.right() - qMax(3, rect.width() / 12), rect.top(), qMax(3, rect.width() / 12), rect.height(), QColor(0, 0, 0, 58));
     }
+
+    if (tileId == "boss") {
+        painter.fillRect(rect.adjusted(3, 3, -3, -3), QColor(132, 22, 30, 68));
+        painter.setPen(QPen(QColor(255, 78, 86), qMax(2, rect.width() / 24)));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(rect.adjusted(3, 3, -4, -4));
+        painter.setPen(QPen(QColor(255, 214, 118, 180), 1));
+        painter.drawRect(rect.adjusted(8, 8, -9, -9));
+    }
 }
 
 void MapView::drawMovePath(QPainter &painter) const
@@ -656,12 +688,14 @@ void MapView::drawObject(QPainter &painter, const QRect &rect, const QString &ti
         if (m_defeatedMonsters.contains("boss")) {
             return;
         }
+        const QString bossPic = m_level ? spritePathForPic(m_level->boss.pic) : QString();
+        const QPixmap bossPixmap = bossPic.isEmpty() ? m_bossPixmap : loadSprite(bossPic);
         painter.setPen(Qt::NoPen);
         painter.setBrush(QColor(0, 0, 0, 120));
         painter.drawEllipse(QRect(rect.left() + rect.width() / 7, rect.bottom() - rect.height() / 5,
                                   rect.width() * 5 / 7, rect.height() / 5));
-        const QRect spriteRect = spriteRectInTile(rect, m_bossPixmap, 82, 96, -2);
-        painter.drawPixmap(spriteRect, m_bossPixmap);
+        const QRect spriteRect = spriteRectInTile(rect, bossPixmap, 82, 96, -2);
+        painter.drawPixmap(spriteRect, bossPixmap);
         return;
     }
 

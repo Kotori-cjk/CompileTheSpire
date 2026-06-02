@@ -25,6 +25,7 @@
 #include <QPixmap>
 #include <QRegularExpression>
 #include <QScrollArea>
+#include <QShortcut>
 #include <QSlider>
 #include <QStyle>
 #include <QStackedWidget>
@@ -37,6 +38,40 @@
 
 #include <algorithm>
 #include <functional>
+
+class DialogCloseInputFilter : public QObject
+{
+public:
+    explicit DialogCloseInputFilter(QDialog *dialog)
+        : QObject(dialog)
+        , m_dialog(dialog)
+    {
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        Q_UNUSED(watched);
+        if (!m_dialog || !m_dialog->isVisible()) {
+            return false;
+        }
+        if (event->type() == QEvent::KeyPress) {
+            m_dialog->reject();
+            return true;
+        }
+        if (event->type() == QEvent::MouseButtonPress) {
+            QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+            if (mouseEvent->button() == Qt::RightButton) {
+                m_dialog->reject();
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    QDialog *m_dialog = nullptr;
+};
 
 void MainWindow::showBagDialog()
 {
@@ -66,7 +101,11 @@ void MainWindow::showBagDialog()
         codeItems.append(qMakePair(blockId, codeForBlock(blockId)));
     }
 
-    constexpr int iconSlots = 10;
+    int iconSlots = 10;
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        iconSlots = qMax(levels.at(currentLevelIndex).bagSize, codeItems.size());
+    }
+    const int columns = qBound(1, qMin(5, iconSlots), 5);
     for (int i = 0; i < iconSlots; ++i) {
         QToolButton *icon = new QToolButton(board);
         icon->setFixedSize(86, 86);
@@ -104,6 +143,8 @@ void MainWindow::showBagDialog()
                 });
                 detailLayout->addWidget(codeView);
                 detailLayout->addWidget(close);
+                DialogCloseInputFilter *closeInputFilter = new DialogCloseInputFilter(&detail);
+                qApp->installEventFilter(closeInputFilter);
                 detail.resize(520, 360);
                 if (detail.exec() == QDialog::Accepted) {
                     dialog.accept();
@@ -114,7 +155,7 @@ void MainWindow::showBagDialog()
             icon->setText("-");
             icon->setEnabled(false);
         }
-        grid->addWidget(icon, i / 5, i % 5);
+        grid->addWidget(icon, i / columns, i % columns);
     }
 
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
@@ -246,6 +287,11 @@ void MainWindow::showManualDialog()
 
         boardLayout->addWidget(infoPanel, 1);
         detailRoot->addWidget(board);
+        QDialogButtonBox *detailButtons = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
+        connect(detailButtons, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
+        detailRoot->addWidget(detailButtons);
+        DialogCloseInputFilter *closeInputFilter = new DialogCloseInputFilter(&detail);
+        qApp->installEventFilter(closeInputFilter);
         detail.resize(1080, 700);
         detail.exec();
     };
@@ -382,6 +428,14 @@ void MainWindow::showManualDialog()
             refreshPage();
         }
     });
+    auto addPageShortcut = [&dialog](int key, QPushButton *button) {
+        QShortcut *shortcut = new QShortcut(QKeySequence(key), &dialog);
+        QObject::connect(shortcut, &QShortcut::activated, button, &QPushButton::click);
+    };
+    addPageShortcut(Qt::Key_A, prevButton);
+    addPageShortcut(Qt::Key_Left, prevButton);
+    addPageShortcut(Qt::Key_D, nextButton);
+    addPageShortcut(Qt::Key_Right, nextButton);
     refreshPage();
 
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
@@ -570,6 +624,92 @@ void MainWindow::showVictorySettlement()
     newlyUnlockedStageIndexes.clear();
 }
 
+void MainWindow::showCombatSettlement(const QString &defeatedName,
+                                      const CombatResult &result,
+                                      const QMap<QString, QString> &usedBlockCodes,
+                                      bool bossDefeated)
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Combat Settlement");
+    dialog.setModal(true);
+
+    QVBoxLayout *root = new QVBoxLayout(&dialog);
+    root->setContentsMargins(18, 18, 18, 18);
+    root->setSpacing(12);
+
+    QFrame *panel = new QFrame(&dialog);
+    panel->setObjectName("combatSettlementPanel");
+    panel->setStyleSheet(
+        "QFrame#combatSettlementPanel { background: rgba(7, 10, 15, 242); border: 2px solid rgba(215, 176, 106, 210); border-radius: 8px; }"
+        "QLabel { color: #f9f1d0; background: transparent; }"
+    );
+    QVBoxLayout *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(28, 24, 28, 24);
+    layout->setSpacing(14);
+
+    QLabel *title = new QLabel(QString("%1 defeated").arg(defeatedName.isEmpty() ? "Enemy" : defeatedName), panel);
+    title->setAlignment(Qt::AlignCenter);
+    title->setWordWrap(true);
+    title->setStyleSheet(
+        "QLabel { color: #ffe082; font-family: Georgia, 'Times New Roman'; font-size: 34px; font-weight: 900;"
+        "border: 1px solid rgba(255, 224, 130, 115); border-radius: 6px; padding: 10px;"
+        "background: rgba(54, 26, 12, 225); }"
+    );
+    layout->addWidget(title);
+
+    auto addCodeSection = [panel, layout](const QString &heading, const QStringList &codes) {
+        QLabel *label = new QLabel(heading, panel);
+        label->setStyleSheet("QLabel { color: #4feaff; font-size: 17px; font-weight: 900; }");
+        layout->addWidget(label);
+
+        QTextBrowser *view = new QTextBrowser(panel);
+        view->setReadOnly(true);
+        view->setContextMenuPolicy(Qt::NoContextMenu);
+        view->setTextInteractionFlags(Qt::NoTextInteraction);
+        view->setMinimumHeight(110);
+        view->setStyleSheet(
+            "QTextBrowser { color: #fff4cf; background: rgba(10, 16, 25, 245);"
+            "border: 1px solid rgba(79, 234, 255, 120); border-radius: 6px; padding: 8px; }"
+        );
+        QString html;
+        if (codes.isEmpty()) {
+            html = "<span style=\"color:#9da7b7;\">None</span>";
+        } else {
+            QStringList blocks;
+            for (const QString &code : codes) {
+                blocks << QString("<pre style=\"font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
+                                  "font-size:14px;line-height:1.45;margin:0 0 10px 0;white-space:pre-wrap;\">%1</pre>")
+                              .arg(codeBlockHtml(code));
+            }
+            html = blocks.join("<hr style=\"border:0;border-top:1px solid rgba(215,176,106,95);\">");
+        }
+        view->setHtml(html);
+        layout->addWidget(view);
+    };
+
+    QStringList consumedCodes;
+    for (const QString &blockId : result.usedBlocks) {
+        if (usedBlockCodes.contains(blockId)) {
+            consumedCodes << usedBlockCodes.value(blockId);
+        }
+    }
+    addCodeSection("Consumed Code Blocks", consumedCodes);
+
+    QStringList generatedCodes;
+    if (!bossDefeated && !result.synthesizedBlock.code.trimmed().isEmpty()) {
+        generatedCodes << result.synthesizedBlock.code;
+    }
+    addCodeSection("Generated Code Block", generatedCodes);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok, panel);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    layout->addWidget(buttons);
+
+    root->addWidget(panel);
+    dialog.resize(720, 680);
+    dialog.exec();
+}
+
 void MainWindow::handleChest(const QString &chestId)
 {
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
@@ -580,13 +720,18 @@ void MainWindow::handleChest(const QString &chestId)
     }
 
     QDialog dialog(this);
-    dialog.setWindowTitle("Chest");
+    dialog.setWindowTitle("chest");
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
-    QLabel *summary = new QLabel(QString("强制拾取: %1\n可多次拾取: %2")
+    QLabel *chestImage = new QLabel(&dialog);
+    chestImage->setAlignment(Qt::AlignCenter);
+    const QString chestPixmapPath = chest.forcedPick ? ":/images/assets/forced_chest.png" : ":/images/assets/unforce_chest.png";
+    chestImage->setPixmap(QPixmap(chestPixmapPath).scaled(170, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+    QLabel *summary = new QLabel(QString("强制拾取: %1    可多次拾取: %2")
                                      .arg(chest.forcedPick ? "是" : "否",
                                           chest.repeat ? "是" : "否"),
                                  &dialog);
-    summary->setWordWrap(true);
+    summary->setAlignment(Qt::AlignCenter);
     QWidget *contents = new QWidget(&dialog);
     QGridLayout *contentGrid = new QGridLayout(contents);
     contentGrid->setSpacing(12);
@@ -616,6 +761,7 @@ void MainWindow::handleChest(const QString &chestId)
     QPushButton *skipButton = buttons->addButton(chest.forcedPick ? "Leave" : "Skip", QDialogButtonBox::RejectRole);
     Q_UNUSED(skipButton);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(chestImage);
     layout->addWidget(summary);
     layout->addWidget(contents);
     layout->addWidget(buttons);
@@ -636,7 +782,7 @@ void MainWindow::handleChest(const QString &chestId)
         }
         ui->combatLogLabel->setText(picked.isEmpty()
                                         ? "No new block was picked."
-                                        : QString("Picked: %1").arg(picked));
+                                        : "Picked a code block.");
     } else {
         ui->combatLogLabel->setText(chest.forcedPick ? "Forced chest closed. Returned to the previous tile." : "Chest skipped.");
     }
@@ -668,10 +814,39 @@ void MainWindow::handleMonster(const QString &monsterId)
                                    : encounterName,
                                &dialog);
     title->setWordWrap(true);
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet(monsterId == "boss" || monster.type.compare("boss", Qt::CaseInsensitive) == 0
+                             ? "QLabel { color: #ffe082; font-size: 27px; font-weight: 900; background: rgba(68, 20, 24, 225); border: 2px solid #ff626e; border-radius: 7px; padding: 9px; }"
+                             : "QLabel { color: #f9f1d0; font-size: 23px; font-weight: 900; background: rgba(31, 38, 50, 225); border: 1px solid #5a6a82; border-radius: 7px; padding: 8px; }");
     QLabel *hero = new QLabel(&dialog);
     hero->setFixedSize(180, 220);
     hero->setAlignment(Qt::AlignCenter);
     hero->setPixmap(QPixmap(":/images/assets/jibao.png").scaled(hero->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    hero->setStyleSheet("QLabel { background: rgba(5, 8, 12, 220); border: 1px solid rgba(79, 234, 255, 140); border-radius: 7px; padding: 8px; }");
+
+    auto combatSpritePath = [](const QString &monsterId, const Monster &monster) {
+        if (monsterId == "boss" || monster.monsterId == "boss") {
+            return QString(":/images/assets/marry_ann.png");
+        }
+        QString normalizedPic = monster.pic.trimmed();
+        normalizedPic.replace('\\', '/');
+        const QString fileName = normalizedPic.mid(normalizedPic.lastIndexOf('/') + 1);
+        const QStringList candidates = {
+            normalizedPic.startsWith(":/") ? normalizedPic : QString(":/images/%1").arg(normalizedPic),
+            fileName.isEmpty() ? QString() : QString(":/images/assets/%1").arg(fileName)
+        };
+        for (const QString &candidate : candidates) {
+            if (!candidate.isEmpty() && !QPixmap(candidate).isNull()) {
+                return candidate;
+            }
+        }
+        return QString(":/images/assets/jabberwock.png");
+    };
+    QLabel *enemy = new QLabel(&dialog);
+    enemy->setFixedSize(180, 220);
+    enemy->setAlignment(Qt::AlignCenter);
+    enemy->setPixmap(QPixmap(combatSpritePath(monsterId, monster)).scaled(enemy->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    enemy->setStyleSheet("QLabel { background: rgba(5, 8, 12, 220); border: 1px solid rgba(215, 176, 106, 150); border-radius: 7px; padding: 8px; }");
 
     QScrollArea *bagScroll = new QScrollArea(&dialog);
     bagScroll->setWidgetResizable(true);
@@ -755,6 +930,14 @@ void MainWindow::handleMonster(const QString &monsterId)
                 slot->setTextProvider([this](const QString &blockId) {
                     return formatCodeBlockForDisplay(codeForBlock(blockId));
                 });
+                slot->setOnRemoveRequested([this, slot, tokenId, refreshCombatBag]() {
+                    if (!gameEngine.unfillSpace(tokenId)) {
+                        return;
+                    }
+                    slot->clearBlock();
+                    syncFromEngineState();
+                    refreshCombatBag();
+                });
                 slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag]() {
                     const QString blockId = slot->property("blockId").toString();
                     const QString previousBlockId = slot->property("previousBlockId").toString();
@@ -814,12 +997,20 @@ void MainWindow::handleMonster(const QString &monsterId)
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     bool wonBoss = false;
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, monsterId]() {
+    bool hasCombatSettlement = false;
+    CombatResult combatSettlementResult;
+    QMap<QString, QString> combatSettlementUsedCodes;
+    QString combatSettlementName;
+    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, &hasCombatSettlement, &combatSettlementResult, &combatSettlementUsedCodes, &combatSettlementName, monsterId]() {
         if (!gameEngine.m_combat) {
             QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
             return;
         }
         const bool isBossCombat = gameEngine.m_combat->isBoss();
+        combatSettlementUsedCodes.clear();
+        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+            combatSettlementUsedCodes.insert(block.blockId, block.code);
+        }
         const CombatResult result = gameEngine.submitCombat();
         if (result.resultType == "count_error") {
             QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
@@ -843,21 +1034,28 @@ void MainWindow::handleMonster(const QString &monsterId)
         refreshGameUi();
         const Monster clearedMonster = monsterByTile(monsterId);
         const QString clearedName = clearedMonster.nickname.isEmpty() ? clearedMonster.name : clearedMonster.nickname;
+        combatSettlementResult = result;
+        combatSettlementName = clearedName;
+        hasCombatSettlement = true;
         ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(clearedName));
         dialog.accept();
     });
     QHBoxLayout *combatTop = new QHBoxLayout();
     combatTop->addWidget(hero);
     combatTop->addWidget(codeScroll, 1);
+    combatTop->addWidget(enemy);
     layout->addWidget(title);
     layout->addLayout(combatTop);
 
     layout->addWidget(bagScroll);
     layout->addWidget(buttons);
-    dialog.resize(860, 660);
+    dialog.resize(1060, 660);
     dialog.exec();
     if (gameEngine.m_combat) {
         gameEngine.exitCombat();
+    }
+    if (hasCombatSettlement) {
+        showCombatSettlement(combatSettlementName, combatSettlementResult, combatSettlementUsedCodes, wonBoss);
     }
     if (wonBoss) {
         showVictorySettlement();

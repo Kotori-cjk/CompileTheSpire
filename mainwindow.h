@@ -65,6 +65,10 @@ private:
     void showBagDialog();
     void showManualDialog();
     void showVictorySettlement();
+    void showCombatSettlement(const QString &defeatedName,
+                              const CombatResult &result,
+                              const QMap<QString, QString> &usedBlockCodes,
+                              bool bossDefeated);
 
     void movePlayer(int rowDelta, int columnDelta);
     void movePlayerTo(int targetRow, int targetColumn);
@@ -114,6 +118,7 @@ private:
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
+    QPushButton *undoRunButton = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
     QWidget *mainMenuButtonBar = nullptr;

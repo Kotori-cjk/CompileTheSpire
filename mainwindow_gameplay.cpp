@@ -84,6 +84,9 @@ void MainWindow::refreshGameUi()
     ui->goldLabel->setText(QString("Bag: %1/%2").arg(bagBlocks.size()).arg(level.bagSize));
     ui->floorLabel->setText(QString("Pos: %1,%2").arg(playerColumn).arg(playerRow));
     ui->nextChallengeButton->setEnabled(gameEngine.snapshotStack.size() > 1);
+    if (undoRunButton) {
+        undoRunButton->setEnabled(gameEngine.snapshotStack.size() > 1);
+    }
     refreshMapGrid();
     refreshSidePanel();
 }
@@ -192,7 +195,7 @@ void MainWindow::refreshSidePanel()
 
 void MainWindow::movePlayer(int rowDelta, int columnDelta)
 {
-    if (movePlaybackActive) {
+    if (movePlaybackActive || (mapView && mapView->isPlayerAnimating())) {
         return;
     }
     clearDisplayedMovePath();
@@ -209,7 +212,7 @@ void MainWindow::movePlayer(int rowDelta, int columnDelta)
 
 void MainWindow::movePlayerTo(int targetRow, int targetColumn)
 {
-    if (movePlaybackActive) {
+    if (movePlaybackActive || (mapView && mapView->isPlayerAnimating())) {
         return;
     }
     if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
@@ -228,9 +231,7 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
     bool success = false;
     const QVector<QPoint> backendPath = gameEngine.m_map->findPath(targetRow, targetColumn, &success);
     if (!success || backendPath.size() < 2) {
-        if (!moveThroughEngine(targetRow, targetColumn)) {
-            ui->combatLogLabel->setText("No path to that tile.");
-        }
+        ui->combatLogLabel->setText("No path to that tile.");
         return;
     }
 
@@ -367,4 +368,3 @@ QString MainWindow::describeTile(const QString &tileId) const
     }
     return tileId;
 }
-
