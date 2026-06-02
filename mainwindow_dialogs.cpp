@@ -217,6 +217,13 @@ void MainWindow::showManualDialog()
         codeView->setMinimumHeight(285);
         infoLayout->addWidget(codeView, 1);
 
+        if (monster.spaces.isEmpty()) {
+            QLabel *friendly = new QLabel("Friendly", infoPanel);
+            friendly->setAlignment(Qt::AlignCenter);
+            friendly->setStyleSheet("QLabel { color: #b9ffd0; font-size: 16px; font-weight: 900; background: rgba(28, 109, 50, 160); border: 1px solid rgba(139, 232, 154, 210); border-radius: 6px; padding: 7px; }");
+            infoLayout->addWidget(friendly);
+        }
+
         if (monsterId == "boss") {
             const Boss boss = levels.at(currentLevelIndex).boss;
             QLabel *io = new QLabel(QString("Expected input: %1\nExpected output: %2")
@@ -320,11 +327,18 @@ void MainWindow::showManualDialog()
             if (itemIndex < monsterItems.size()) {
                 const QString monsterId = monsterItems.at(itemIndex).first;
                 const Monster monster = monsterItems.at(itemIndex).second;
-                const bool defeated = defeatedMonsters.contains(monsterId);
+                const bool friendly = monster.spaces.isEmpty();
+                const bool defeated = !friendly && defeatedMonsters.contains(monsterId);
                 card->setText(QString("%1%2").arg(monsterDisplayName(monsterId, monster),
                                                   monsterId == "boss" ? "\nBOSS" : QString()));
                 card->setIcon(QIcon(spriteForMonster(monsterId, monster)));
-                if (defeated) {
+                if (friendly) {
+                    card->setStyleSheet(
+                        "QToolButton { color: #eefbea; font-size: 16px; font-weight: 800; text-align: left;"
+                        "background: rgba(34, 92, 47, 185); border: 2px solid rgba(139, 232, 154, 210); border-radius: 8px; padding: 12px; }"
+                        "QToolButton:hover { border-color: #4feaff; background: rgba(42, 116, 60, 220); }"
+                    );
+                } else if (defeated) {
                     card->setStyleSheet(
                         "QToolButton { color: #eefbea; font-size: 16px; font-weight: 800; text-align: left;"
                         "background: rgba(34, 92, 47, 185); border: 2px solid rgba(139, 232, 154, 210); border-radius: 8px; padding: 12px; }"
@@ -335,7 +349,7 @@ void MainWindow::showManualDialog()
                                   QString("<b>%1</b><br>%2%3")
                                       .arg(monsterDisplayName(monsterId, monster).toHtmlEscaped(),
                                            monsterId == "boss" ? "Boss<br>" : QString(),
-                                           defeated ? "Defeated" : "Not defeated"));
+                                           friendly ? "Friendly" : (defeated ? "Defeated" : "Not defeated")));
                 connect(card, &QToolButton::clicked, &dialog, [&, monsterId, monster]() {
                     showMonsterDetail(monsterId, monster);
                 });
@@ -437,11 +451,11 @@ void MainWindow::showVictorySettlement()
         statsLayout->addWidget(valueWidget, row, column * 2 + 1);
     };
 
+    const QVector<int> unlockedThisClear = newlyUnlockedStageIndexes;
     addStat(0, 0, "Clues Revealed", QString("%1 / %2").arg(collectedClues.size()).arg(level.clues.size()));
-    addStat(0, 1, "Unlocked", isLevelUnlocked(currentLevelIndex + 1) ? "Next Stage" : "Current Stage");
+    addStat(0, 1, "Unlocked", unlockedThisClear.isEmpty() ? "No New Stage" : "New Stage");
     summaryLayout->addWidget(stats);
 
-    const QVector<int> unlockedThisClear = newlyUnlockedStageIndexes;
     if (!unlockedThisClear.isEmpty()) {
         QFrame *unlockPanel = new QFrame(summaryPanel);
         unlockPanel->setStyleSheet(
@@ -634,6 +648,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     }
 
     const Monster monster = monsterByTile(monsterId);
+    const bool friendlyEncounter = monster.spaces.isEmpty();
     playBgm(monsterId == "boss" ? "assets/audio/bgm_boss.mp3" : "assets/audio/bgm_combat.wav");
     QDialog dialog(this);
     dialog.setWindowTitle(monsterId == "boss" ? "Boss Encounter" : "Monster Encounter");
@@ -688,6 +703,26 @@ void MainWindow::handleMonster(const QString &monsterId)
 
     const QStringList templateLines = monster.codeTemplate.split('\n');
     const QRegularExpression tokenPattern("\\$([^$]+)\\$");
+    QSet<QString> hiddenClueIds;
+    if (currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+        const LevelData &level = levels.at(currentLevelIndex);
+        for (const QString &line : templateLines) {
+            QRegularExpressionMatchIterator clueMatches = tokenPattern.globalMatch(line);
+            while (clueMatches.hasNext()) {
+                const QString tokenId = clueMatches.next().captured(1);
+                if (!spaceIndexById.contains(tokenId)
+                    && level.clues.contains(tokenId)
+                    && !collectedClues.contains(tokenId)) {
+                    hiddenClueIds.insert(tokenId);
+                }
+            }
+        }
+        for (const QString &clueId : monster.referencedClues) {
+            if (level.clues.contains(clueId) && !collectedClues.contains(clueId)) {
+                hiddenClueIds.insert(clueId);
+            }
+        }
+    }
     for (const QString &line : templateLines) {
         QWidget *lineWidget = new QWidget(codePanel);
         QHBoxLayout *lineLayout = new QHBoxLayout(lineWidget);
@@ -708,7 +743,6 @@ void MainWindow::handleMonster(const QString &monsterId)
             const QString tokenId = match.captured(1);
             if (spaceIndexById.contains(tokenId)) {
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
-                slot->setToolTip(tokenId);
                 slot->setTextProvider([this](const QString &blockId) {
                     return formatCodeBlockForDisplay(codeForBlock(blockId));
                 });
@@ -759,6 +793,15 @@ void MainWindow::handleMonster(const QString &monsterId)
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
     QPushButton *submitButton = buttons->addButton("Submit fill", QDialogButtonBox::ActionRole);
+    if (friendlyEncounter) {
+        submitButton->setEnabled(false);
+        submitButton->setText("Friendly");
+        submitButton->setToolTip("This encounter has no fill space.");
+    } else if (!hiddenClueIds.isEmpty()) {
+        submitButton->setEnabled(false);
+        submitButton->setText("Clues missing");
+        submitButton->setToolTip("Reveal every clue linked to this encounter before submitting.");
+    }
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     bool wonBoss = false;
@@ -789,7 +832,9 @@ void MainWindow::handleMonster(const QString &monsterId)
         }
         syncFromEngineState();
         refreshGameUi();
-        ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(monsterId));
+        const Monster clearedMonster = monsterByTile(monsterId);
+        const QString clearedName = clearedMonster.nickname.isEmpty() ? clearedMonster.name : clearedMonster.nickname;
+        ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(clearedName));
         dialog.accept();
     });
     QHBoxLayout *combatTop = new QHBoxLayout();

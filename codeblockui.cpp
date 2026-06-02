@@ -155,5 +155,6 @@ QString codeBlockPopupHtml(const QString &code, const QString &type)
 void installHoverPopup(QWidget *widget, const QString &html)
 {
     widget->installEventFilter(new HoverPopupFilter(widget, html));
+    widget->setToolTip(QString());
     widget->setMouseTracking(true);
 }

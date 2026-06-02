@@ -88,6 +88,8 @@ public:
         setAcceptDrops(true);
         setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         setMinimumSize(132, 32);
+        setMaximumWidth(520);
+        setWordWrap(true);
         setProperty("blockId", QString());
         setText("              ");
         setTextFormat(Qt::PlainText);
@@ -117,7 +119,7 @@ public:
     {
         setProperty("blockId", blockId);
         setText(displayText);
-        setMinimumWidth(displayText.contains('\n') ? 220 : 132);
+        setMinimumWidth(displayText.contains('\n') ? 260 : 132);
         refreshStyle(false);
     }
 
