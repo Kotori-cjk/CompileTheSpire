@@ -139,6 +139,13 @@ bool GameEngine::fillSpace(const QString& spaceId,const QString& blockId){
     m_bag->bagRemove(blockId);
     return m_combat->submitBlock(spc,tblock);
 }
+bool GameEngine::unfillSpace(const QString& spaceId){
+    if(m_combat==nullptr||!m_combat->isFilled(spaceId))return false;
+    CodeBlock block=m_combat->filledCodes()[spaceId];
+    if(!m_combat->unfill(spaceId))return false;
+    m_bag->bagAdd(block);
+    return true;
+}
 bool GameEngine::revealClue(const QString& clueId){
     if(m_map->clueRevealed(clueId))return false;
     if(!m_level->clues.contains(clueId))return false;

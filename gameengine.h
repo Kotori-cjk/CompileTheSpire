@@ -75,6 +75,8 @@ public:
     //call these when move by click (with mouse)
     bool fillSpace(const QString& spaceId,const QString& blockId);
     //call it when player fill the space
+    bool unfillSpace(const QString& spaceId);
+    //call it when player remove a block from space
     bool revealClue(const QString& clueId);
     //call it when player trigger a clue
     bool exitChest(const QString& chestId);
