@@ -168,6 +168,7 @@ bool GameEngine::takeFromChest(const QString& chestId,const QString& blockId){
     QString msg="";
     success=m_bag->addBlockFromChest(blockId,chestId,&msg);
     if(!success)return false;
+    m_locked=false;
     snapshotStack.append(getCurrentSnapshot());
     if(!m_level->chests[chestId].repeat||m_bag->chestIsEmpty(chestId)){
         m_map->Clear(m_level->chests[chestId].pos);
@@ -226,6 +227,12 @@ CombatResult GameEngine::submitCombat(){
 }
 QVector<CodeBlock> GameEngine::bagBlocks(){
     return m_bag->bag();
+}
+bool GameEngine::discardBlock(const QString& blockId){
+    if(m_bag==nullptr||!m_bag->bagContains(blockId))return false;
+    m_bag->bagRemove(blockId);
+    snapshotStack.append(getCurrentSnapshot());
+    return true;
 }
 monsterClueDetail GameEngine::getMonsterDetail(const QString& monsterId){
     return m_map->getMonsterClueDetail(monsterId);
