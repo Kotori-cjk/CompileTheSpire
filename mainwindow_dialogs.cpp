@@ -35,6 +35,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <functional>
 
 void MainWindow::showBagDialog()
@@ -440,6 +441,54 @@ void MainWindow::showVictorySettlement()
     addStat(0, 1, "Unlocked", isLevelUnlocked(currentLevelIndex + 1) ? "Next Stage" : "Current Stage");
     summaryLayout->addWidget(stats);
 
+    const QVector<int> unlockedThisClear = newlyUnlockedStageIndexes;
+    if (!unlockedThisClear.isEmpty()) {
+        QFrame *unlockPanel = new QFrame(summaryPanel);
+        unlockPanel->setStyleSheet(
+            "QFrame { background: rgba(5, 14, 22, 145); border: 1px solid rgba(79, 234, 255, 130); border-radius: 6px; }"
+            "QLabel { background: transparent; }"
+        );
+        QVBoxLayout *unlockLayout = new QVBoxLayout(unlockPanel);
+        unlockLayout->setContentsMargins(18, 12, 18, 12);
+        unlockLayout->setSpacing(10);
+
+        QLabel *unlockTitle = new QLabel("New Stage Unlocked", unlockPanel);
+        unlockTitle->setAlignment(Qt::AlignCenter);
+        unlockTitle->setStyleSheet("QLabel { color: #4feaff; font-size: 16px; font-weight: 900; }");
+        unlockLayout->addWidget(unlockTitle);
+
+        QHBoxLayout *unlockRow = new QHBoxLayout();
+        unlockRow->setSpacing(12);
+        unlockRow->addStretch();
+        const QVector<StageCard> stages = stageCatalog();
+        for (int levelIndex : unlockedThisClear) {
+            const auto stageIt = std::find_if(stages.cbegin(), stages.cend(), [levelIndex](const StageCard &stage) {
+                return stage.levelIndex == levelIndex;
+            });
+            const QString stageId = stageIt != stages.cend()
+                                        ? (stageIt->isEx ? QString("EX-%1").arg(levelIndex - 8) : QString::number(levelIndex + 1))
+                                        : QString::number(levelIndex + 1);
+            QFrame *badge = new QFrame(unlockPanel);
+            badge->setFixedSize(92, 92);
+            badge->setStyleSheet(
+                "QFrame { background: qradialgradient(cx:0.5, cy:0.42, radius:0.72,"
+                "stop:0 rgba(140, 255, 255, 245), stop:0.24 rgba(40, 183, 212, 238),"
+                "stop:0.68 rgba(8, 45, 64, 245), stop:1 rgba(1, 8, 14, 255));"
+                "border: 4px solid rgba(80, 240, 255, 225); border-radius: 46px; }"
+            );
+            QVBoxLayout *badgeLayout = new QVBoxLayout(badge);
+            badgeLayout->setContentsMargins(6, 6, 6, 6);
+            QLabel *badgeText = new QLabel(stageId, badge);
+            badgeText->setAlignment(Qt::AlignCenter);
+            badgeText->setStyleSheet("QLabel { color: #eaffff; font-family: Georgia, 'Times New Roman'; font-size: 24px; font-weight: 900; }");
+            badgeLayout->addWidget(badgeText);
+            unlockRow->addWidget(badge);
+        }
+        unlockRow->addStretch();
+        unlockLayout->addLayout(unlockRow);
+        summaryLayout->addWidget(unlockPanel);
+    }
+
     layout->addWidget(summaryPanel, 0);
     layout->addStretch(1);
 
@@ -495,6 +544,7 @@ void MainWindow::showVictorySettlement()
     root->addWidget(board);
     dialog.resize(1080, 700);
     dialog.exec();
+    newlyUnlockedStageIndexes.clear();
 }
 
 void MainWindow::handleChest(const QString &chestId)
@@ -553,10 +603,8 @@ void MainWindow::handleChest(const QString &chestId)
         if (!selectedBlockId.isEmpty()) {
             if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
                 picked = selectedBlockId;
-                if (chest.forcedPick && chest.repeat) {
-                    if (gameEngine.m_level) {
-                        gameEngine.m_level->chests[chestId].forcedPick = false;
-                    }
+                if (chest.forcedPick) {
+                    gameEngine.m_locked = false;
                 }
                 syncFromEngineState();
             } else {
@@ -736,6 +784,8 @@ void MainWindow::handleMonster(const QString &monsterId)
         wonBoss = isBossCombat;
         if (wonBoss) {
             completedStageIndexes.insert(currentLevelIndex);
+            gameEngine.m_save.Clear(currentLevelIndex);
+            gameEngine.m_save.Save();
         }
         syncFromEngineState();
         refreshGameUi();

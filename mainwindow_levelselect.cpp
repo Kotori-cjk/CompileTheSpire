@@ -134,11 +134,17 @@ void MainWindow::refreshLevelSelectUi()
         const bool hasStage = stageIndex < visibleStages.size();
         const StageCard stage = hasStage ? visibleStages.at(stageIndex) : StageCard{-1, showingExLevels, "Empty", "", ""};
         const bool unlocked = hasStage && isLevelUnlocked(stage.levelIndex);
-        const bool completed = hasStage && completedStageIndexes.contains(stage.levelIndex);
+        const bool completed = hasStage && isLevelCleared(stage.levelIndex);
         buttons[i]->setEnabled(hasStage);
         buttons[i]->setProperty("levelIndex", stage.levelIndex);
         const bool selected = hasStage && stage.levelIndex == selectedStageIndex;
-        buttons[i]->setProperty("levelCard", selected ? "selected" : (completed ? "cleared" : (unlocked ? "true" : "locked")));
+        QString cardState = "locked";
+        if (unlocked && completed) {
+            cardState = selected ? "selectedCleared" : "cleared";
+        } else if (unlocked) {
+            cardState = selected ? "selectedUnlocked" : "true";
+        }
+        buttons[i]->setProperty("levelCard", cardState);
         buttons[i]->style()->unpolish(buttons[i]);
         buttons[i]->style()->polish(buttons[i]);
         buttons[i]->setText(hasStage
@@ -159,7 +165,7 @@ void MainWindow::refreshLevelSelectUi()
         if (toIndex < visibleStages.size()) {
             const int fromLevel = visibleStages.at(fromIndex).levelIndex;
             const int toLevel = visibleStages.at(toIndex).levelIndex;
-            state = completedStageIndexes.contains(fromLevel) ? "cleared" : (isLevelUnlocked(toLevel) ? "true" : "locked");
+            state = isLevelCleared(fromLevel) ? "cleared" : (isLevelUnlocked(toLevel) ? "true" : "locked");
         }
         bridges[i]->setProperty("levelBridge", state);
         bridges[i]->style()->unpolish(bridges[i]);
@@ -204,6 +210,19 @@ bool MainWindow::isLevelUnlocked(int levelIndex) const
         return true;
     }
     return false;
+}
+
+bool MainWindow::isLevelCleared(int levelIndex) const
+{
+    if (levelIndex >= 0 && levelIndex < levels.size()) {
+        for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
+            if (meta.levelIndex == levelIndex) {
+                return meta.cleared;
+            }
+        }
+    }
+
+    return completedStageIndexes.contains(levelIndex);
 }
 
 void MainWindow::setLevelSelectMode(bool exMode)
@@ -251,6 +270,7 @@ void MainWindow::startLevel(int levelIndex)
         levelIndex = 0;
     }
 
+    newlyUnlockedStageIndexes.clear();
     gameEngine.levels = levels;
     bool started = gameEngine.startLevel(levelIndex);
     if (!started && levelIndex == 0) {
@@ -272,4 +292,3 @@ void MainWindow::startLevel(int levelIndex)
         mapView->setFocus(Qt::OtherFocusReason);
     }
 }
-
