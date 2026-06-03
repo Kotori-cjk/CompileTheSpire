@@ -11,6 +11,7 @@
 #include <QMap>
 #include <QPushButton>
 #include <QSet>
+#include <QSoundEffect>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -44,9 +45,13 @@ private:
     void buildRuntimeGameUi();
     void positionMainMenuButtons();
     void updateMainMenuBackground();
+    QString audioFilePath(const QString &resourcePath) const;
     void playBgm(const QString &resourcePath);
+    void playSfx(const QString &resourcePath);
+    void playSfx(const QString &resourcePath, const QString &fallbackResourcePath);
     void syncBgmToCurrentPage();
     void updateBgmVolume();
+    void updateSfxVolume();
     void loadLevels();
     void refreshLevelSelectUi();
     void startLevel(int levelIndex);
@@ -124,6 +129,7 @@ private:
     QWidget *mainMenuButtonBar = nullptr;
     QMediaPlayer *bgmPlayer = nullptr;
     QAudioOutput *bgmAudioOutput = nullptr;
+    QMap<QString, QSoundEffect *> sfxEffects;
 };
 
 #endif // MAINWINDOW_H

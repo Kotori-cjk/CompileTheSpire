@@ -53,6 +53,7 @@ void MainWindow::resetLevel()
     pendingMoveTargetRow = -1;
     pendingMoveTargetColumn = -1;
     ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
+    playSfx("assets/audio/sfx_move.wav");
     refreshGameUi();
 }
 
@@ -61,12 +62,14 @@ void MainWindow::undo()
     clearDisplayedMovePath();
     if (!gameEngine.m_map || !gameEngine.undo()) {
         ui->combatLogLabel->setText("Nothing to undo yet.");
+        playSfx("assets/audio/sfx_error.wav");
         refreshGameUi();
         return;
     }
 
     syncFromEngineState();
     ui->combatLogLabel->setText("Undo restored the previous state.");
+    playSfx("assets/audio/sfx_move.wav");
     refreshGameUi();
 }
 
@@ -201,12 +204,14 @@ void MainWindow::movePlayer(int rowDelta, int columnDelta)
     clearDisplayedMovePath();
     if (!gameEngine.m_map) {
         ui->combatLogLabel->setText("No active map.");
+        playSfx("assets/audio/sfx_error.wav");
         return;
     }
 
     const QPoint backendPos = gameEngine.m_map->playerPos();
     if (!moveThroughEngine(backendPos.x() + rowDelta, backendPos.y() + columnDelta)) {
         ui->combatLogLabel->setText("Blocked.");
+        playSfx("assets/audio/sfx_error.wav");
     }
 }
 
@@ -217,6 +222,7 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
     }
     if (!gameEngine.m_map || currentLevelIndex < 0 || currentLevelIndex >= levels.size()) {
         ui->combatLogLabel->setText("No path to that tile.");
+        playSfx("assets/audio/sfx_error.wav");
         return;
     }
 
@@ -225,6 +231,7 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
         || targetColumn < 0 || targetColumn >= level.mapGrid.at(targetRow).size()
         || !gameEngine.m_map->canGoIn(targetRow, targetColumn)) {
         ui->combatLogLabel->setText("No path to that tile.");
+        playSfx("assets/audio/sfx_error.wav");
         return;
     }
 
@@ -232,6 +239,7 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
     const QVector<QPoint> backendPath = gameEngine.m_map->findPath(targetRow, targetColumn, &success);
     if (!success || backendPath.size() < 2) {
         ui->combatLogLabel->setText("No path to that tile.");
+        playSfx("assets/audio/sfx_error.wav");
         return;
     }
 
@@ -277,6 +285,7 @@ void MainWindow::advanceMovePlayback()
             syncFromEngineState();
             refreshGameUi();
             ui->combatLogLabel->setText("No path to that tile.");
+            playSfx("assets/audio/sfx_error.wav");
         }
         return;
     }
@@ -285,6 +294,7 @@ void MainWindow::advanceMovePlayback()
     playerRow = next.y();
     playerColumn = next.x();
     ++activeMovePathIndex;
+    playSfx("assets/audio/sfx_move.wav");
     refreshGameUi();
     QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
 }

@@ -77,6 +77,18 @@ foreach(runtime_data_dir IN ITEMS levels savedata assets/audio)
     endif()
 endforeach()
 
+file(GLOB_RECURSE RUNTIME_AUDIO_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio/*")
+if(RUNTIME_AUDIO_FILES)
+    add_custom_target(copy_runtime_audio ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets/audio"
+        DEPENDS ${RUNTIME_AUDIO_FILES}
+        COMMENT "Copying audio assets to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_audio)
+endif()
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
