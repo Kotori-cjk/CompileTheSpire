@@ -5,6 +5,7 @@
 #include "stagecatalog.h"
 
 #include <QAbstractItemView>
+#include <QAbstractButton>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDialog>
@@ -51,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
     bgmPlayer = new QMediaPlayer(this);
     bgmPlayer->setAudioOutput(bgmAudioOutput);
     updateBgmVolume();
+    updateSfxVolume();
     connect(bgmPlayer, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
         if (status == QMediaPlayer::EndOfMedia && !currentBgmResource.isEmpty()) {
             bgmPlayer->setPosition(0);
@@ -66,6 +68,7 @@ MainWindow::MainWindow(QWidget *parent)
         refreshGameUi();
     });
     connect(&gameEngine, &GameEngine::moveCompleted, this, [this](const MoveResult &result) {
+        const bool playedByPathAnimation = suppressNextMovePath;
         activeMovePath.clear();
         if (!suppressNextMovePath) {
             for (const QPoint &step : result.movePath) {
@@ -74,6 +77,9 @@ MainWindow::MainWindow(QWidget *parent)
             activeMovePathIndex = activeMovePath.size();
         }
         suppressNextMovePath = false;
+        if (!playedByPathAnimation) {
+            playSfx("assets/audio/sfx_move.wav");
+        }
         syncFromEngineState();
         QString eventText = QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow);
         if (result.event == "chest") {
@@ -96,6 +102,7 @@ MainWindow::MainWindow(QWidget *parent)
                     syncFromEngineState();
                     refreshGameUi();
                     if (revealed && currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
+                        playSfx("assets/audio/sfx_event.wav");
                         const QString clueText = levels.at(currentLevelIndex).clues.value(clueId).val.trimmed();
                         QDialog clueDialog(this);
                         clueDialog.setModal(true);
@@ -129,6 +136,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
     connect(&gameEngine, &GameEngine::forcedMove, this, [this](const QPoint &) {
+        playSfx("assets/audio/sfx_move.wav");
         activeMovePath.clear();
         activeMovePathIndex = 0;
         movePlaybackActive = false;
@@ -137,6 +145,7 @@ MainWindow::MainWindow(QWidget *parent)
         refreshGameUi();
     });
     connect(&gameEngine, &GameEngine::chestEntered, this, [this](const QString &chestId) {
+        playSfx("assets/audio/chest_open.wav", "assets/audio/sfx_event.wav");
         QTimer::singleShot(0, this, [this, chestId]() {
             handleChest(chestId);
             syncFromEngineState();
@@ -144,6 +153,7 @@ MainWindow::MainWindow(QWidget *parent)
         });
     });
     connect(&gameEngine, &GameEngine::combatStarted, this, [this](const QString &monsterId, Combat *) {
+        playSfx("assets/audio/sfx_combat.wav");
         QTimer::singleShot(0, this, [this, monsterId]() {
             if (monsterId != "boss" && !monsterId.startsWith("monster")) {
                 if (gameEngine.m_combat) {
@@ -170,6 +180,7 @@ MainWindow::MainWindow(QWidget *parent)
         refreshGameUi();
     });
     connect(&gameEngine, &GameEngine::levelUnlocked, this, [this](int levelIndex) {
+        playSfx("assets/audio/sfx_event.wav");
         if (levelIndex >= 0 && !newlyUnlockedStageIndexes.contains(levelIndex)) {
             newlyUnlockedStageIndexes.append(levelIndex);
         }
@@ -287,6 +298,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(ui->sfxVolumeSlider, &QSlider::valueChanged, this, [this, updatePercent]() {
         updatePercent(ui->sfxVolumeSlider, ui->sfxVolumeValueLabel);
+        updateSfxVolume();
     });
 
     connect(ui->exitButton, &QPushButton::clicked, this, &MainWindow::close);
@@ -308,6 +320,16 @@ void MainWindow::setupMovementShortcuts()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event->type() == QEvent::MouseButtonRelease) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            if (QAbstractButton *button = qobject_cast<QAbstractButton *>(watched);
+                button && button->isEnabled() && dynamic_cast<CodeBlockIcon *>(button) == nullptr) {
+                playSfx("assets/audio/sfx_ui.wav");
+            }
+        }
+    }
+
     if (event->type() == QEvent::KeyPress
         && ui
         && ui->stackedWidget->currentWidget() == ui->gamePage
@@ -1177,18 +1199,24 @@ void MainWindow::updateMainMenuBackground()
 {
 }
 
-void MainWindow::playBgm(const QString &resourcePath)
+QString MainWindow::audioFilePath(const QString &resourcePath) const
 {
-    if (!bgmPlayer || resourcePath.isEmpty() || currentBgmResource == resourcePath) {
-        return;
-    }
-
     const QString appRelativePath = QDir(QCoreApplication::applicationDirPath()).filePath(resourcePath);
     const QString workingRelativePath = QDir::current().filePath(resourcePath);
     QString audioPath = QFileInfo::exists(appRelativePath) ? appRelativePath : workingRelativePath;
     if (!QFileInfo::exists(audioPath)) {
         audioPath = QDir(QCoreApplication::applicationDirPath()).filePath(QString("../CompileTheSpire/%1").arg(resourcePath));
     }
+    return QFileInfo::exists(audioPath) ? audioPath : QString();
+}
+
+void MainWindow::playBgm(const QString &resourcePath)
+{
+    if (!bgmPlayer || resourcePath.isEmpty() || currentBgmResource == resourcePath) {
+        return;
+    }
+
+    const QString audioPath = audioFilePath(resourcePath);
     if (!QFileInfo::exists(audioPath)) {
         statusBar()->showMessage(QString("Missing BGM: %1").arg(resourcePath), 2500);
         return;
@@ -1198,6 +1226,42 @@ void MainWindow::playBgm(const QString &resourcePath)
     bgmPlayer->setSource(QUrl::fromLocalFile(audioPath));
     updateBgmVolume();
     bgmPlayer->play();
+}
+
+void MainWindow::playSfx(const QString &resourcePath)
+{
+    if (resourcePath.isEmpty()) {
+        return;
+    }
+
+    QSoundEffect *effect = sfxEffects.value(resourcePath, nullptr);
+    if (!effect) {
+        const QString audioPath = audioFilePath(resourcePath);
+        if (audioPath.isEmpty()) {
+            statusBar()->showMessage(QString("Missing SFX: %1").arg(resourcePath), 2500);
+            return;
+        }
+        effect = new QSoundEffect(this);
+        effect->setSource(QUrl::fromLocalFile(audioPath));
+        effect->setLoopCount(1);
+        sfxEffects.insert(resourcePath, effect);
+        updateSfxVolume();
+    }
+
+    if (effect->isPlaying()) {
+        effect->stop();
+    }
+    effect->play();
+}
+
+void MainWindow::playSfx(const QString &resourcePath, const QString &fallbackResourcePath)
+{
+    if (!audioFilePath(resourcePath).isEmpty()) {
+        playSfx(resourcePath);
+        return;
+    }
+
+    playSfx(fallbackResourcePath);
 }
 
 void MainWindow::syncBgmToCurrentPage()
@@ -1227,4 +1291,19 @@ void MainWindow::updateBgmVolume()
     const qreal master = qBound(0, ui->volumeSlider->value(), 100) / 100.0;
     const qreal music = qBound(0, ui->musicVolumeSlider->value(), 100) / 100.0;
     bgmAudioOutput->setVolume(master * music);
+}
+
+void MainWindow::updateSfxVolume()
+{
+    if (!ui) {
+        return;
+    }
+
+    const qreal master = qBound(0, ui->volumeSlider->value(), 100) / 100.0;
+    const qreal effects = qBound(0, ui->sfxVolumeSlider->value(), 100) / 100.0;
+    for (QSoundEffect *effect : sfxEffects) {
+        if (effect) {
+            effect->setVolume(master * effects);
+        }
+    }
 }

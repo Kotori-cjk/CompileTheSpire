@@ -458,6 +458,7 @@ void MainWindow::showVictorySettlement()
         return;
     }
 
+    playSfx("assets/audio/sfx_success.wav");
     playBgm("assets/audio/bgm_victory.mp3");
 
     QDialog dialog(this);
@@ -720,6 +721,7 @@ void MainWindow::handleChest(const QString &chestId)
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
     if (!gameEngine.m_bag || !chestHasAvailableBlocks(chestId)) {
         ui->combatLogLabel->setText("This chest is already empty.");
+        playSfx("assets/audio/sfx_error.wav");
         refreshGameUi();
         return;
     }
@@ -781,7 +783,9 @@ void MainWindow::handleChest(const QString &chestId)
                     gameEngine.m_locked = false;
                 }
                 syncFromEngineState();
+                playSfx("assets/audio/sfx_event.wav");
             } else {
+                playSfx("assets/audio/sfx_error.wav");
                 QMessageBox::warning(&dialog, "Chest", "Unable to take this code block.");
             }
         }
@@ -804,6 +808,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     seenMonsters.insert(monsterId);
     if (defeatedMonsters.contains(monsterId)) {
         ui->combatLogLabel->setText("This enemy is already defeated.");
+        playSfx("assets/audio/sfx_error.wav");
         return;
     }
 
@@ -937,11 +942,13 @@ void MainWindow::handleMonster(const QString &monsterId)
                 });
                 slot->setOnRemoveRequested([this, slot, tokenId, refreshCombatBag]() {
                     if (!gameEngine.unfillSpace(tokenId)) {
+                        playSfx("assets/audio/sfx_error.wav");
                         return;
                     }
                     slot->clearBlock();
                     syncFromEngineState();
                     refreshCombatBag();
+                    playSfx("assets/audio/sfx_combat.wav");
                 });
                 slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag]() {
                     const QString blockId = slot->property("blockId").toString();
@@ -955,11 +962,13 @@ void MainWindow::handleMonster(const QString &monsterId)
                         } else {
                             slot->setBlock(previousBlockId, formatCodeBlockForDisplay(codeForBlock(previousBlockId)));
                         }
+                        playSfx("assets/audio/sfx_error.wav");
                         QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
                         return;
                     }
                     syncFromEngineState();
                     refreshCombatBag();
+                    playSfx("assets/audio/sfx_combat.wav");
                 });
                 lineLayout->addWidget(slot, 0, Qt::AlignVCenter);
             } else {
@@ -1007,7 +1016,9 @@ void MainWindow::handleMonster(const QString &monsterId)
     QMap<QString, QString> combatSettlementUsedCodes;
     QString combatSettlementName;
     connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, &hasCombatSettlement, &combatSettlementResult, &combatSettlementUsedCodes, &combatSettlementName, monsterId]() {
+        playSfx("assets/audio/sfx_combat.wav");
         if (!gameEngine.m_combat) {
+            playSfx("assets/audio/sfx_error.wav");
             QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
             return;
         }
@@ -1018,17 +1029,21 @@ void MainWindow::handleMonster(const QString &monsterId)
         }
         const CombatResult result = gameEngine.submitCombat();
         if (result.resultType == "count_error") {
+            playSfx("assets/audio/sfx_error.wav");
             QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
             return;
         }
         if (result.resultType == "space_error") {
+            playSfx("assets/audio/sfx_error.wav");
             QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
             return;
         }
         if (result.resultType != "success") {
+            playSfx("assets/audio/sfx_error.wav");
             QMessageBox::warning(&dialog, "Wrong Fill", "Combat submit failed.");
             return;
         }
+        playSfx("assets/audio/sfx_success.wav");
         wonBoss = isBossCombat;
         if (wonBoss) {
             completedStageIndexes.insert(currentLevelIndex);
