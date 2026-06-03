@@ -75,9 +75,19 @@ MainWindow::MainWindow(QWidget *parent)
         }
         suppressNextMovePath = false;
         syncFromEngineState();
-        ui->combatLogLabel->setText(result.event == "empty"
-                                        ? QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow)
-                                        : QString("Triggered %1: %2").arg(result.event, result.eventId));
+        QString eventText = QString("Moved to %1,%2.").arg(playerColumn).arg(playerRow);
+        if (result.event == "chest") {
+            eventText = "Found a chest.";
+        } else if (result.event == "clue") {
+            eventText = "Found a clue.";
+        } else if (result.event == "monster" || result.event == "boss") {
+            const Monster monster = monsterByTile(result.eventId);
+            const QString name = monster.nickname.isEmpty() ? monster.name : monster.nickname;
+            eventText = QString("Encountered %1.").arg(name.isEmpty() ? "enemy" : name);
+        } else if (result.event != "empty") {
+            eventText = "Triggered an event.";
+        }
+        ui->combatLogLabel->setText(eventText);
         refreshGameUi();
         if (result.event == "clue") {
             QTimer::singleShot(0, this, [this, clueId = result.eventId]() {
@@ -87,9 +97,32 @@ MainWindow::MainWindow(QWidget *parent)
                     refreshGameUi();
                     if (revealed && currentLevelIndex >= 0 && currentLevelIndex < levels.size()) {
                         const QString clueText = levels.at(currentLevelIndex).clues.value(clueId).val.trimmed();
-                        QMessageBox::information(this,
-                                                 "Clue",
-                                                 clueText.isEmpty() ? QString("%1 recorded.").arg(clueId) : clueText);
+                        QDialog clueDialog(this);
+                        clueDialog.setModal(true);
+                        clueDialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+                        QVBoxLayout *clueLayout = new QVBoxLayout(&clueDialog);
+                        clueLayout->setContentsMargins(16, 16, 16, 16);
+                        QFrame *panel = new QFrame(&clueDialog);
+                        panel->setStyleSheet(
+                            "QFrame { background: rgba(9, 13, 18, 245); border: 2px solid #4feaff; border-radius: 8px; }"
+                            "QLabel { color: #f9f1d0; font-size: 16px; font-weight: 700; background: transparent; }"
+                        );
+                        QVBoxLayout *panelLayout = new QVBoxLayout(panel);
+                        panelLayout->setContentsMargins(22, 18, 22, 18);
+                        panelLayout->setSpacing(14);
+                        QLabel *text = new QLabel(clueText.isEmpty() ? QString("Clue recorded.") : clueText, panel);
+                        text->setWordWrap(true);
+                        text->setAlignment(Qt::AlignCenter);
+                        QPushButton *ok = new QPushButton("OK", panel);
+                        ok->setMinimumSize(120, 36);
+                        ok->setStyleSheet("QPushButton { color: #fff1c2; background: #34495f; border: 1px solid #8fa8c4; border-radius: 6px; }"
+                                          "QPushButton:hover { background: #42617d; }");
+                        connect(ok, &QPushButton::clicked, &clueDialog, &QDialog::accept);
+                        panelLayout->addWidget(text);
+                        panelLayout->addWidget(ok, 0, Qt::AlignCenter);
+                        clueLayout->addWidget(panel);
+                        clueDialog.resize(360, 160);
+                        clueDialog.exec();
                     }
                 }
             });
@@ -174,15 +207,20 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->pauseMainMenuButton, &QPushButton::clicked, this, [this]() {
-        ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
-        mainMenuButtonBar->show();
-        positionMainMenuButtons();
+        refreshLevelSelectUi();
+        ui->stackedWidget->setCurrentWidget(ui->mapPage);
+        mainMenuButtonBar->hide();
     });
 
     connect(ui->backToMenuButton, &QPushButton::clicked, this, [this]() {
-        ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
-        mainMenuButtonBar->show();
-        positionMainMenuButtons();
+        if (gameEngine.m_map && currentLevelIndex >= 0) {
+            ui->stackedWidget->setCurrentWidget(ui->gamePage);
+            mainMenuButtonBar->hide();
+        } else {
+            ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
+            mainMenuButtonBar->show();
+            positionMainMenuButtons();
+        }
     });
 
     connect(ui->deckButton, &QPushButton::clicked, this, [this]() {
@@ -298,6 +336,18 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             return true;
         default:
             break;
+        }
+    }
+    if (event->type() == QEvent::MouseButtonDblClick
+        && ui
+        && ui->stackedWidget->currentWidget() == ui->mapPage) {
+        QPushButton *stageButton = qobject_cast<QPushButton *>(watched);
+        if (stageButton && stageButton->property("levelIndex").isValid()) {
+            const int levelIndex = stageButton->property("levelIndex").toInt();
+            if (isLevelUnlocked(levelIndex)) {
+                startLevel(levelIndex);
+                return true;
+            }
         }
     }
 
@@ -639,12 +689,12 @@ void MainWindow::applyVisualStyle()
 
         QPushButton[levelCard="selectedUnlocked"] {
             background: qradialgradient(cx:0.5, cy:0.43, radius:0.75,
-                                        stop:0 rgba(255, 252, 188, 255),
-                                        stop:0.28 rgba(71, 238, 255, 255),
-                                        stop:0.62 rgba(14, 111, 143, 250),
-                                        stop:1 rgba(2, 15, 24, 255));
-            color: #ffffff;
-            border: 5px solid #f7d75b;
+                                        stop:0 rgba(222, 255, 226, 255),
+                                        stop:0.30 rgba(74, 222, 128, 255),
+                                        stop:0.66 rgba(11, 91, 53, 250),
+                                        stop:1 rgba(3, 17, 13, 255));
+            color: #f6fff7;
+            border: 5px solid #62ffa0;
             border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
             font-size: 34px;
@@ -655,12 +705,12 @@ void MainWindow::applyVisualStyle()
 
         QPushButton[levelCard="selectedCleared"] {
             background: qradialgradient(cx:0.5, cy:0.42, radius:0.74,
-                                        stop:0 rgba(255, 248, 190, 255),
-                                        stop:0.34 rgba(224, 158, 35, 252),
-                                        stop:0.68 rgba(88, 56, 17, 252),
-                                        stop:1 rgba(9, 10, 13, 255));
-            color: #fff2b8;
-            border: 5px solid #fff07a;
+                                        stop:0 rgba(232, 255, 220, 255),
+                                        stop:0.34 rgba(101, 214, 98, 252),
+                                        stop:0.68 rgba(37, 94, 36, 252),
+                                        stop:1 rgba(7, 15, 10, 255));
+            color: #f8fff1;
+            border: 5px solid #74ff82;
             border-radius: 42px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
             font-size: 34px;
@@ -930,6 +980,19 @@ void MainWindow::buildRuntimeGameUi()
         label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         label->setFixedWidth(150);
     }
+    if (!ui->settingsPage->findChild<QLabel *>("controlsGuideLabel")) {
+        QLabel *controlsGuide = new QLabel(ui->settingsPage);
+        controlsGuide->setObjectName("controlsGuideLabel");
+        controlsGuide->setText("Controls: Z Undo    R Reset    B Bag    M Manual    Esc Menu");
+        controlsGuide->setAlignment(Qt::AlignCenter);
+        controlsGuide->setWordWrap(true);
+        controlsGuide->setStyleSheet(
+            "QLabel#controlsGuideLabel { color: #fff1c2; background: rgba(9, 13, 18, 205);"
+            "border: 1px solid rgba(215, 176, 106, 150); border-radius: 7px; padding: 10px;"
+            "font-size: 16px; font-weight: 800; }"
+        );
+        ui->settingsLayout->insertWidget(1, controlsGuide);
+    }
 
     ui->hpLabel->setText("Mode: Explore");
     ui->deckButton->setText("Bag");
@@ -949,6 +1012,7 @@ void MainWindow::buildRuntimeGameUi()
     ui->pauseButton->setText("Menu");
     ui->pauseTitleLabel->setText("Menu");
     ui->resumeButton->setText("Return");
+    ui->pauseMainMenuButton->setText("Exit");
     ui->bottomBarLayout->setStretch(0, 0);
     ui->bottomBarLayout->setStretch(1, 0);
     ui->bottomBarLayout->setStretch(2, 0);
@@ -1045,6 +1109,9 @@ void MainWindow::buildRuntimeGameUi()
     ui->mapFightButton->setGeometry(92, 160, 84, 84);
     ui->mapEliteButton->setGeometry(300, 92, 84, 84);
     ui->mapBossButton->setGeometry(512, 18, 84, 84);
+    ui->mapFightButton->installEventFilter(this);
+    ui->mapEliteButton->installEventFilter(this);
+    ui->mapBossButton->installEventFilter(this);
     bridge01->lower();
     bridge12->lower();
     bridge01->setStyleSheet("background: transparent; border: none;");
