@@ -53,6 +53,7 @@ struct Clue{
 struct SynthesisCell{
     QString type;//"clue" "space"
     QString id;//"clue_1" "space_1"
+    int tabCount=0;//how many tabs before a single transfer in a row
 };
 
 struct Synthesis{
