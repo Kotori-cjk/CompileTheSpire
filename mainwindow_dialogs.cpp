@@ -120,7 +120,7 @@ void MainWindow::showBagDialog()
             const QString code = codeItems.at(i).second;
             icon->setToolTip(formatCodeBlockForDisplay(code));
             installHoverPopup(icon, codeBlockPopupHtml(code, typeForBlock(blockId)));
-            connect(icon, &QToolButton::clicked, &dialog, [this, &dialog, blockId, code]() {
+            connect(icon, &QToolButton::clicked, &dialog, [this, &dialog, blockId, code, icon]() {
                 QDialog detail(&dialog);
                 detail.setWindowTitle("Code Block");
                 QVBoxLayout *detailLayout = new QVBoxLayout(&detail);
@@ -133,12 +133,15 @@ void MainWindow::showBagDialog()
                 QDialogButtonBox *close = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
                 QPushButton *discardButton = close->addButton("Discard", QDialogButtonBox::DestructiveRole);
                 QObject::connect(close, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
-                QObject::connect(discardButton, &QPushButton::clicked, &detail, [this, &detail, blockId]() {
+                QObject::connect(discardButton, &QPushButton::clicked, &detail, [this, &detail, blockId, icon]() {
                     if (!gameEngine.m_bag || !gameEngine.m_bag->bagRemove(blockId)) {
                         QMessageBox::warning(&detail, "Code Block", "Unable to discard this code block.");
                         return;
                     }
                     syncFromEngineState();
+                    icon->setIcon(QIcon());
+                    icon->setText("-");
+                    icon->setEnabled(false);
                     detail.accept();
                 });
                 detailLayout->addWidget(codeView);
@@ -146,9 +149,7 @@ void MainWindow::showBagDialog()
                 DialogCloseInputFilter *closeInputFilter = new DialogCloseInputFilter(&detail);
                 qApp->installEventFilter(closeInputFilter);
                 detail.resize(520, 360);
-                if (detail.exec() == QDialog::Accepted) {
-                    dialog.accept();
-                }
+                detail.exec();
             });
         } else {
             icon->setIcon(QIcon());
@@ -160,6 +161,8 @@ void MainWindow::showBagDialog()
 
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    QShortcut *bagShortcut = new QShortcut(QKeySequence(Qt::Key_B), &dialog);
+    connect(bagShortcut, &QShortcut::activated, &dialog, &QDialog::reject);
     layout->addWidget(title);
     layout->addWidget(board);
     layout->addWidget(buttons);
@@ -440,6 +443,8 @@ void MainWindow::showManualDialog()
 
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    QShortcut *manualShortcut = new QShortcut(QKeySequence(Qt::Key_M), &dialog);
+    connect(manualShortcut, &QShortcut::activated, &dialog, &QDialog::reject);
     layout->addWidget(title);
     layout->addWidget(board);
     layout->addWidget(buttons);
