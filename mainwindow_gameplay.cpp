@@ -238,6 +238,18 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
     bool success = false;
     const QVector<QPoint> backendPath = gameEngine.m_map->findPath(targetRow, targetColumn, &success);
     if (!success || backendPath.size() < 2) {
+        const QString tileId = level.mapGrid.at(targetRow).at(targetColumn);
+        const QPoint playerPos = gameEngine.m_map->playerPos();
+        if (targetRow == playerPos.x() && targetColumn == playerPos.y()
+            && tileId.startsWith("chest") && !openedChests.contains(tileId)) {
+            handleChest(tileId, false);
+            return;
+        }
+        if (tileId.startsWith("chest") && !openedChests.contains(tileId)) {
+            ui->combatLogLabel->setText("Chest is out of reach.");
+            handleChest(tileId, true);
+            return;
+        }
         ui->combatLogLabel->setText("No path to that tile.");
         playSfx("assets/audio/sfx_error.wav");
         return;
