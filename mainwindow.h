@@ -84,7 +84,7 @@ private:
     bool canEnter(int row, int column) const;
     QString tileAt(int row, int column) const;
     QString describeTile(const QString &tileId) const;
-    void handleChest(const QString &chestId);
+    void handleChest(const QString &chestId, bool viewOnly = false);
     void handleMonster(const QString &monsterId);
 
     QString renderMonsterCode(const Monster &monster) const;
@@ -118,6 +118,7 @@ private:
     bool movePlaybackActive = false;
     bool suppressNextMovePath = false;
     bool showingExLevels = false;
+    bool chestDetailedByDefault = false;
     int selectedStageIndex = 0;
     QString currentBgmResource;
 

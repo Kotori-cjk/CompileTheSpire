@@ -16,7 +16,9 @@
 #include <QDragLeaveEvent>
 #include <QDropEvent>
 #include <QEvent>
+#include <QFontMetrics>
 #include <QPoint>
+#include <QSizePolicy>
 #include <functional>
 
 inline constexpr const char *codeBlockMimeType = "application/x-compile-spire-code-block";
@@ -87,11 +89,12 @@ public:
     {
         setAcceptDrops(true);
         setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        setMinimumSize(132, 32);
+        setMinimumSize(220, 28);
         setMaximumWidth(520);
+        setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
         setWordWrap(true);
         setProperty("blockId", QString());
-        setText("              ");
+        setText(QString());
         setTextFormat(Qt::PlainText);
         refreshStyle(false);
     }
@@ -115,8 +118,9 @@ public:
     {
         setProperty("blockId", QString());
         setProperty("previousBlockId", QString());
-        setText("              ");
-        setMinimumWidth(132);
+        setText(QString());
+        setWordWrap(false);
+        setMinimumWidth(220);
         refreshStyle(false);
     }
 
@@ -124,7 +128,17 @@ public:
     {
         setProperty("blockId", blockId);
         setText(displayText);
-        setMinimumWidth(displayText.contains('\n') ? 260 : 132);
+        const bool multiline = displayText.contains('\n');
+        setWordWrap(multiline);
+        QFont codeFont("Consolas");
+        codeFont.setPointSize(16);
+        codeFont.setBold(true);
+        const QFontMetrics metrics(codeFont);
+        int contentWidth = 0;
+        for (const QString &line : displayText.split('\n')) {
+            contentWidth = qMax(contentWidth, metrics.horizontalAdvance(line));
+        }
+        setMinimumWidth(multiline ? 260 : qMax(72, contentWidth + 10));
         refreshStyle(false);
     }
 
@@ -176,10 +190,11 @@ private:
         const bool filled = !property("blockId").toString().isEmpty();
         const QString border = hovered ? "#49e6ff" : (filled ? "#d7b75f" : "#526170");
         const QString background = filled ? "rgba(10, 38, 47, 225)" : "rgba(12, 18, 26, 215)";
+        const QString padding = filled ? "2px 2px" : "2px 10px";
         setStyleSheet(QString(
-            "QLabel { color: %1; background: %2; border: 2px solid %3; border-radius: 7px;"
-            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 15px; font-weight: 700; padding: 5px 9px; }"
-        ).arg(filled ? "#f9f1d0" : "#6f7f8b", background, border));
+            "QLabel { color: %1; background: %2; border: 1px solid %3; border-radius: 6px;"
+            "font-family: Consolas, 'Microsoft YaHei UI'; font-size: 16px; font-weight: 700; padding: %4; }"
+        ).arg(filled ? "#f9f1d0" : "#6f7f8b", background, border, padding));
     }
 
     std::function<void()> m_onChanged;

@@ -12,6 +12,7 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QDrag>
+#include <QComboBox>
 #include <QEvent>
 #include <QFileInfo>
 #include <QFrame>
@@ -271,6 +272,9 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->saveSettingsButton, &QPushButton::clicked, this, [this]() {
+        if (QComboBox *chestMode = ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
+            chestDetailedByDefault = (chestMode->currentIndex() == 1);
+        }
         if (ui->windowModeComboBox->currentText() == "Fullscreen" || ui->fullscreenCheckBox->isChecked()) {
             showFullScreen();
         } else {
@@ -452,6 +456,10 @@ void MainWindow::applyDefaultSettings()
     ui->languageComboBox->setCurrentIndex(0);
     ui->animationSpeedComboBox->setCurrentIndex(0);
     ui->tutorialCheckBox->setChecked(true);
+    chestDetailedByDefault = false;
+    if (QComboBox *chestMode = ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
+        chestMode->setCurrentIndex(0);
+    }
     ui->volumeValueLabel->setText("80%");
     ui->musicVolumeValueLabel->setText("70%");
     ui->sfxVolumeValueLabel->setText("75%");
@@ -994,6 +1002,26 @@ void MainWindow::buildRuntimeGameUi()
     };
     if (QLabel *volumeLabel = findChild<QLabel *>("volumeLabel")) {
         settingsLabels.prepend(volumeLabel);
+    }
+    if (!ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
+        QLabel *chestModeLabel = new QLabel("Chest Display", ui->settingsPage);
+        chestModeLabel->setObjectName("chestDisplayModeLabel");
+        chestModeLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        chestModeLabel->setFixedWidth(150);
+
+        QComboBox *chestMode = new QComboBox(ui->settingsPage);
+        chestMode->setObjectName("chestDisplayModeComboBox");
+        chestMode->setMinimumWidth(180);
+        chestMode->addItem("Compact");
+        chestMode->addItem("Detailed");
+        chestMode->setCurrentIndex(chestDetailedByDefault ? 1 : 0);
+        connect(chestMode, &QComboBox::currentIndexChanged, this, [this](int index) {
+            chestDetailedByDefault = (index == 1);
+        });
+
+        ui->gameplayGridLayout->addWidget(chestModeLabel, 3, 0);
+        ui->gameplayGridLayout->addWidget(chestMode, 3, 1);
+        settingsLabels.append(chestModeLabel);
     }
     for (QLabel *label : settingsLabels) {
         if (!label) {
