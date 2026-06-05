@@ -147,7 +147,7 @@ QString codeBlockHtml(const QString &code)
 QString codeBlockPopupHtml(const QString &code, const QString &type)
 {
     Q_UNUSED(type);
-    return QString("<pre>%1</pre>").arg(codeBlockHtml(code));
+    return QString("<pre style=\"white-space:pre-wrap; font-family:Consolas,'Cascadia Mono',monospace; margin:0;\">%1</pre>").arg(codeBlockHtml(code));
 }
 
 void installHoverPopup(QWidget *widget, const QString &html)

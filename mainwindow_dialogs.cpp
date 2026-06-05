@@ -719,6 +719,10 @@ void MainWindow::showCombatSettlement(const QString &defeatedName,
 void MainWindow::handleChest(const QString &chestId, bool viewOnly)
 {
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
+    const bool activeForcedChest = !viewOnly
+                                   && chest.forcedPick
+                                   && gameEngine.m_locked
+                                   && tileAt(playerRow, playerColumn) == chestId;
     if (!gameEngine.m_bag || (!viewOnly && !chestHasAvailableBlocks(chestId))) {
         ui->combatLogLabel->setText("This chest is already empty.");
         playSfx("assets/audio/sfx_error.wav");
@@ -843,7 +847,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
     QPushButton *modeButton = buttons->addButton(detailedMode ? "Compact" : "Detailed", QDialogButtonBox::ActionRole);
-    QPushButton *skipButton = buttons->addButton(viewOnly ? "Close" : (chest.forcedPick ? "Leave" : "Skip"), QDialogButtonBox::RejectRole);
+    QPushButton *skipButton = buttons->addButton(viewOnly ? "Close" : (activeForcedChest ? "Leave" : "Skip"), QDialogButtonBox::RejectRole);
     Q_UNUSED(skipButton);
     connect(modeButton, &QPushButton::clicked, &dialog, [&]() {
         detailedMode = !detailedMode;
@@ -867,7 +871,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
         if (!selectedBlockId.isEmpty()) {
             if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
                 picked = selectedBlockId;
-                if (chest.forcedPick) {
+                if (activeForcedChest) {
                     gameEngine.m_locked = false;
                 }
                 syncFromEngineState();
@@ -883,10 +887,10 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
     } else if (viewOnly) {
         ui->combatLogLabel->setText("Chest is out of reach.");
     } else {
-        ui->combatLogLabel->setText(chest.forcedPick ? "Forced chest closed. Returned to the previous tile." : "Chest skipped.");
+        ui->combatLogLabel->setText(activeForcedChest ? "Forced chest closed. Returned to the previous tile." : "Chest skipped.");
     }
 
-    if (!viewOnly && chest.forcedPick && picked.isEmpty() && gameEngine.m_map) {
+    if (activeForcedChest && picked.isEmpty() && gameEngine.m_map) {
         gameEngine.exitChest(chestId);
         syncFromEngineState();
     }
@@ -1021,7 +1025,10 @@ void MainWindow::handleMonster(const QString &monsterId)
     const int combatLineHeight = qMax(28, combatCodeMetrics.height() + 7);
 
     int templateCellIndex = 0;
+    int displayBraceDepth = 0;
     for (const QString &line : templateLines) {
+        const int lineBraceDepth = qMax(0, displayBraceDepth - (line.trimmed().startsWith('}') ? 1 : 0));
+        const int autoIndentColumns = lineBraceDepth * 4;
         QWidget *lineWidget = new QWidget(codePanel);
         lineWidget->setMinimumHeight(combatLineHeight);
         lineWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -1065,10 +1072,10 @@ void MainWindow::handleMonster(const QString &monsterId)
                                      : 0;
             ++templateCellIndex;
 
-            // For a revealed clue that occupies its own line, fold the template
-            // indent into the clue text so wrapped lines keep that indent instead
-            // of hanging off the first line. tabCount comes from the backend.
+            // For a revealed clue that occupies its own line, move the clue
+            // widget to the template indent instead of baking spaces into text.
             bool clueOwnsLine = false;
+            int clueOwnsLineIndentColumns = 0;
             QString clueText;
             if (!isSpace) {
                 const bool unlocked = collectedClues.contains(tokenId);
@@ -1078,8 +1085,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                     const QString prefix = line.mid(cursor, start - cursor);
                     const QString trailing = line.mid(match.capturedEnd());
                     if (prefix.trimmed().isEmpty() && trailing.trimmed().isEmpty()) {
-                        const QString indent(tabCount, QLatin1Char(' '));
-                        clueText = indent + indentContinuationLines(clueText, indent);
+                        clueOwnsLineIndentColumns = tabCount;
                         clueOwnsLine = true;
                     }
                 }
@@ -1087,16 +1093,30 @@ void MainWindow::handleMonster(const QString &monsterId)
 
             if (start > cursor && !clueOwnsLine) {
                 advanceTextSegment(line.mid(cursor, start - cursor));
+            } else if (clueOwnsLine && visualX == 0 && clueOwnsLineIndentColumns > 0) {
+                visualX = combatCodeMetrics.horizontalAdvance(QString(clueOwnsLineIndentColumns, QLatin1Char(' ')));
+                maxVisualX = qMax(maxVisualX, visualX);
             }
 
             if (isSpace) {
+                if (visualX == 0 && start == 0 && autoIndentColumns > 0) {
+                    const QString autoIndent(autoIndentColumns, QLatin1Char(' '));
+                    visualX = combatCodeMetrics.horizontalAdvance(autoIndent);
+                    maxVisualX = qMax(maxVisualX, visualX);
+                }
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
                 slot->setToolTip("Double-click a filled blank to undo it.");
                 slot->setProperty("visualX", visualX);
-                slot->setTextProvider([this](const QString &blockId) {
-                    return formatCodeBlockForDisplay(codeForBlock(blockId));
+                slot->setTextProvider([this, slot, &combatCodeMetrics](const QString &blockId) {
+                    const QString formatted = formatCodeBlockForDisplay(codeForBlock(blockId));
+                    const int indentColumns = qMax(0, slot->property("visualX").toInt() / qMax(1, combatCodeMetrics.horizontalAdvance(QStringLiteral(" "))));
+                    return indentContinuationLines(formatted, QString(indentColumns, QLatin1Char(' ')));
                 });
-                auto updateSlotGeometry = [slot, lineWidget, combatLineHeight]() {
+                auto updateSlotGeometry = [slot, lineWidget, codeScroll, combatLineHeight]() {
+                    const int availableWidth = codeScroll->viewport()
+                                                   ? codeScroll->viewport()->width() - slot->property("visualX").toInt() - 36
+                                                   : 520;
+                    slot->setContentWidthLimit(qBound(220, availableWidth, 760));
                     const QSize slotSize = slot->sizeHint();
                     const int slotHeight = qMax(combatLineHeight, slotSize.height());
                     slot->setGeometry(slot->property("visualX").toInt(), 0, slotSize.width(), slotHeight);
@@ -1114,7 +1134,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                     refreshCombatBag();
                     playSfx("assets/audio/sfx_combat.wav");
                 });
-                slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag, updateSlotGeometry]() {
+                slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag, updateSlotGeometry, &combatCodeMetrics]() {
                     const QString blockId = slot->property("blockId").toString();
                     const QString previousBlockId = slot->property("previousBlockId").toString();
                     if (blockId == previousBlockId) {
@@ -1124,7 +1144,10 @@ void MainWindow::handleMonster(const QString &monsterId)
                         if (previousBlockId.isEmpty()) {
                             slot->clearBlock();
                         } else {
-                            slot->setBlock(previousBlockId, formatCodeBlockForDisplay(codeForBlock(previousBlockId)));
+                            const int indentColumns = qMax(0, slot->property("visualX").toInt() / qMax(1, combatCodeMetrics.horizontalAdvance(QStringLiteral(" "))));
+                            slot->setBlock(previousBlockId,
+                                           indentContinuationLines(formatCodeBlockForDisplay(codeForBlock(previousBlockId)),
+                                                                  QString(indentColumns, QLatin1Char(' '))));
                         }
                         playSfx("assets/audio/sfx_error.wav");
                         QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
@@ -1163,6 +1186,16 @@ void MainWindow::handleMonster(const QString &monsterId)
         lineWidget->setMinimumHeight(lineVisualHeight);
         lineWidget->setMinimumWidth(maxVisualX + 8);
         codeLayout->addWidget(lineWidget);
+
+        QString structuralLine = line;
+        structuralLine.remove(tokenPattern);
+        for (const QChar ch : structuralLine) {
+            if (ch == '{') {
+                ++displayBraceDepth;
+            } else if (ch == '}') {
+                displayBraceDepth = qMax(0, displayBraceDepth - 1);
+            }
+        }
     }
     codeLayout->addStretch(1);
     codeScroll->setWidget(codePanel);

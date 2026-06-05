@@ -4,11 +4,16 @@
 #include <QString>
 #include <QWidget>
 #include <QLabel>
+#include <QFrame>
 #include <QToolButton>
 #include <QObject>
 #include <QLayout>
+#include <QVBoxLayout>
 #include <QIcon>
 #include <QPixmap>
+#include <QApplication>
+#include <QCursor>
+#include <QScreen>
 #include <QDrag>
 #include <QMimeData>
 #include <QMouseEvent>
@@ -99,6 +104,11 @@ public:
         refreshStyle(false);
     }
 
+    void setContentWidthLimit(int width)
+    {
+        setMaximumWidth(qMax(220, width));
+    }
+
     void setOnChanged(std::function<void()> callback)
     {
         m_onChanged = std::move(callback);
@@ -138,7 +148,7 @@ public:
         for (const QString &line : displayText.split('\n')) {
             contentWidth = qMax(contentWidth, metrics.horizontalAdvance(line));
         }
-        setMinimumWidth(multiline ? 260 : qMax(72, contentWidth + 10));
+        setMinimumWidth(multiline ? qMin(360, maximumWidth()) : qMin(maximumWidth(), qMax(72, contentWidth + 10)));
         refreshStyle(false);
     }
 
@@ -210,11 +220,18 @@ public:
         , m_anchor(anchor)
         , m_html(html)
     {
-        m_popup = new QLabel(nullptr, Qt::ToolTip);
-        m_popup->setTextFormat(Qt::RichText);
-        m_popup->setWordWrap(true);
-        m_popup->setMaximumWidth(360);
-        m_popup->setStyleSheet("QLabel { background: rgba(14, 18, 24, 245); color: #f9f1d0; border: 2px solid #49e6ff; border-radius: 6px; padding: 10px; }");
+        m_popup = new QFrame(nullptr, Qt::Tool | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+        m_popup->setAttribute(Qt::WA_ShowWithoutActivating);
+        m_popup->setAttribute(Qt::WA_TransparentForMouseEvents);
+        m_popup->setStyleSheet("QFrame { background: rgba(14, 18, 24, 245); border: 2px solid #49e6ff; border-radius: 6px; }"
+                               "QLabel { color: #f9f1d0; background: transparent; border: none; padding: 10px; }");
+        QVBoxLayout *layout = new QVBoxLayout(m_popup);
+        layout->setContentsMargins(0, 0, 0, 0);
+        m_content = new QLabel(m_popup);
+        m_content->setTextFormat(Qt::RichText);
+        m_content->setWordWrap(false);
+        m_content->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        layout->addWidget(m_content);
     }
 
     ~HoverPopupFilter() override
@@ -230,9 +247,20 @@ protected:
         }
 
         if (event->type() == QEvent::Enter) {
-            m_popup->setText(m_html);
+            m_content->setText(m_html);
+            m_content->adjustSize();
             m_popup->adjustSize();
-            m_popup->move(m_anchor->mapToGlobal(QPoint(m_anchor->width() + 10, 0)));
+            QPoint pos = QCursor::pos() + QPoint(18, 14);
+            if (QScreen *screen = QApplication::screenAt(pos)) {
+                const QRect area = screen->availableGeometry();
+                if (pos.x() + m_popup->width() > area.right()) {
+                    pos.setX(qMax(area.left(), QCursor::pos().x() - m_popup->width() - 18));
+                }
+                if (pos.y() + m_popup->height() > area.bottom()) {
+                    pos.setY(qMax(area.top(), area.bottom() - m_popup->height() - 8));
+                }
+            }
+            m_popup->move(pos);
             m_popup->show();
         } else if (event->type() == QEvent::Leave || event->type() == QEvent::MouseButtonPress || event->type() == QEvent::Hide) {
             m_popup->hide();
@@ -242,7 +270,8 @@ protected:
 
 private:
     QWidget *m_anchor = nullptr;
-    QLabel *m_popup = nullptr;
+    QFrame *m_popup = nullptr;
+    QLabel *m_content = nullptr;
     QString m_html;
 };
 
