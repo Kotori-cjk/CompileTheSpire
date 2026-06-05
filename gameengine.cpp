@@ -176,10 +176,10 @@ bool GameEngine::takeFromChest(const QString& chestId,const QString& blockId){
     success=m_bag->addBlockFromChest(blockId,chestId,&msg);
     if(!success)return false;
     m_locked=false;
-    snapshotStack.append(getCurrentSnapshot());
     if(!m_level->chests[chestId].repeat||m_bag->chestIsEmpty(chestId)){
         m_map->Clear(m_level->chests[chestId].pos);
     }
+    snapshotStack.append(getCurrentSnapshot());
     return true;
 }
 bool GameEngine::exitCombat(){
