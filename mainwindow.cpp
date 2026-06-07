@@ -324,6 +324,18 @@ void MainWindow::setupMovementShortcuts()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::RightButton) {
+            if (QWidget *modalWidget = QApplication::activeModalWidget()) {
+                if (QDialog *dialog = qobject_cast<QDialog *>(modalWidget)) {
+                    dialog->reject();
+                    return true;
+                }
+            }
+        }
+    }
+
     if (event->type() == QEvent::MouseButtonRelease) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent *>(event);
         if (mouseEvent->button() == Qt::LeftButton) {
