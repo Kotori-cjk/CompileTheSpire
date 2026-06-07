@@ -279,7 +279,7 @@ void MainWindow::showManualDialog()
 
         if (monsterId == "boss") {
             const Boss boss = levels.at(currentLevelIndex).boss;
-            QLabel *io = new QLabel(QString("Expected input: %1\nExpected output: %2")
+            QLabel *io = new QLabel(QString("Expected Input: %1\nExpected Output: %2")
                                         .arg(boss.input.isEmpty() ? "None" : boss.input,
                                              boss.output.isEmpty() ? "None" : boss.output),
                                     infoPanel);
@@ -407,7 +407,7 @@ void MainWindow::showManualDialog()
                                   QString("<b>%1</b><br>%2%3")
                                       .arg(monsterDisplayName(monsterId, monster).toHtmlEscaped(),
                                            monsterId == "boss" ? "Boss<br>" : QString(),
-                                           friendly ? "Friendly" : (defeated ? "Defeated" : "Not defeated")));
+                                           friendly ? "Friendly" : (defeated ? "Defeated" : "Not Defeated")));
                 connect(card, &QToolButton::clicked, &dialog, [&, monsterId, monster]() {
                     showMonsterDetail(monsterId, monster);
                 });
@@ -653,7 +653,7 @@ void MainWindow::showCombatSettlement(const QString &defeatedName,
     layout->setContentsMargins(28, 24, 28, 24);
     layout->setSpacing(14);
 
-    QLabel *title = new QLabel(QString("%1 defeated").arg(defeatedName.isEmpty() ? "Enemy" : defeatedName), panel);
+    QLabel *title = new QLabel(QString("%1 Defeated").arg(defeatedName.isEmpty() ? "Enemy" : defeatedName), panel);
     title->setAlignment(Qt::AlignCenter);
     title->setWordWrap(true);
     title->setStyleSheet(
@@ -912,7 +912,16 @@ void MainWindow::handleMonster(const QString &monsterId)
     QDialog dialog(this);
     dialog.setWindowTitle(monsterId == "boss" ? "Boss Encounter" : "Monster Encounter");
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
-    const QString encounterName = monster.nickname.isEmpty() ? monster.name : monster.nickname;
+    QString encounterName = monster.nickname.isEmpty() ? monster.name : monster.nickname;
+    bool capitalizeNext = true;
+    for (QChar &ch : encounterName) {
+        if (capitalizeNext && ch.isLetter()) {
+            ch = ch.toUpper();
+            capitalizeNext = false;
+        } else if (ch.isSpace() || ch == '-' || ch == '_') {
+            capitalizeNext = true;
+        }
+    }
     QLabel *title = new QLabel(monsterId == "boss" || monster.type.compare("boss", Qt::CaseInsensitive) == 0
                                    ? QString("%1  Boss").arg(encounterName)
                                    : encounterName,
@@ -1201,14 +1210,14 @@ void MainWindow::handleMonster(const QString &monsterId)
     codeScroll->setWidget(codePanel);
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
-    QPushButton *submitButton = buttons->addButton("Submit fill", QDialogButtonBox::ActionRole);
+    QPushButton *submitButton = buttons->addButton("Submit Fill", QDialogButtonBox::ActionRole);
     if (friendlyEncounter) {
         submitButton->setEnabled(false);
         submitButton->setText("Friendly");
         submitButton->setToolTip("This encounter has no fill space.");
     } else if (!hiddenClueIds.isEmpty()) {
         submitButton->setEnabled(false);
-        submitButton->setText("Clues missing");
+        submitButton->setText("Clues Missing");
         submitButton->setToolTip("Reveal every clue linked to this encounter before submitting.");
     }
     buttons->addButton("Exit", QDialogButtonBox::RejectRole);
