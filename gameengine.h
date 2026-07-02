@@ -50,7 +50,7 @@ signals:
     void combatStarted(QString monsterId,Combat* combat);
     void combatEnded(CombatResult result);
     void clueRevealed(QString clueId,QString monsterId,QString text);
-    void chestEntered(QString chestId);
+    void chestEntered(QString chestId,bool m_locked);
     void forcedMove(QPoint newpos);
     //when forced move(by exit), trigger this and change physical location
     void exitLevel();
@@ -85,6 +85,8 @@ public:
     //if player skip an unforced,it seems that you don't need to call anything
     bool takeFromChest(const QString& chestId,const QString& blockId);
     //call it when player choose a block in chest
+    bool takeBundleFromChest(const QString& chestId);
+    //call it when player confirm bundle pick
     bool exitCombat();
     //for develop:aka endCombat, similar func to exitChest
     //call it when player exit a combat
