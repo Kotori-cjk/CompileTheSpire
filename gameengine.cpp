@@ -91,8 +91,16 @@ bool GameEngine::moveTo(int tarX,int tarY){
             }
         }
         else if(res.event=="chest"){
-            if(m_level->chests[res.eventId].forcedPick)m_locked=true;
-            emit chestEntered(res.eventId);
+            if(m_level->chests[res.eventId].forcedPick){
+                bool canTake;
+                if(m_level->specialTags.contains("bundle_pick"))
+                    canTake=m_bag->bagCapacity()-m_bag->bagSize()>=m_level->chests[res.eventId].blocks.size();
+                else canTake=!m_bag->bagIsFull();
+                if(canTake)m_locked=true;
+                else if(m_level->specialTags.contains("skip_on_full"))snapshotStack.removeLast();
+                else m_locked=true;
+            }
+            emit chestEntered(res.eventId,m_locked);
         }
         else{
             const QString& monsterId=res.eventId;
@@ -162,6 +170,20 @@ bool GameEngine::revealClue(const QString& clueId){
     emit clueRevealed(clueId,tmonster.monsterId,m_level->clues[clueId].val);
     return true;
 }
+bool GameEngine::takeBundleFromChest(const QString& chestId){
+    if(!m_level->chests.contains(chestId))return false;
+    const Chest& chest=m_level->chests[chestId];
+    int need=chest.blocks.size();
+    if(m_bag->bagCapacity()-m_bag->bagSize()<need)return false;
+    for(const auto& key:chest.blocks.keys()){
+        QString msg;
+        if(!m_bag->addBlockFromChest(key,chestId,&msg))return false;
+    }
+    m_locked=false;
+    m_map->Clear(chest.pos);
+    snapshotStack.append(getCurrentSnapshot());
+    return true;
+}
 bool GameEngine::exitChest(const QString& chestId){
     m_locked=false;
     snapshotStack.removeLast();
@@ -220,7 +242,10 @@ CombatResult GameEngine::submitCombat(){
             for(const auto& blockId:result.usedBlocks){
                 m_bag->bagRemove(blockId);
             }
-            m_bag->bagAdd(result.synthesizedBlock);
+            bool discardDrop=false;
+            if(m_level->specialTags.contains("discard_drops")&&!m_level->specialTags.contains("no_discard"))
+                discardDrop=true;
+            if(!discardDrop)m_bag->bagAdd(result.synthesizedBlock);
             m_map->setDefeatedCode(m_combat->monsterId(),result.synthesizedBlock.code);
             m_map->Clear(m_level->monsters[m_combat->monsterId()].pos);
             snapshotStack.append(getCurrentSnapshot());
@@ -237,6 +262,8 @@ QVector<CodeBlock> GameEngine::bagBlocks(){
 }
 bool GameEngine::discardBlock(const QString& blockId){
     if(m_bag==nullptr||!m_bag->bagContains(blockId))return false;
+    if(m_level->specialTags.contains("no_discard"))return false;
+    if(m_level->specialTags.contains("no_natural_discard")&&m_bag->bagGet(blockId).type=="natural")return false;
     m_bag->bagRemove(blockId);
     snapshotStack.append(getCurrentSnapshot());
     return true;
@@ -254,7 +281,17 @@ bool GameEngine::undo(){
     emit forcedMove(pos);
     QString event=m_map->getEvent(pos);
     if(event=="chest"){
-        emit chestEntered(m_level->mapGrid[pos.x()][pos.y()]);
+        m_locked=false;
+        const Chest& chest=m_level->chests[m_level->mapGrid[pos.x()][pos.y()]];
+        if(chest.forcedPick){
+            bool canTake;
+            if(m_level->specialTags.contains("bundle_pick"))
+                canTake=m_bag->bagCapacity()-m_bag->bagSize()>=chest.blocks.size();
+            else canTake=!m_bag->bagIsFull();
+            if(canTake)m_locked=true;
+            else if(!m_level->specialTags.contains("skip_on_full"))m_locked=true;
+        }
+        emit chestEntered(m_level->mapGrid[pos.x()][pos.y()],m_locked);
     }
     else if(event=="clue"){
         QString clueId=m_level->mapGrid[pos.x()][pos.y()];
@@ -292,10 +329,25 @@ bool GameEngine::undo(){
 }
 bool GameEngine::resetLevel(){
     if(snapshotStack.isEmpty())return false;
+    m_locked=false;
     restoreFromSnapshot(snapshotStack[0]);
     snapshotStack=QVector<GameSnapshot>();
     snapshotStack.append(getCurrentSnapshot());
-    emit forcedMove(m_map->playerPos());
+    QPoint pos=m_map->playerPos();
+    emit forcedMove(pos);
+    QString event=m_map->getEvent(pos);
+    if(event=="chest"){
+        const Chest& chest=m_level->chests[m_level->mapGrid[pos.x()][pos.y()]];
+        if(chest.forcedPick){
+            bool canTake;
+            if(m_level->specialTags.contains("bundle_pick"))
+                canTake=m_bag->bagCapacity()-m_bag->bagSize()>=chest.blocks.size();
+            else canTake=!m_bag->bagIsFull();
+            if(canTake)m_locked=true;
+            else if(!m_level->specialTags.contains("skip_on_full"))m_locked=true;
+        }
+        emit chestEntered(m_level->mapGrid[pos.x()][pos.y()],m_locked);
+    }
     return true;
 }
 void GameEngine::exit(){
