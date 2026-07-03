@@ -1,0 +1,281 @@
+{
+    "map_width": 7,
+    "map_height": 7,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 8,
+    "map_grid": [
+        [
+            "start",
+            "clue_1",
+            ".",
+            "#",
+            "chest_3",
+            "monster_2",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "monster_1",
+            "#",
+            "#",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            "chest_1",
+            "clue_3",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            "clue_4",
+            "#",
+            "chest_2",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "monster_3",
+            "monster_4",
+            ".",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "chest_4",
+            ".",
+            "#",
+            "#",
+            "#",
+            "clue_2",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            "monster_5",
+            ".",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_1": "Inventory lifecycle",
+        "clue_3": "Maybe we need an Inventory class to manage our Items.",
+        "clue_4": "// The copy constructor of `Inventory`",
+        "clue_2": "Sample input:\n2\nsword 10\nshield 20\n\nSample output:\n30\n130"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_09_inv_copy_header": "Inventory(const Inventory& other): items(other.sizeValue > 0 ? new Item[other.sizeValue] : nullptr), sizeValue(other.sizeValue) {",
+                "block_09_inv_copy_loop_ok": "for (int i = 0; i < sizeValue; ++i) items[i] = other.items[i];",
+                "block_09_inv_copy_loop_alt": "for (int i = 0; i < sizeValue; ++i) items[i] = Item();"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 7,
+            "blocks": {
+                "block_09_item_ctor_ok": "Item(string itemName = \"empty\", int itemPower = 0): name(itemName), power(itemPower) {}",
+                "block_09_item_ctor_alt": "Item(string itemName = \"empty\", int itemPower = 0): name(itemName), power(0) {}",
+                "block_09_item_copy": "Item(const Item& other): name(other.name), power(other.power) {}",
+                "block_09_item_assign_ok": "if (this != &other) {\n            name = other.name;\n            power = other.power;\n        }\n        return *this;",
+                "block_09_item_assign_alt": "power = 0;\n        return *this;",
+                "block_09_strength_ok": "power += delta;",
+                "block_09_strength_alt": "power = delta;"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_09_inv_init_ok": "items(n > 0 ? new Item[n] : nullptr), sizeValue(n)",
+                "block_09_inv_init_alt": "items(nullptr), sizeValue(n)",
+                "block_09_inv_init_alt2": "items(new Item[1]), sizeValue(n)"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 6,
+            "blocks": {
+                "block_09_assign_ok": "if (this == &other) return *this;\n        delete[] items;\n        sizeValue = other.sizeValue;\n        items = sizeValue > 0 ? new Item[sizeValue] : nullptr;\n        for (int i = 0; i < sizeValue; ++i) items[i] = other.items[i];\n        return *this;",
+                "block_09_assign_alt": "items = other.items;\n        sizeValue = other.sizeValue;\n        return *this;",
+                "block_09_dtor_ok": "delete[] items;",
+                "block_09_dtor_alt": "delete items;",
+                "block_09_total_ok": "int sum = 0;\n        for (int i = 0; i < sizeValue; ++i) sum += items[i].getPower();\n        return sum;",
+                "block_09_total_alt": "return sizeValue;"
+            }
+        }
+    },
+    "monster_count": 5,
+    "monsters": {
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "InventoryCtor",
+            "type": "function",
+            "code": "Inventory(int n = 0): $space1$ {}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_inv_init"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "ItemValue",
+            "type": "class",
+            "code": "class Item {\nprivate:\n    string name;\n    int power;\n\npublic:\n\t// your constructor\n    $space1$\n\t\n\t// your copy constructor\n    $space2$\n\n    Item& operator=(const Item& other) {\n        $space3$\n    }\n\n    void strengthen(int delta) {\n        $space4$\n    }\n\n    int getPower() const { return power; }\n    string getName() const { return name; }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_item_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_09_item_copy"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_item_assign"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_strength"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "InventoryCopy",
+            "type": "function",
+            "code": "//what it is?\n$clue_4$\n\t$space1$\n        $space2$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_09_inv_copy_header"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_inv_copy_loop"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "InventoryRest",
+            "type": "function",
+            "code": "Inventory& operator=(const Inventory& other) {\n        $space1$\n    }\n\n    ~Inventory() {\n        $space2$\n    }\n\n    void setItem(int index, const Item& item) {\n        if (0 <= index && index < sizeValue) items[index] = item;\n    }\n\n    void strengthenItem(int index, int delta) {\n        if (0 <= index && index < sizeValue) items[index].strengthen(delta);\n    }\n\n    int totalPower() const {\n        $space3$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_assign"
+                    ]
+                },
+                "space2": {
+                    "type": "find",
+                    "val": [
+                        "delete"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_09_total"
+                    ]
+                }
+            }
+        },
+        "monster_5": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "Inventory",
+            "type": "class",
+            "code": "class Inventory {\nprivate:\n    Item* items;\n    int sizeValue;\n\npublic:\n\n\t// constructor\n    $space1$\n\n\t// copy constructor\n    $space2$\n\n    $space3$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "InventoryCtor[block_09_inv_init_ok]"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "InventoryCopy[block_09_inv_copy_header,block_09_inv_copy_loop_ok]"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "InventoryRest[block_09_assign_ok,block_09_dtor_ok,block_09_total_ok]"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Inventory lifecycle Boss",
+        "code": "#include <iostream>\n#include <string>\nusing namespace std;\n\n// your class Item\n$space_1$\n\n// your class Inventory\n$space_2$\n\nint main() {\n    int n; cin >> n;\n    Inventory original(n);\n    for (int i = 0; i < n; ++i) { string name; int power; cin >> name >> power; original.setItem(i, Item(name, power)); }\n    Inventory copied = original;\n    if (n > 0) original.strengthenItem(0, 100);\n    cout << copied.totalPower() << '\\n';\n    cout << original.totalPower() << '\\n';\n    return 0;\n}\n",
+        "input": "2\nsword 10\nshield 20",
+        "output": "30\n130",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "ItemValue[block_09_item_ctor_ok,block_09_item_copy,block_09_item_assign_ok,block_09_strength_ok]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "Inventory[InventoryCtor[block_09_inv_init_ok],InventoryCopy[block_09_inv_copy_header,block_09_inv_copy_loop_ok],InventoryRest[block_09_assign_ok,block_09_dtor_ok,block_09_total_ok]]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

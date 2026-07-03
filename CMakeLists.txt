@@ -66,7 +66,20 @@ endif()
 
 target_link_libraries(CompileTheSpire PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Multimedia)
 
-foreach(runtime_data_dir IN ITEMS levels savedata assets/audio)
+file(GLOB_RECURSE RUNTIME_LEVEL_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/levels/*")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/levels")
+    add_custom_target(copy_runtime_levels ALL
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:CompileTheSpire>/levels"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/levels"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/levels"
+        DEPENDS ${RUNTIME_LEVEL_FILES}
+        COMMENT "Copying levels to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_levels)
+endif()
+
+foreach(runtime_data_dir IN ITEMS savedata assets/audio)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_data_dir}")
         add_custom_command(TARGET CompileTheSpire POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
