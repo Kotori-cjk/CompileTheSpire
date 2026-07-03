@@ -72,6 +72,16 @@ bool GameEngine::startLevel(int levelIndex){
 }
 bool GameEngine::moveTo(int tarX,int tarY){
     if(m_locked||m_combat!=nullptr)return false;
+    if(m_level->specialTags.contains("discard_drops")){
+        QString tileId=m_level->mapGrid[tarX][tarY];
+        if(tileId=="boss"||tileId.startsWith("mon")){
+            int need=tileId=="boss"?m_level->boss.spaces.size():m_level->monsters[tileId].spaces.size();
+            if(m_bag->bagSize()!=need){
+                emit moveBlocked(QString("Need exactly %1 blocks, have %2").arg(need).arg(m_bag->bagSize()));
+                return false;
+            }
+        }
+    }
     bool success=false;
     MoveResult res=m_map->moveTo(tarX,tarY,&success);
     if(!success){
