@@ -55,6 +55,7 @@ signals:
     //when forced move(by exit), trigger this and change physical location
     void exitLevel();
     void levelUnlocked(int levelIndex);
+    void moveBlocked(QString reason);
 
 public:
     GameSnapshot getCurrentSnapshot();
