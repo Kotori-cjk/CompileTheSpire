@@ -441,7 +441,8 @@ int MapView::currentTileSize() const
 
     const int availableWidth = qMax(1, width() - mapMargin * 2);
     const int availableHeight = qMax(1, height() - mapMargin * 2);
-    return qBound(56, qMin(availableWidth / m_level->mapWidth, availableHeight / m_level->mapHeight), 138);
+    const int tileSize = qMin(availableWidth / m_level->mapWidth, availableHeight / m_level->mapHeight);
+    return qMax(1, qMin(tileSize, 138));
 }
 
 QPoint MapView::tileAtPosition(const QPoint &position) const
