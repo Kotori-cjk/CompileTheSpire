@@ -1,0 +1,146 @@
+{
+    "map_width": 5,
+    "map_height": 5,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 3,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            ".",
+            "clue_2",
+            "."
+        ],
+        [
+            "#",
+            "clue_1",
+            "#",
+            "#",
+            "chest_1"
+        ],
+        [
+            ".",
+            ".",
+            "monster_1",
+            "#",
+            "chest_3"
+        ],
+        [
+            "monster_2",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "chest_2",
+            ".",
+            ".",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 2,
+    "clues": {
+        "clue_2": "Sample input:\nA man, a plan, a canal: Panama!\n\nSample output:\namanaplanacanalpanama\nYES",
+        "clue_1": "The emperor of the Palindrome Empire is launching a great purge.\nWhat is the password?\n\"A man, a plan, a canal: Panama!\""
+    },
+    "chest_count": 3,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 3,
+            "blocks": {
+                "block_if_2": "if (isalnum(c)) result += static_cast<char>(tolower(c));",
+                "block_if_3": "if (ch != ' ') result += ch;",
+                "block_if_1": "if (isalpha(c)) result += ch;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_check_1": "if (s[left] != s[right]) return false;",
+                "block_check_2": "if (s[left] == s[right]) return true;"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_while": "while (left < right) {",
+                "block_for": "for (; left < right; ++left) {"
+            }
+        }
+    },
+    "monster_count": 2,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "normalize",
+            "type": "function",
+            "code": "string normalize(const string& text) {\n    string result;\n    for (char ch : text) {\n        unsigned char c = static_cast<unsigned char>(ch);\n        $space1$\n    }\n    return result;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_if"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/mabel.png",
+            "nickname": "mabel",
+            "name": "isPalindrome",
+            "type": "function",
+            "code": "bool isPalindrome(const string& s) {\n    int left = 0, right = static_cast<int>(s.size()) - 1;\n    $space1$\n        $space2$\n        ++left;\n        --right;\n    }\n    return true;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_while",
+                        "block_for"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_check"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "jabberwock",
+        "code": "#include <cctype>\n#include <iostream>\n#include <string>\nusing namespace std;\n\n//your normalize\n$space_1$\n\n//your isPalindrome\n$space_2$\n\nint main() {\n    string line;\n    getline(cin, line);\n    string cleaned = normalize(line);\n    cout << cleaned << '\\n';\n    cout << (isPalindrome(cleaned) ? \"YES\" : \"NO\") << '\\n';\n    return 0;\n}\n\n",
+        "input": "A man, a plan, a canal: Panama!",
+        "output": "amanaplanacanalpanama\nYES",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "normalize[block_if_2]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "isPalindrome[block_while,block_check_1]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}
