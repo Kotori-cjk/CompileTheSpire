@@ -84,7 +84,7 @@ private:
     bool canEnter(int row, int column) const;
     QString tileAt(int row, int column) const;
     QString describeTile(const QString &tileId) const;
-    void handleChest(const QString &chestId, bool viewOnly = false);
+    void handleChest(const QString &chestId, bool viewOnly = false, bool lockedByChest = false);
     void handleMonster(const QString &monsterId);
 
     QString renderMonsterCode(const Monster &monster) const;

@@ -145,10 +145,10 @@ MainWindow::MainWindow(QWidget *parent)
         syncFromEngineState();
         refreshGameUi();
     });
-    connect(&gameEngine, &GameEngine::chestEntered, this, [this](const QString &chestId) {
+    connect(&gameEngine, &GameEngine::chestEntered, this, [this](const QString &chestId, bool lockedByChest) {
         playSfx("assets/audio/chest_open.wav", "assets/audio/sfx_event.wav");
-        QTimer::singleShot(0, this, [this, chestId]() {
-            handleChest(chestId);
+        QTimer::singleShot(0, this, [this, chestId, lockedByChest]() {
+            handleChest(chestId, false, lockedByChest);
             syncFromEngineState();
             refreshGameUi();
         });
