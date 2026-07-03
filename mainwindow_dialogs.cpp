@@ -133,9 +133,12 @@ void MainWindow::showBagDialog()
                 QDialogButtonBox *close = new QDialogButtonBox(QDialogButtonBox::Close, &detail);
                 QPushButton *discardButton = close->addButton("Discard", QDialogButtonBox::DestructiveRole);
                 QObject::connect(close, &QDialogButtonBox::rejected, &detail, &QDialog::reject);
-                QObject::connect(discardButton, &QPushButton::clicked, &detail, [this, &detail, blockId, icon]() {
-                    if (!gameEngine.m_bag || !gameEngine.m_bag->bagRemove(blockId)) {
-                        QMessageBox::warning(&detail, "Code Block", "Unable to discard this code block.");
+                QObject::connect(discardButton, &QPushButton::clicked, &detail, [this, &detail, blockId, icon, discardButton]() {
+                    if (!gameEngine.discardBlock(blockId)) {
+                        discardButton->setEnabled(false);
+                        discardButton->setText("Locked");
+                        discardButton->setToolTip("This code block cannot be discarded.");
+                        playSfx("assets/audio/sfx_error.wav");
                         return;
                     }
                     syncFromEngineState();
@@ -716,12 +719,15 @@ void MainWindow::showCombatSettlement(const QString &defeatedName,
     dialog.exec();
 }
 
-void MainWindow::handleChest(const QString &chestId, bool viewOnly)
+void MainWindow::handleChest(const QString &chestId, bool viewOnly, bool lockedByChest)
 {
     const Chest chest = levels.at(currentLevelIndex).chests.value(chestId);
+    const bool bundlePick = currentLevelIndex >= 0
+                            && currentLevelIndex < levels.size()
+                            && levels.at(currentLevelIndex).specialTags.contains("bundle_pick");
     const bool activeForcedChest = !viewOnly
                                    && chest.forcedPick
-                                   && gameEngine.m_locked
+                                   && lockedByChest
                                    && tileAt(playerRow, playerColumn) == chestId;
     if (!gameEngine.m_bag || (!viewOnly && !chestHasAvailableBlocks(chestId))) {
         ui->combatLogLabel->setText("This chest is already empty.");
@@ -750,6 +756,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
     contentScroll->setMinimumHeight(180);
     contentScroll->setStyleSheet("QScrollArea { background: rgba(8, 11, 16, 235); border: 1px solid #354255; border-radius: 7px; }");
     QString selectedBlockId;
+    bool selectedBundle = false;
     bool detailedMode = chestDetailedByDefault;
     const QVector<CodeBlock> remainingBlocks = gameEngine.m_bag->blocksRemaining(chestId);
 
@@ -787,7 +794,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
                                              ? "QToolButton { background: #15242b; border: 2px solid #7c6a45; border-radius: 5px; color: #9d9072; font-weight: 700; }"
                                              : "QToolButton { background: #15242b; border: 2px solid #d7b06a; border-radius: 5px; color: #ffe8ad; font-weight: 700; }"
                                                "QToolButton:hover { border-color: #49e6ff; color: white; }");
-                if (!viewOnly) {
+                if (!viewOnly && !bundlePick) {
                     connect(blockIcon, &QToolButton::clicked, &dialog, [&dialog, &selectedBlockId, block]() {
                         selectedBlockId = block.blockId;
                         dialog.accept();
@@ -828,7 +835,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
 
                 rowLayout->addWidget(icon, 0, Qt::AlignTop);
                 rowLayout->addWidget(details, 1);
-                if (!viewOnly) {
+                if (!viewOnly && !bundlePick) {
                     QPushButton *takeButton = new QPushButton("Take", row);
                     takeButton->setFixedSize(82, 36);
                     connect(takeButton, &QPushButton::clicked, &dialog, [&dialog, &selectedBlockId, block]() {
@@ -847,6 +854,14 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
     QPushButton *modeButton = buttons->addButton(detailedMode ? "Compact" : "Detailed", QDialogButtonBox::ActionRole);
+    QPushButton *takeBundleButton = nullptr;
+    if (!viewOnly && bundlePick) {
+        takeBundleButton = buttons->addButton("Take All", QDialogButtonBox::AcceptRole);
+        connect(takeBundleButton, &QPushButton::clicked, &dialog, [&dialog, &selectedBundle]() {
+            selectedBundle = true;
+            dialog.accept();
+        });
+    }
     QPushButton *skipButton = buttons->addButton(viewOnly ? "Close" : (activeForcedChest ? "Leave" : "Skip"), QDialogButtonBox::RejectRole);
     Q_UNUSED(skipButton);
     connect(modeButton, &QPushButton::clicked, &dialog, [&]() {
@@ -868,12 +883,18 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly)
             refreshGameUi();
             return;
         }
-        if (!selectedBlockId.isEmpty()) {
+        if (selectedBundle) {
+            if (gameEngine.takeBundleFromChest(chestId)) {
+                picked = chestId;
+                syncFromEngineState();
+                playSfx("assets/audio/sfx_event.wav");
+            } else {
+                playSfx("assets/audio/sfx_error.wav");
+                QMessageBox::warning(&dialog, "Chest", "Unable to take all code blocks.");
+            }
+        } else if (!selectedBlockId.isEmpty()) {
             if (gameEngine.takeFromChest(chestId, selectedBlockId)) {
                 picked = selectedBlockId;
-                if (activeForcedChest) {
-                    gameEngine.m_locked = false;
-                }
                 syncFromEngineState();
                 playSfx("assets/audio/sfx_event.wav");
             } else {
@@ -1291,7 +1312,10 @@ void MainWindow::handleMonster(const QString &monsterId)
     if (gameEngine.m_combat) {
         gameEngine.exitCombat();
     }
-    if (hasCombatSettlement) {
+    const bool skipCombatSettlement = currentLevelIndex >= 0
+                                      && currentLevelIndex < levels.size()
+                                      && levels.at(currentLevelIndex).specialTags.contains("discard_drops");
+    if (hasCombatSettlement && !skipCombatSettlement) {
         showCombatSettlement(combatSettlementName, combatSettlementResult, combatSettlementUsedCodes, wonBoss);
     }
     if (wonBoss) {
