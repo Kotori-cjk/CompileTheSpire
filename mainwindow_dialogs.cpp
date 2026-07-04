@@ -928,7 +928,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     }
 
     const Monster monster = monsterByTile(monsterId);
-    const bool friendlyEncounter = monster.spaces.isEmpty();
+    const bool friendlyEncounter = monster.spaces.isEmpty()&&!(monsterId=="boss"&&gameEngine.m_level->specialTags.contains("friendly_boss"));
     playBgm(monsterId == "boss" ? "assets/audio/bgm_boss.mp3" : "assets/audio/bgm_combat.wav");
     QDialog dialog(this);
     dialog.setWindowTitle(monsterId == "boss" ? "Boss Encounter" : "Monster Encounter");

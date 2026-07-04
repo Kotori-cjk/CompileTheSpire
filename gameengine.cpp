@@ -72,9 +72,9 @@ bool GameEngine::startLevel(int levelIndex){
 }
 bool GameEngine::moveTo(int tarX,int tarY){
     if(m_locked||m_combat!=nullptr)return false;
-    if(m_level->specialTags.contains("discard_drops")){
-        QString tileId=m_level->mapGrid[tarX][tarY];
-        if(tileId=="boss"||tileId.startsWith("mon")){
+    QString tileId=m_level->mapGrid[tarX][tarY];
+    if(m_level->specialTags.contains("discard_drops")&&!(tileId=="boss"&&m_level->specialTags.contains("friendly_boss"))){
+        if((tileId=="boss"||tileId.startsWith("mon"))&&!m_map->cleared[tarX][tarY]){
             int need=tileId=="boss"?m_level->boss.spaces.size():m_level->monsters[tileId].spaces.size();
             if(m_bag->bagSize()!=need){
                 emit moveBlocked(QString("Need exactly %1 blocks, have %2").arg(need).arg(m_bag->bagSize()));
@@ -111,6 +111,12 @@ bool GameEngine::moveTo(int tarX,int tarY){
                 else m_locked=true;
             }
             emit chestEntered(res.eventId,m_locked);
+        }
+        else if(res.event=="boss"&&m_level->specialTags.contains("friendly_boss")){
+            QMap<QString,Clue>clues;
+            if(m_combat!=nullptr)delete m_combat;
+            m_combat=new Combat(m_level->boss,clues);
+            emit combatStarted(res.eventId,m_combat);
         }
         else{
             const QString& monsterId=res.eventId;
@@ -253,7 +259,7 @@ CombatResult GameEngine::submitCombat(){
                 m_bag->bagRemove(blockId);
             }
             bool discardDrop=false;
-            if(m_level->specialTags.contains("discard_drops")&&!m_level->specialTags.contains("no_discard"))
+            if(m_level->specialTags.contains("discard_drops"))
                 discardDrop=true;
             if(!discardDrop)m_bag->bagAdd(result.synthesizedBlock);
             m_map->setDefeatedCode(m_combat->monsterId(),result.synthesizedBlock.code);
