@@ -65,7 +65,9 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(&gameEngine, &GameEngine::levelLoaded, this, [this]() {
         syncFromEngineState();
-        ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
+        ui->combatLogLabel->setText(beginnerTipsEnabled()
+                                        ? "Use WASD/arrow keys or click a reachable tile."
+                                        : "Ready.");
         refreshGameUi();
     });
     connect(&gameEngine, &GameEngine::moveCompleted, this, [this](const MoveResult &result) {
@@ -275,17 +277,26 @@ MainWindow::MainWindow(QWidget *parent)
         if (QComboBox *chestMode = ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
             chestDetailedByDefault = (chestMode->currentIndex() == 1);
         }
-        if (ui->windowModeComboBox->currentText() == "Fullscreen" || ui->fullscreenCheckBox->isChecked()) {
-            showFullScreen();
-        } else {
-            showNormal();
+        if (QComboBox *movementMode = ui->settingsPage->findChild<QComboBox *>("movementModeComboBox")) {
+            instantMoveMode = (movementMode->currentIndex() == 1);
         }
+        applyDisplaySettings();
         statusBar()->showMessage("Settings applied.", 2500);
     });
 
     connect(ui->resetSettingsButton, &QPushButton::clicked, this, [this]() {
         applyDefaultSettings();
         statusBar()->showMessage("Settings restored to defaults.", 2500);
+    });
+    connect(ui->tutorialCheckBox, &QCheckBox::toggled, this, [this](bool checked) {
+        if (QLabel *controlsGuide = ui->settingsPage->findChild<QLabel *>("controlsGuideLabel")) {
+            controlsGuide->setVisible(checked);
+        }
+        const QString beginnerMoveText = "Use WASD/arrow keys or click a reachable tile.";
+        if (ui->combatLogLabel->text() == beginnerMoveText || ui->combatLogLabel->text() == "Ready.") {
+            ui->combatLogLabel->setText(checked ? beginnerMoveText : "Ready.");
+        }
+        refreshSidePanel();
     });
 
     const auto updatePercent = [](QSlider *slider, QLabel *label) {
@@ -465,16 +476,46 @@ void MainWindow::applyDefaultSettings()
     ui->windowModeComboBox->setCurrentIndex(0);
     ui->resolutionComboBox->setCurrentIndex(0);
     ui->fullscreenCheckBox->setChecked(false);
-    ui->languageComboBox->setCurrentIndex(0);
     ui->animationSpeedComboBox->setCurrentIndex(0);
     ui->tutorialCheckBox->setChecked(true);
     chestDetailedByDefault = false;
+    instantMoveMode = false;
     if (QComboBox *chestMode = ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
         chestMode->setCurrentIndex(0);
+    }
+    if (QComboBox *movementMode = ui->settingsPage->findChild<QComboBox *>("movementModeComboBox")) {
+        movementMode->setCurrentIndex(0);
     }
     ui->volumeValueLabel->setText("80%");
     ui->musicVolumeValueLabel->setText("70%");
     ui->sfxVolumeValueLabel->setText("75%");
+}
+
+void MainWindow::applyDisplaySettings()
+{
+    if (ui->windowModeComboBox->currentText() == "Fullscreen" || ui->fullscreenCheckBox->isChecked()) {
+        showFullScreen();
+        return;
+    }
+
+    showNormal();
+
+    const QRegularExpression resolutionPattern(R"((\d+)\s*x\s*(\d+))");
+    const QRegularExpressionMatch match = resolutionPattern.match(ui->resolutionComboBox->currentText());
+    if (!match.hasMatch()) {
+        return;
+    }
+
+    const int width = match.captured(1).toInt();
+    const int height = match.captured(2).toInt();
+    if (width > 0 && height > 0) {
+        resize(width, height);
+    }
+}
+
+bool MainWindow::beginnerTipsEnabled() const
+{
+    return ui && ui->tutorialCheckBox && ui->tutorialCheckBox->isChecked();
 }
 
 void MainWindow::applyVisualStyle()
@@ -1004,16 +1045,48 @@ void MainWindow::buildRuntimeGameUi()
     positionMainMenuButtons();
     QTimer::singleShot(0, this, &MainWindow::positionMainMenuButtons);
 
+    ui->settingsLayout->setSpacing(10);
     QList<QLabel *> settingsLabels = {
         ui->musicVolumeLabel,
         ui->sfxVolumeLabel,
         ui->windowModeLabel,
         ui->resolutionLabel,
-        ui->languageLabel,
         ui->animationSpeedLabel
     };
     if (QLabel *volumeLabel = findChild<QLabel *>("volumeLabel")) {
         settingsLabels.prepend(volumeLabel);
+    }
+    ui->gameplayGroupBox->setMinimumHeight(230);
+    ui->gameplayGridLayout->setVerticalSpacing(8);
+    ui->gameplayGridLayout->setContentsMargins(12, 18, 12, 10);
+    for (int row = 0; row <= 4; ++row) {
+        ui->gameplayGridLayout->setRowMinimumHeight(row, 32);
+    }
+    ui->animationSpeedComboBox->setMinimumHeight(32);
+    ui->tutorialCheckBox->setMinimumHeight(32);
+    if (!ui->settingsPage->findChild<QComboBox *>("movementModeComboBox")) {
+        QLabel *movementModeLabel = new QLabel("Movement Mode", ui->settingsPage);
+        movementModeLabel->setObjectName("movementModeLabel");
+        movementModeLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        movementModeLabel->setFixedWidth(150);
+
+        QComboBox *movementMode = new QComboBox(ui->settingsPage);
+        movementMode->setObjectName("movementModeComboBox");
+        movementMode->setMinimumWidth(180);
+        movementMode->setMinimumHeight(32);
+        movementMode->addItem("Animated");
+        movementMode->addItem("Instant");
+        movementMode->setCurrentIndex(instantMoveMode ? 1 : 0);
+        connect(movementMode, &QComboBox::currentIndexChanged, this, [this](int index) {
+            instantMoveMode = (index == 1);
+            if (instantMoveMode) {
+                clearDisplayedMovePath();
+            }
+        });
+
+        ui->gameplayGridLayout->addWidget(movementModeLabel, 3, 0);
+        ui->gameplayGridLayout->addWidget(movementMode, 3, 1);
+        settingsLabels.append(movementModeLabel);
     }
     if (!ui->settingsPage->findChild<QComboBox *>("chestDisplayModeComboBox")) {
         QLabel *chestModeLabel = new QLabel("Chest Display", ui->settingsPage);
@@ -1024,6 +1097,7 @@ void MainWindow::buildRuntimeGameUi()
         QComboBox *chestMode = new QComboBox(ui->settingsPage);
         chestMode->setObjectName("chestDisplayModeComboBox");
         chestMode->setMinimumWidth(180);
+        chestMode->setMinimumHeight(32);
         chestMode->addItem("Compact");
         chestMode->addItem("Detailed");
         chestMode->setCurrentIndex(chestDetailedByDefault ? 1 : 0);
@@ -1031,8 +1105,8 @@ void MainWindow::buildRuntimeGameUi()
             chestDetailedByDefault = (index == 1);
         });
 
-        ui->gameplayGridLayout->addWidget(chestModeLabel, 3, 0);
-        ui->gameplayGridLayout->addWidget(chestMode, 3, 1);
+        ui->gameplayGridLayout->addWidget(chestModeLabel, 4, 0);
+        ui->gameplayGridLayout->addWidget(chestMode, 4, 1);
         settingsLabels.append(chestModeLabel);
     }
     for (QLabel *label : settingsLabels) {
@@ -1048,6 +1122,7 @@ void MainWindow::buildRuntimeGameUi()
         controlsGuide->setText("Controls: Z Undo    R Reset    B Bag    M Manual    Esc Menu");
         controlsGuide->setAlignment(Qt::AlignCenter);
         controlsGuide->setWordWrap(true);
+        controlsGuide->setVisible(beginnerTipsEnabled());
         controlsGuide->setStyleSheet(
             "QLabel#controlsGuideLabel { color: #fff1c2; background: rgba(9, 13, 18, 205);"
             "border: 1px solid rgba(215, 176, 106, 150); border-radius: 7px; padding: 10px;"
@@ -1165,6 +1240,8 @@ void MainWindow::buildRuntimeGameUi()
     bridge12->setScaledContents(true);
     bridge01->setGeometry(158, 112, 250, 108);
     bridge12->setGeometry(366, 38, 250, 108);
+    bridge01->hide();
+    bridge12->hide();
     ui->mapFightButton->setParent(nodeCanvas);
     ui->mapEliteButton->setParent(nodeCanvas);
     ui->mapBossButton->setParent(nodeCanvas);
