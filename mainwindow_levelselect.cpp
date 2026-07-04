@@ -246,6 +246,44 @@ void MainWindow::selectStage(int levelIndex)
     refreshLevelSelectUi();
 }
 
+void MainWindow::showBeginnerTipsIntro()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Beginner Tips");
+    dialog.setModal(true);
+    dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dialog.setStyleSheet("QDialog { background: #05080d; } QPushButton { border: none; background: transparent; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    const QString imagePath = audioFilePath("assets/beginner_tips_intro.png");
+    if (imagePath.isEmpty()) {
+        statusBar()->showMessage("Missing beginner tutorial image.", 2500);
+        return;
+    }
+
+    const QPixmap source(imagePath);
+    if (source.isNull()) {
+        statusBar()->showMessage("Failed to load beginner tutorial image.", 2500);
+        return;
+    }
+
+    const QSize targetSize = source.size().scaled(QSize(1100, 620), Qt::KeepAspectRatio);
+    QPushButton *imageButton = new QPushButton(&dialog);
+    imageButton->setCursor(Qt::PointingHandCursor);
+    imageButton->setIcon(QIcon(source.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+    imageButton->setIconSize(targetSize);
+    imageButton->setFixedSize(targetSize);
+    imageButton->setToolTip("Click to continue.");
+    layout->addWidget(imageButton);
+
+    connect(imageButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    QTimer::singleShot(60000, &dialog, &QDialog::accept);
+    dialog.exec();
+}
+
 void MainWindow::startLevel(int levelIndex)
 {
     if (levelIndex < 0) {

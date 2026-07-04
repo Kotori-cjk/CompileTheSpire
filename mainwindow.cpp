@@ -208,6 +208,10 @@ MainWindow::MainWindow(QWidget *parent)
         ui->stackedWidget->setCurrentWidget(ui->settingsPage);
     });
 
+    connect(beginnerTipsButton, &QPushButton::clicked, this, [this]() {
+        showBeginnerTipsIntro();
+    });
+
     connect(ui->pauseButton, &QPushButton::clicked, this, [this]() {
         ui->stackedWidget->setCurrentWidget(ui->pausePage);
     });
@@ -547,7 +551,7 @@ void MainWindow::applyVisualStyle()
             border-image: url(:/images/assets/interface_background_fitted.png) 0 0 0 0 stretch stretch;
         }
 
-        QPushButton#startGameButton, QPushButton#settingsButton, QPushButton#exitButton {
+        QPushButton#startGameButton, QPushButton#settingsButton, QPushButton#beginnerTipsButton, QPushButton#exitButton {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                         stop:0 rgba(58, 38, 14, 225),
                                         stop:0.48 rgba(20, 24, 30, 225),
@@ -559,10 +563,10 @@ void MainWindow::applyVisualStyle()
             font-size: 20px;
             font-weight: 900;
             padding: 8px 24px;
-            min-width: 220px;
-            max-width: 220px;
-            min-height: 52px;
-            max-height: 52px;
+            min-width: 166px;
+            max-width: 166px;
+            min-height: 30px;
+            max-height: 30px;
             letter-spacing: 0px;
         }
 
@@ -571,7 +575,7 @@ void MainWindow::applyVisualStyle()
             color: #fff6c8;
         }
 
-        QPushButton#startGameButton:hover, QPushButton#settingsButton:hover, QPushButton#exitButton:hover {
+        QPushButton#startGameButton:hover, QPushButton#settingsButton:hover, QPushButton#beginnerTipsButton:hover, QPushButton#exitButton:hover {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                                         stop:0 rgba(55, 91, 94, 235),
                                         stop:0.5 rgba(16, 39, 48, 238),
@@ -580,7 +584,7 @@ void MainWindow::applyVisualStyle()
             color: #ffffff;
         }
 
-        QPushButton#startGameButton:pressed, QPushButton#settingsButton:pressed, QPushButton#exitButton:pressed {
+        QPushButton#startGameButton:pressed, QPushButton#settingsButton:pressed, QPushButton#beginnerTipsButton:pressed, QPushButton#exitButton:pressed {
             background: rgba(7, 9, 14, 245);
             border-color: #ff8f3e;
             color: #ffdca4;
@@ -1029,16 +1033,20 @@ void MainWindow::buildRuntimeGameUi()
     mainMenuButtonBar->setObjectName("mainMenuButtonBar");
     mainMenuButtonBar->setStyleSheet("QWidget#mainMenuButtonBar { background: transparent; border: none; }");
     QHBoxLayout *menuButtonRow = new QHBoxLayout(mainMenuButtonBar);
-    menuButtonRow->setSpacing(40);
+    menuButtonRow->setSpacing(24);
     menuButtonRow->setContentsMargins(0, 0, 0, 0);
+    beginnerTipsButton = new QPushButton("Beginner Tips", mainMenuButtonBar);
+    beginnerTipsButton->setObjectName("beginnerTipsButton");
     ui->startGameButton->setParent(mainMenuButtonBar);
     ui->settingsButton->setParent(mainMenuButtonBar);
     ui->exitButton->setParent(mainMenuButtonBar);
     menuButtonRow->addWidget(ui->startGameButton);
     menuButtonRow->addWidget(ui->settingsButton);
+    menuButtonRow->addWidget(beginnerTipsButton);
     menuButtonRow->addWidget(ui->exitButton);
     ui->startGameButton->setFixedSize(220, 52);
     ui->settingsButton->setFixedSize(220, 52);
+    beginnerTipsButton->setFixedSize(220, 52);
     ui->exitButton->setFixedSize(220, 52);
     mainMenuButtonBar->show();
     mainMenuButtonBar->raise();
@@ -1303,8 +1311,9 @@ void MainWindow::positionMainMenuButtons()
     }
 
     const int buttonWidth = 220;
-    const int gap = 40;
-    const int width = 3 * buttonWidth + 2 * gap;
+    const int gap = 24;
+    const int buttonCount = beginnerTipsButton ? 4 : 3;
+    const int width = buttonCount * buttonWidth + (buttonCount - 1) * gap;
     const int height = 60;
     const int x = qMax(0, (ui->mainMenuPage->width() - width) / 2);
     const int y = qMax(0, ui->mainMenuPage->height() - height - 6);

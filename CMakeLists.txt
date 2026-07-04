@@ -102,6 +102,20 @@ if(RUNTIME_AUDIO_FILES)
     add_dependencies(CompileTheSpire copy_runtime_audio)
 endif()
 
+set(BEGINNER_TUTORIAL_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/assets/beginner_tips_intro.png")
+if(EXISTS "${BEGINNER_TUTORIAL_IMAGE}")
+    add_custom_target(copy_runtime_beginner_tutorial ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${BEGINNER_TUTORIAL_IMAGE}"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets/beginner_tips_intro.png"
+        DEPENDS "${BEGINNER_TUTORIAL_IMAGE}"
+        COMMENT "Copying beginner tutorial image to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_beginner_tutorial)
+endif()
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
