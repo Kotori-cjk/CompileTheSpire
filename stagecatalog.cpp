@@ -26,15 +26,24 @@ QVector<StageCard> stageCatalog()
         {6, false, "Stage 7", "Bit Forge", "A late normal route for denser C++ syntax puzzles."},
         {7, false, "Stage 8", "Memory Crown", "The final normal ascent before the spire core."},
         {8, false, "Stage 9", "Compile Throne", "Normal boss placeholder for the full chapter arc."},
-        {9, true, "EX-1", "Template Rift", "Extra challenge route. Designed for later hard levels."},
-        {10, true, "EX-2", "Iterator Vault", "Optional branch with denser clue and chest logic."},
-        {11, true, "EX-3", "Undefined Core", "A harder fill route with fewer visible hints."},
-        {12, true, "EX-4", "Const Labyrinth", "Requires prior EX proof before entry."},
-        {13, true, "EX-5", "Overload Gate", "A special branch for advanced C++ mechanics."},
-        {14, true, "EX-6", "Shadow Linker", "A locked extension for future JSON content."},
-        {15, true, "EX-7", "Metaprogram Pit", "Late EX placeholder with strict topology."},
-        {16, true, "EX-8", "Undefined Peak", "The final optional climb."},
-        {17, true, "EX-9", "Core Dump", "EX boss placeholder for the chapter finale."}
+        {9, false, "Stage 10", "Template Rift", "Extra normal route for harder syntax puzzles."},
+        {10, false, "Stage 11", "Iterator Vault", "A denser route with stricter chest planning."},
+        {11, false, "Stage 12", "Undefined Core", "A harder fill route with fewer visible hints."},
+        {12, false, "Stage 13", "Const Labyrinth", "A normal branch for advanced C++ mechanics."},
+        {13, false, "Stage 14", "Overload Gate", "A later route for overloaded operators and classes."},
+        {14, false, "Stage 15", "Shadow Linker", "A locked extension for future JSON content."},
+        {15, false, "Stage 16", "Metaprogram Pit", "Late normal placeholder with strict topology."},
+        {16, false, "Stage 17", "Undefined Peak", "The penultimate normal climb."},
+        {17, false, "Stage 18", "Core Dump", "Normal boss placeholder for the chapter finale."},
+        {18, true, "EX-1", "Template Rift", "Extra challenge route. Designed for later hard levels."},
+        {19, true, "EX-2", "Iterator Vault", "Optional branch with denser clue and chest logic."},
+        {20, true, "EX-3", "Undefined Core", "A harder fill route with fewer visible hints."},
+        {21, true, "EX-4", "Const Labyrinth", "Requires prior EX proof before entry."},
+        {22, true, "EX-5", "Overload Gate", "A special branch for advanced C++ mechanics."},
+        {23, true, "EX-6", "Shadow Linker", "A locked extension for future JSON content."},
+        {24, true, "EX-7", "Metaprogram Pit", "Late EX placeholder with strict topology."},
+        {25, true, "EX-8", "Undefined Peak", "The final optional climb."},
+        {26, true, "EX-9", "Core Dump", "EX boss placeholder for the chapter finale."}
     };
 }
 

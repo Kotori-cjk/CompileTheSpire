@@ -159,17 +159,7 @@ void MainWindow::refreshLevelSelectUi()
         if (!bridges[i]) {
             continue;
         }
-        const int fromIndex = firstIndex + i;
-        const int toIndex = firstIndex + i + 1;
-        QString state = "locked";
-        if (toIndex < visibleStages.size()) {
-            const int fromLevel = visibleStages.at(fromIndex).levelIndex;
-            const int toLevel = visibleStages.at(toIndex).levelIndex;
-            state = isLevelCleared(fromLevel) ? "cleared" : (isLevelUnlocked(toLevel) ? "true" : "locked");
-        }
-        bridges[i]->setProperty("levelBridge", state);
-        bridges[i]->style()->unpolish(bridges[i]);
-        bridges[i]->style()->polish(bridges[i]);
+        bridges[i]->hide();
     }
     if (!selectedStageVisible && selectedStageIndex >= 0) {
         selectedStageIndex = -1;
@@ -177,13 +167,19 @@ void MainWindow::refreshLevelSelectUi()
         return;
     }
     if (startButton) {
-        startButton->setEnabled(selectedStageIndex >= 0 && !levels.isEmpty() && isLevelUnlocked(selectedStageIndex));
+        startButton->setEnabled(selectedStageIndex >= 0
+                                && selectedStageIndex < levels.size()
+                                && isLevelUnlocked(selectedStageIndex));
     }
     ui->mapBackButton->setText("Back");
 }
 
 bool MainWindow::isLevelUnlocked(int levelIndex) const
 {
+    if (levelIndex < 0 || levelIndex >= levels.size()) {
+        return false;
+    }
+
     if (levelIndex == 0 && !showingExLevels) {
         return true;
     }

@@ -41,6 +41,8 @@ private:
     void setupMovementShortcuts();
     bool handleGameMoveKey(int key);
     void applyDefaultSettings();
+    void applyDisplaySettings();
+    bool beginnerTipsEnabled() const;
     void applyVisualStyle();
     void buildRuntimeGameUi();
     void positionMainMenuButtons();
@@ -79,6 +81,7 @@ private:
     void movePlayerTo(int targetRow, int targetColumn);
     void startMovePlayback(const QVector<QPoint> &backendPath, int targetRow, int targetColumn);
     void advanceMovePlayback();
+    int movePlaybackIntervalMs() const;
     bool moveThroughEngine(int targetRow, int targetColumn);
     void clearDisplayedMovePath();
     bool canEnter(int row, int column) const;
@@ -119,6 +122,7 @@ private:
     bool suppressNextMovePath = false;
     bool showingExLevels = false;
     bool chestDetailedByDefault = false;
+    bool instantMoveMode = false;
     int selectedStageIndex = 0;
     QString currentBgmResource;
 

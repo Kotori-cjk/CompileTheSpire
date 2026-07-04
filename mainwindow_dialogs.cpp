@@ -1135,7 +1135,7 @@ void MainWindow::handleMonster(const QString &monsterId)
                     maxVisualX = qMax(maxVisualX, visualX);
                 }
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
-                slot->setToolTip("Double-click a filled blank to undo it.");
+                slot->setToolTip(beginnerTipsEnabled() ? "Double-click a filled blank to undo it." : QString());
                 slot->setProperty("visualX", visualX);
                 slot->setTextProvider([this, slot, &combatCodeMetrics](const QString &blockId) {
                     const QString formatted = formatCodeBlockForDisplay(codeForBlock(blockId));
@@ -1300,6 +1300,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     QLabel *combatHint = new QLabel("Drag blocks into blanks. Double-click a filled blank to undo it.", &dialog);
     combatHint->setAlignment(Qt::AlignCenter);
     combatHint->setWordWrap(true);
+    combatHint->setVisible(beginnerTipsEnabled());
     combatHint->setStyleSheet("QLabel { color: #fff1c2; background: rgba(9, 13, 18, 210); border: 1px solid rgba(215, 176, 106, 150); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 800; }");
     layout->addWidget(title);
     layout->addLayout(combatTop);

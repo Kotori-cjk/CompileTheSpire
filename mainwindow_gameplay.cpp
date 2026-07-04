@@ -52,7 +52,9 @@ void MainWindow::resetLevel()
     suppressNextMovePath = false;
     pendingMoveTargetRow = -1;
     pendingMoveTargetColumn = -1;
-    ui->combatLogLabel->setText("Use WASD/arrow keys or click a reachable tile.");
+    ui->combatLogLabel->setText(beginnerTipsEnabled()
+                                    ? "Use WASD/arrow keys or click a reachable tile."
+                                    : "Ready.");
     playSfx("assets/audio/sfx_move.wav");
     refreshGameUi();
 }
@@ -192,7 +194,9 @@ void MainWindow::refreshSidePanel()
         const Clue clue = levels.at(currentLevelIndex).clues.value(tileId);
         ui->challengeTextEdit->setPlainText(clue.val.isEmpty() ? "No clue text." : clue.val);
     } else {
-        ui->challengeTextEdit->setPlainText("Move onto a chest, clue, monster, or boss tile and interact.");
+        ui->challengeTextEdit->setPlainText(beginnerTipsEnabled()
+                                                ? "Move onto a chest, clue, monster, or boss tile and interact."
+                                                : QString());
     }
 }
 
@@ -255,6 +259,22 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
         return;
     }
 
+    if (instantMoveMode || movePlaybackIntervalMs() <= 0) {
+        activeMovePath.clear();
+        activeMovePathIndex = 0;
+        pendingMoveTargetRow = -1;
+        pendingMoveTargetColumn = -1;
+        suppressNextMovePath = true;
+        if (!moveThroughEngine(targetRow, targetColumn)) {
+            suppressNextMovePath = false;
+            syncFromEngineState();
+            refreshGameUi();
+            ui->combatLogLabel->setText("No path to that tile.");
+            playSfx("assets/audio/sfx_error.wav");
+        }
+        return;
+    }
+
     startMovePlayback(backendPath, targetRow, targetColumn);
 }
 
@@ -274,7 +294,7 @@ void MainWindow::startMovePlayback(const QVector<QPoint> &backendPath, int targe
     playerColumn = start.y();
     ui->combatLogLabel->setText(QString("Moving to %1,%2.").arg(targetColumn).arg(targetRow));
     refreshGameUi();
-    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
+    QTimer::singleShot(movePlaybackIntervalMs(), this, &MainWindow::advanceMovePlayback);
 }
 
 void MainWindow::advanceMovePlayback()
@@ -308,7 +328,23 @@ void MainWindow::advanceMovePlayback()
     ++activeMovePathIndex;
     playSfx("assets/audio/sfx_move.wav");
     refreshGameUi();
-    QTimer::singleShot(115, this, &MainWindow::advanceMovePlayback);
+    QTimer::singleShot(movePlaybackIntervalMs(), this, &MainWindow::advanceMovePlayback);
+}
+
+int MainWindow::movePlaybackIntervalMs() const
+{
+    if (!ui || !ui->animationSpeedComboBox) {
+        return 115;
+    }
+
+    switch (ui->animationSpeedComboBox->currentIndex()) {
+    case 1:
+        return 55;
+    case 2:
+        return 0;
+    default:
+        return 115;
+    }
 }
 
 bool MainWindow::moveThroughEngine(int targetRow, int targetColumn)
