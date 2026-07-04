@@ -62,6 +62,7 @@ private:
     void selectStage(int levelIndex);
     bool isLevelUnlocked(int levelIndex) const;
     bool isLevelCleared(int levelIndex) const;
+    void showBeginnerTipsIntro();
     void resetLevel();
     void undo();
 
@@ -131,6 +132,7 @@ private:
     QPushButton *undoRunButton = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
+    QPushButton *beginnerTipsButton = nullptr;
     QWidget *mainMenuButtonBar = nullptr;
     QMediaPlayer *bgmPlayer = nullptr;
     QAudioOutput *bgmAudioOutput = nullptr;
