@@ -1,0 +1,509 @@
+{
+    "map_width": 15,
+    "map_height": 15,
+    "level_type": "simple",
+    "special_tags": [
+        "discard_drops",
+        "no_discard",
+        "bundle_pick",
+        "friendly_boss",
+        "skip_on_full"
+    ],
+    "bag_size": 2,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "monster_Helper",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_B1",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "start",
+            ".",
+            ".",
+            "chest_R1",
+            ".",
+            ".",
+            "monster_R1",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_R2",
+            ".",
+            ".",
+            "#",
+            "#",
+            "monster_B1",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "chest_G1",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "monster_RB1",
+            ".",
+            "boss",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_B2",
+            ".",
+            ".",
+            "#",
+            "#",
+            "monster_G1",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "monster_GB1",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_G2",
+            "#"
+        ],
+        [
+            "#",
+            "chest_G3",
+            "chest_B3",
+            "monster_GB2",
+            ".",
+            "chest_GB1",
+            ".",
+            ".",
+            "monster_RG1",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_R3",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+    ],
+    "clue_count": 0,
+    "clues": {},
+    "chest_count": 10,
+    "chests": {
+        "chest_B1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B1": "continue;"
+            }
+        },
+        "chest_R1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R1": "int* p"
+            }
+        },
+        "chest_R2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R2": "int* p"
+            }
+        },
+        "chest_G1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G1": "a + b"
+            }
+        },
+        "chest_B2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B2": "continue;"
+            }
+        },
+        "chest_G2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G2": "a + b"
+            }
+        },
+        "chest_G3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G3": "a * b"
+            }
+        },
+        "chest_B3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B3": "return a;"
+            }
+        },
+        "chest_GB1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G4": "a + b",
+                "block_B4": "break;"
+            }
+        },
+        "chest_R3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R3": "size_t n"
+            }
+        }
+    },
+    "monster_count": 8,
+    "monsters": {
+        "monster_Helper": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "Helper",
+            "type": "function",
+            "code": "In the next series of levels, there are some special mechanics:\n\n  - You cannot discard code blocks.\n  - Monsters do not drop code blocks.\n  - You must pick up all blocks from a chest at once.\n  - If your bag doesn't have enough capacity, you can skip the chest — even forced ones.\n  - The boss is friendly; touching her wins the level.",
+            "spaces": {}
+        },
+        "monster_R1": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "R1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                }
+            }
+        },
+        "monster_B1": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "B1",
+            "type": "function",
+            "code": "int loop() {\n    int a = 1;\n    while (a--) {\n        $space1$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RB1": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_G1": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "G1",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_GB1": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "GB1",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_GB2": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "GB2",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG1": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "RG1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint eval() {\n    int a = 1, b = 2;\n    return $space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "",
+        "input": "",
+        "output": "",
+        "spaces": {}
+    },
+    "start": [
+        2,
+        2
+    ],
+    "end_text": "Congrats!"
+}

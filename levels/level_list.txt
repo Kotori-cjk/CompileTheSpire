@@ -1,0 +1,32 @@
+# Normal stages are loaded in this order.
+level_01_grade_stats.json
+level_02_text_palindrome.json
+level_03_expression_eval.json
+level_04_date.json
+level_05_fraction.json
+level_06_bank_accounts.json
+level_07_complex_ops.json
+level_08_vector_lite.json
+level_09_inventory_lifecycle.json
+level_10_shape_area.json
+level_11_pet_shop.json
+level_12_skill_system.json
+level_13_task_scheduler.json
+level_14_disjoint_set.json
+level_15_maze_bfs.json
+level_16_course_ranking.json
+level_17_mini_interpreter.json
+level_18_battle_simulator.json
+
+# EX stages are loaded after normal stages.
+Extra-1.json
+Extra-2.json
+Extra-3.json
+Extra-4.json
+Extra-5.json
+Extra-6.json
+Extra-7.json
+Extra-8.json
+Extra-9.json
+Extra-10.json
+Extra-Final.json

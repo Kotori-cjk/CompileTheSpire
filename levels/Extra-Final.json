@@ -1,0 +1,920 @@
+{
+    "map_width": 13,
+    "map_height": 13,
+    "level_type": "simple",
+    "special_tags": [
+        "no_discard",
+        "friendly_boss"
+    ],
+    "collapse": {
+        "*": [[1, 1], [1, 3]],
+        "chest_sp1": [],
+        "chest_sp2": [],
+        "clue_2": [[1, 2], [10, 11], [12, 11]]
+    },
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_FGn1",
+            "monster_delT*2_3",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "chest_sp2",
+            "monster_Chtholly",
+            "chest_sp1",
+            "#",
+            "chest_T3*1",
+            "#",
+            "monster_A3",
+            "chest_F1",
+            ".",
+            ".",
+            "monster_delany*3_1",
+            "#"
+        ],
+        [
+            "#",
+            "chest_AB1",
+            "start",
+            "chest_A1",
+            "chest_C2*2",
+            ".",
+            "monster_B1",
+            ".",
+            "#",
+            "monster_B2",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "chest_B1",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "chest_T2*2",
+            ".",
+            "#",
+            "monster_delany*2_1",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "monster_A4",
+            ".",
+            ".",
+            ".",
+            ".",
+            "chest_Tr1",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "monster_A1",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "chest_Z2",
+            "#"
+        ],
+        [
+            "chest_A3",
+            "chest_T1*2",
+            ".",
+            "#",
+            ".",
+            "#",
+            "chest_Z1",
+            "#",
+            "monster_B3",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "monster_delany*3_2",
+            "#",
+            ".",
+            ".",
+            ".",
+            "monster_F1",
+            "#",
+            ".",
+            ".",
+            "monster_delT*2_1",
+            "#",
+            "clue_2"
+        ],
+        [
+            "#",
+            "chest_Tr3",
+            "chest_G2",
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_A2",
+            "monster_G1",
+            "#",
+            "monster_Special3"
+        ],
+        [
+            "#",
+            ".",
+            "monster_F2",
+            "#",
+            ".",
+            "#",
+            "monster_delany*3_3",
+            "#",
+            "monster_delany*3_5",
+            "#",
+            "monster_G2",
+            "#",
+            "clue_1"
+        ],
+        [
+            "#",
+            "#",
+            "monster_delany*3_4",
+            "#",
+            ".",
+            ".",
+            "chest_Tr2",
+            ".",
+            "chest_Tr4",
+            "monster_delT*2_2",
+            "monster_Z1",
+            "monster_Special1",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "monster_A2",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            "monster_Z4",
+            "boss",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "monster_F3",
+            ".",
+            "monster_Z3",
+            ".",
+            "monster_Z2",
+            "monster_Special2",
+            "#"
+        ]
+    ],
+    "clue_count": 2,
+    "clues": {
+        "clue_2": "对不起，我也绝对、无法得到幸福了。\n因为，我已经发现了。我、其实、早就已经被幸福包围了。\n我曾经发誓要永远和他在一起，能够如此发誓，让我无比幸福。\n我曾经发誓要永远和她在一起，能够如此发誓，让我心获安详。\n我曾经以为自己喜欢这个人。\n我曾经觉得自己非常珍视她。\n能有如此感受，让我无比幸福。\n能有如此感受，让我无比喜悦。\n他曾经对我说：我一定会让你幸福。\n我曾经对她说：我一定会让你幸福。\n能听到他那样说，让我无比幸福。\n能够对她那么说，让我心获满足。\n那个人，分了这么多的幸福给我。\n我从她那，得到了这么多的东西，可是，我却...\n所以，我敢肯定...现在的我...不管别人怎么说，都一定是世界上最幸福的女孩。",
+        "clue_1": "Are you going to Scarborough Fair?\nParsley, sage, rosemary and thyme\nRemember me to one who lives there\nHe once was a true love of mine\n\nTell him to make me a cambric shirt\nParsley, sage, rosemary and thyme\nWithout no seams nor needlework\nThen he'll be a true love of mine\n\nTell him to find me an acre of land\nParsley, sage, rosemary and thyme\nBetween the salt water and the sea strand\nThen he'll be a true love of mine\n\nAre you going to Scarborough Fair?"
+    },
+    "chest_count": 20,
+    "chests": {
+        "chest_FGn1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G1": "Flandre++;",
+                "block_F2": "Remilia++;"
+            }
+        },
+        "chest_sp2": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_sp2": "unsigned int Chtholly(unsigned int& x){\n\tx+=William(++x);\n\treturn x;\n}"
+            }
+        },
+        "chest_sp1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_sp1": "unsigned int Chtholly(unsigned int& x);"
+            }
+        },
+        "chest_T3*1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_T4": "Kaguya++;"
+            }
+        },
+        "chest_F1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_F1": "Remilia++;"
+            }
+        },
+        "chest_AB1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_A2": "Reimu++;",
+                "block_B2": "Marisa++;"
+            }
+        },
+        "chest_A1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_A1": "Reimu++;"
+            }
+        },
+        "chest_C2*2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_C2": "Alice++;",
+                "block_C3": "Alice++;"
+            }
+        },
+        "chest_B1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B1": "Marisa++;"
+            }
+        },
+        "chest_T2*2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_T2": "Kaguya++;",
+                "block_T3": "Kaguya++;"
+            }
+        },
+        "chest_Tr1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_tr1": "Parsee++;"
+            }
+        },
+        "chest_Z2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_Z2": "Sakuya++;"
+            }
+        },
+        "chest_A3": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_A4": "Reimu++;"
+            }
+        },
+        "chest_T1*2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_T1": "Kaguya++;",
+                "block_T5": "Kaguya++;"
+            }
+        },
+        "chest_Z1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_Z1": "Sakuya++;"
+            }
+        },
+        "chest_Tr3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_tr3": "Parsee++;"
+            }
+        },
+        "chest_G2": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G2": "Flandre++;"
+            }
+        },
+        "chest_A2": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_A3": "Reimu++;"
+            }
+        },
+        "chest_Tr2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_tr2": "Parsee++;"
+            }
+        },
+        "chest_Tr4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_tr4": "Parsee++;"
+            }
+        }
+    },
+    "monster_count": 29,
+    "monsters": {
+        "monster_delT*2_3": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "T",
+            "type": "function",
+            "code": "int Kaguya=0;\n$space1$\n$space2$",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                }
+            }
+        },
+        "monster_Chtholly": {
+            "pic": "assets/chtholly.png",
+            "nickname": "Mystery Girl",
+            "name": "monster_Chtholly",
+            "type": "function",
+            "code": "Somebody says the author is a crazy Touhou fan.\nYou can't discard any block in this level.\nThis friendly boss don't need any block to defeat.\nTwo chests around me are the key to special content.\nTake them will decrease your max bagsize by 2.\nAfter taking any block they will collapse.\n\n$clue_1$\n\n$clue_2$",
+            "spaces": {}
+        },
+        "monster_A3": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "A",
+            "type": "function",
+            "code": "int reimu(){\n\tint Reimu=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_A"
+                    ]
+                }
+            }
+        },
+        "monster_delany*3_1": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n\t{$space3$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space3": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_B1": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "B",
+            "type": "function",
+            "code": "int marisa(){\n\tint Marisa=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_B"
+                    ]
+                }
+            }
+        },
+        "monster_B2": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "B",
+            "type": "function",
+            "code": "int marisa(){\n\tint Marisa=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_B"
+                    ]
+                }
+            }
+        },
+        "monster_delany*2_1": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_A4": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "A",
+            "type": "function",
+            "code": "int reimu(){\n\tint Reimu=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_A"
+                    ]
+                }
+            }
+        },
+        "monster_A1": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "A",
+            "type": "function",
+            "code": "int reimu(){\n\tint Reimu=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_A"
+                    ]
+                }
+            }
+        },
+        "monster_B3": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "B",
+            "type": "function",
+            "code": "int marisa(){\n\tint Marisa=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_B"
+                    ]
+                }
+            }
+        },
+        "monster_delany*3_2": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n\t{$space3$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space3": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_F1": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "F",
+            "type": "function",
+            "code": "int remilia(){\n\tint Remilia=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_F"
+                    ]
+                }
+            }
+        },
+        "monster_delT*2_1": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "T",
+            "type": "function",
+            "code": "int Kaguya=0;\n$space1$\n$space2$",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                }
+            }
+        },
+        "monster_G1": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "G",
+            "type": "function",
+            "code": "int flandre(){\n\tint Flandre=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_G"
+                    ]
+                }
+            }
+        },
+        "monster_Special3": {
+            "pic": "assets/chtholly.png",
+            "nickname": "Mystery Girl",
+            "name": "sp2",
+            "type": "function",
+            "code": "#include<iostream>\n$space1$\n$space2$\nsigned main(){\n\tunsigned int a=0;\n\tstd::cin>>a;\n\tstd::cout<<Chtholly(a);\n\treturn 0;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "find",
+                    "val": [
+                        "sp1[block_sp1]"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "sp2"
+                    ]
+                }
+            }
+        },
+        "monster_F2": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "F",
+            "type": "function",
+            "code": "int remilia(){\n\tint Remilia=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_F"
+                    ]
+                }
+            }
+        },
+        "monster_delany*3_3": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n\t{$space3$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space3": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_delany*3_5": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n\t{$space3$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space3": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_G2": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "G",
+            "type": "function",
+            "code": "int flandre(){\n\tint Flandre=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_G"
+                    ]
+                }
+            }
+        },
+        "monster_delany*3_4": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "del",
+            "type": "function",
+            "code": "{\n\tint Reimu=0,Marisa=0,Alice=0;\n\tint Remilia=0,Flandre=0,Sakuya=0;\n\tint Kaguya=0;\n\t{$space1$}\n\t{$space2$}\n\t{$space3$}\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                },
+                "space3": {
+                    "type": "regex",
+                    "val": [
+                        "^(?!.*(?:tr|sp)).*$"
+                    ]
+                }
+            }
+        },
+        "monster_delT*2_2": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "T",
+            "type": "function",
+            "code": "int Kaguya=0;\n$space1$\n$space2$",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_T"
+                    ]
+                }
+            }
+        },
+        "monster_Z1": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "Z",
+            "type": "function",
+            "code": "int sakuya(){\n\tint Sakuya=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_Z"
+                    ]
+                }
+            }
+        },
+        "monster_Special1": {
+            "pic": "assets/chtholly.png",
+            "nickname": "Mystery Girl",
+            "name": "sp1",
+            "type": "function",
+            "code": "$space1$\nunsigned int Cirno(unsigned int&&x){\n\treturn Chtholly(--x)+(bool)9;\n}\nunsigned int William(unsigned int& x){\n\tif(x>99){\n\t\treturn x*9+9;\n\t}\n\tif(x>5){\n\t\treturn Cirno(Chtholly(x));\n\t}\n\tx+=2;\n\treturn x;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_sp1"
+                    ]
+                }
+            }
+        },
+        "monster_A2": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "A",
+            "type": "function",
+            "code": "int reimu(){\n\tint Reimu=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_A"
+                    ]
+                }
+            }
+        },
+        "monster_Z4": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "Z",
+            "type": "function",
+            "code": "int sakuya(){\n\tint Sakuya=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_Z"
+                    ]
+                }
+            }
+        },
+        "monster_F3": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "F",
+            "type": "function",
+            "code": "int remilia(){\n\tint Remilia=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_F"
+                    ]
+                }
+            }
+        },
+        "monster_Z3": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "Z",
+            "type": "function",
+            "code": "int sakuya(){\n\tint Sakuya=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_Z"
+                    ]
+                }
+            }
+        },
+        "monster_Z2": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "Z",
+            "type": "function",
+            "code": "int sakuya(){\n\tint Sakuya=0;\n\treturn $space1$;\n}\n",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_Z"
+                    ]
+                }
+            }
+        },
+        "monster_Special2": {
+            "pic": "assets/chtholly.png",
+            "nickname": "Mystery Girl",
+            "name": "sp1",
+            "type": "function",
+            "code": "$space1$\nunsigned int Cirno(unsigned int&&x){\n\treturn Chtholly(--x)+(bool)9;\n}\nunsigned int William(unsigned int& x){\n\tif(x>99){\n\t\treturn x*9+9;\n\t}\n\tif(x>5){\n\t\treturn Cirno(Chtholly(x));\n\t}\n\tx+=2;\n\treturn x;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_sp1"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "",
+        "input": "",
+        "output": "",
+        "spaces": {}
+    },
+    "start": [
+        2,
+        2
+    ],
+    "end_text": "在太阳西斜的这个世界里，置身天上之森。等这场战争结束之后，不归之人与望眼欲穿的众人， 人人本着正义之名，长存不灭的过去、逐渐消逝的未来。我回来了，纵使日薄西山，即便看不到未来，此时此刻的光辉，盼君勿忘。-----世界上最幸福的女孩"
+}

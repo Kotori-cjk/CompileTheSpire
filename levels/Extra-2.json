@@ -1,0 +1,267 @@
+{
+    "map_width": 10,
+    "map_height": 10,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 2,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "clue_6",
+            "#"
+        ],
+        [
+            "#",
+            "start",
+            ".",
+            ".",
+            "chest_1",
+            ".",
+            "clue_2",
+            "#",
+            "clue_1",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "chest_2",
+            "#",
+            "#",
+            "monster_1",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "clue_3",
+            ".",
+            "chest_3",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "monster_2",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "clue_4",
+            ".",
+            "#",
+            ".",
+            ".",
+            "monster_4",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "monster_3",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "chest_4",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "clue_5",
+            ".",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            "boss",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+    ],
+    "clue_count": 6,
+    "clues": {
+        "clue_6": "I love Flandre too, she's cute.",
+        "clue_2": "My name is Alice",
+        "clue_1": "I love Remilia.",
+        "clue_3": "a=\"3+4i\"; a.Print();\na=\"5+6i\"; a.Print();",
+        "clue_4": "You can't get clues behind me.\nIt's useless.",
+        "clue_5": "Nice to meet you!"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_strcon": "Complex(char* s){\n\t\tr=s[0]-'0';\n\t\ti=s[2]-'0';\n\t}",
+                "block_emptycon": "Complex(){}"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_intcon": "Complex(int a=0,int b=0):r(a),i(b){}"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_funnyi": "int funny=1;",
+                "block_funnys": "string funny=\"funny\";"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_namesapce": "using namespace std;"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "trivial",
+            "type": "function",
+            "code": "I'm another helper.\nThere are some informations you found.\n$clue_2$\n$clue_5$\n$clue_4$",
+            "spaces": {}
+        },
+        "monster_2": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "class",
+            "type": "class",
+            "code": "class Complex{\npublic:\n    int r,i;\n    void Print() {\n        cout<<r<<\"+\"<<i<<\"i\"<<' ';\n    }\n    $space1$\n\t$space2$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "^((?!namespace).)*$"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "^((?!namespace).)*$"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "useless",
+            "type": "function",
+            "code": "int fun(){\n\t$space_1$\n\treturn funny;\n}",
+            "spaces": {
+                "space_1": {
+                    "type": "find",
+                    "val": [
+                        "funnyi"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "funnier",
+            "type": "function",
+            "code": "using namespace std;\n$space1$\nint funnier(){\n\treturn fun();\t\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "useless[block_funnyi]"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "#include<iostream>\n$space_namespace$\n$space_class$\nint main(){\n    Complex a;\n    $clue_3$\n    return 0;\n}",
+        "input": "无",
+        "output": "3+4i 5+6i",
+        "spaces": {
+            "space_class": {
+                "type": "match",
+                "val": [
+                    "class[block_intcon,block_strcon]",
+                    "class[block_strcon,block_intcon]",
+                    "class[block_strcon,block_emptycon]",
+                    "class[block_emptycon,block_strcon]"
+                ]
+            },
+            "space_namespace": {
+                "type": "find",
+                "val": [
+                    "namespace",
+                    "funnier"
+                ]
+            }
+        }
+    },
+    "start": [
+        1,
+        1
+    ],
+    "end_text": "It seems like extra levels are easy, glhf~"
+}

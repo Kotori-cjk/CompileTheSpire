@@ -5,6 +5,7 @@
 #include "leveldata.h"
 
 #include <QAudioOutput>
+#include <QByteArray>
 #include <QLabel>
 #include <QMediaPlayer>
 #include <QMainWindow>
@@ -63,6 +64,8 @@ private:
     bool isLevelUnlocked(int levelIndex) const;
     bool isLevelCleared(int levelIndex) const;
     void showBeginnerTipsIntro();
+    void unlockAllStagesForTesting();
+    void restoreStageLocksAfterTesting();
     void resetLevel();
     void undo();
 
@@ -108,6 +111,7 @@ private:
     int playerColumn = 0;
     QStringList bagBlocks;
     QMap<QString, CodeBlock> knownCodeBlocks;
+    QVector<QPushButton *> stageNodeButtons;
     QSet<QString> collectedClues;
     QSet<QString> openedChests;
     QSet<QString> defeatedMonsters;
@@ -133,10 +137,15 @@ private:
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
     QPushButton *beginnerTipsButton = nullptr;
+    QPushButton *unlockAllStagesButton = nullptr;
+    QPushButton *restoreStageLocksButton = nullptr;
     QWidget *mainMenuButtonBar = nullptr;
     QMediaPlayer *bgmPlayer = nullptr;
     QAudioOutput *bgmAudioOutput = nullptr;
     QMap<QString, QSoundEffect *> sfxEffects;
+    QByteArray testUnlockSaveBackup;
+    bool testUnlockBackupCaptured = false;
+    bool testUnlockBackupHadSave = false;
 };
 
 #endif // MAINWINDOW_H
