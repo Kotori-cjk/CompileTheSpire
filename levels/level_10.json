@@ -1,0 +1,267 @@
+{
+    "map_width": 8,
+    "map_height": 8,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            "clue_1",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            "clue_4"
+        ],
+        [
+            ".",
+            "#",
+            "chest_1",
+            ".",
+            "#",
+            ".",
+            "#",
+            "clue_3"
+        ],
+        [
+            "#",
+            "chest_2",
+            ".",
+            "#",
+            "#",
+            ".",
+            "clue_2",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "chest_3",
+            "#",
+            "#",
+            "#",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            "#",
+            "monster_2",
+            ".",
+            ".",
+            "chest_4"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "monster_4"
+        ],
+        [
+            ".",
+            "#",
+            "monster_3",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "monster_1",
+            "#",
+            ".",
+            ".",
+            "clue_5",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 5,
+    "clues": {
+        "clue_1": "Shape area\nyou know, Circle and Rectangle are both types of Shape.",
+        "clue_4": "I told you that.",
+        "clue_3": "There’s nothing here. Stop looking any further.",
+        "clue_2": "Sample input:\n2\nC 1\nR 2 3\n\nSample output:\n9.14",
+        "clue_5": "for (int i = 0; i < n; ++i) {\n        char type;\n        cin >> type;\n        if (type == 'C') {\n            double r;\n            cin >> r;\n            shapes.push_back(new Circle(r));\n        } else {\n            double w, h;\n            cin >> w >> h;\n            shapes.push_back(new Rectangle(w, h));\n        }\n    }"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_10_dtor_virtual": "virtual ~Shape() {}",
+                "block_10_dtor_plain": "~Shape() {}",
+                "block_10_area_pure": "virtual double area() const = 0;",
+                "block_10_area_plain": "double area() const { return 0; }"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_10_circle_ctor": "Circle(double r): radius(r) {}",
+                "block_10_circle_area_ok": "return 3.141592653589793 * radius * radius;",
+                "block_10_circle_area_alt": "return 2 * 3.141592653589793 * radius;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_10_rect_ctor": "Rectangle(double w, double h): width(w), height(h) {}",
+                "block_10_rect_area_ok": "return width * height;",
+                "block_10_rect_area_alt": "return width + height;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_10_total_sig_ok": "double totalArea(const vector<Shape*>& shapes) {",
+                "block_10_total_sig_alt": "double totalArea(const vector<Shape> shapes) {",
+                "block_10_total_loop_ok": "double sum = 0;\n    for (size_t i = 0; i < shapes.size(); ++i) sum += shapes[i]->area();\n    return sum;",
+                "block_10_total_loop_alt": "double sum = 0;\n    for (size_t i = 0; i < shapes.size(); ++i) sum += shapes[i].area();\n    return sum;"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "CircleArea",
+            "type": "class",
+            "code": "class Circle: public Shape {\nprivate:\n    double radius;\npublic:\n    $space1$\n    double area() const {\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_10_circle_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_circle_area"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "TotalArea",
+            "type": "function",
+            "code": "$space1$\n    $space2$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_total_sig"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_total_loop"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "RectangleArea",
+            "type": "class",
+            "code": "class Rectangle: public Shape {\nprivate:\n    double width, height;\npublic:\n    $space1$\n    double area() const {\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_10_rect_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_rect_area"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "ShapeBase",
+            "type": "class",
+            "code": "class Shape {\npublic:\n\t// your destructor\n    $space1$\n\t// your area\n    $space2$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_dtor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_10_area"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Shape area Boss",
+        "code": "#include <cmath>\n#include <iomanip>\n#include <iostream>\n#include <vector>\nusing namespace std;\n\n//your Shape\n$space_1$\n\n//your Circle\n$space_2$\n\n//your Rectangle\n$space_3$\n// your total_area\n$space_4$\n\nint main() {\n    int n; cin >> n;\n    vector<Shape*> shapes;\n    $clue_5$\n    cout << fixed << setprecision(2) << totalArea(shapes) << '\\n';\n    for (size_t i = 0; i < shapes.size(); ++i) delete shapes[i];\n    return 0;\n}\n",
+        "input": "2\nC 1\nR 2 3",
+        "output": "9.14",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "ShapeBase[block_10_dtor_virtual,block_10_area_pure]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "CircleArea[block_10_circle_ctor,block_10_circle_area_ok]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "RectangleArea[block_10_rect_ctor,block_10_rect_area_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "TotalArea[block_10_total_sig_ok,block_10_total_loop_ok]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

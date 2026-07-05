@@ -29,6 +29,7 @@ public:
     QStringList unfilledSpaces()const;
     QMap<QString,CodeBlock> filledCodes()const;
     bool submitBlock(const Space& space,CodeBlock& blockId);
+    bool unfill(const QString& spaceId);
     bool isFilled(const QString& spaceId);
     bool isFilled(const Space& space);
     CombatResult submitCombat();

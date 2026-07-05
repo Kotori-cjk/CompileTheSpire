@@ -99,7 +99,7 @@ QVector<QPoint> GameMap::findPath(int tarX,int tarY,bool* success){
         }
         for(int i=0;i<4;i++){
             int xx=u.x+dx[i],yy=u.y+dy[i];
-            if(xx>=0&&xx<levelData->mapHeight&&yy>=0&&yy<levelData->mapWidth&&moveAccessibility(u.x,u.y)&&canGoIn(xx,yy)&&!vis[xx][yy]){
+            if(xx>=0&&xx<levelData->mapHeight&&yy>=0&&yy<levelData->mapWidth&&(u.x==playerX&&u.y==playerY||moveAccessibility(u.x,u.y))&&canGoIn(xx,yy)&&!vis[xx][yy]){
                 vis[xx][yy]=1;
                 node nxt(xx,yy);
                 nxt.moves=u.moves;
@@ -189,6 +189,12 @@ QPoint GameMap::prevPos()const{
 bool GameMap::ifDefeated(const QString& monsterId)const{
     QPoint pos=levelData->monsters[monsterId].pos;
     return cleared[pos.x()][pos.y()];
+}
+QString GameMap::defeatedCode(const QString& monsterId)const{
+    return defeatedCodes.value(monsterId);
+}
+void GameMap::setDefeatedCode(const QString& monsterId,const QString& code){
+    defeatedCodes[monsterId]=code;
 }
 QVector<Monster> GameMap::monsterLeft()const{
     QVector<Monster>ret;

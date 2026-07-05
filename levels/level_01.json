@@ -1,0 +1,176 @@
+{
+    "map_width": 5,
+    "map_height": 5,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 4,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            "#",
+            "monster_4",
+            "."
+        ],
+        [
+            "clue_1",
+            ".",
+            "#",
+            "boss",
+            "."
+        ],
+        [
+            "monster_1",
+            "clue_2",
+            "#",
+            "#",
+            "."
+        ],
+        [
+            "monster_2",
+            ".",
+            "clue_4",
+            ".",
+            "monster_3"
+        ],
+        [
+            "#",
+            "chest_1",
+            "#",
+            "clue_3",
+            "chest_2"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_1": "Hello, I’m the teacher Alice. Could you help me enter and organize our class’s grades?",
+        "clue_2": "What happened to this fucking world? Why did Alice become a teacher?",
+        "clue_4": "vector<int> scores = readScores(n);\n    cout << fixed << setprecision(2) << averageScore(scores) << '\\n';\n    cout << countPassed(scores) << '\\n';\n    cout << highestScore(scores) << '\\n';",
+        "clue_3": "I hope my math grade can be bumped up to 60 so I can pass.\n"
+    },
+    "chest_count": 2,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_input": "for (int i = 0; i < n; ++i) cin >> scores[i];",
+                "block_average_1": "return scores.empty() ? 0.0 : sum / scores.size();",
+                "block_average_2": "return scores.empty() ? 0.0 : 1.0 * sum / scores.size();"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_if_1": "if (x >= 60) ++cnt;",
+                "block_if_2": "if (x > 60) ++cnt;",
+                "block_highest_1": "return scores.empty() ? 0 : max_element(scores.begin(), scores.end());",
+                "block_highest_2": "return scores.empty() ? 0 : *max_element(scores.begin(), scores.end());"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "highestScore",
+            "type": "function",
+            "code": "int highestScore(const vector<int>& scores) {\n    $space_1$\n}",
+            "spaces": {
+                "space_1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_highest"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "readScores",
+            "type": "function",
+            "code": "vector<int> readScores(int n) {\n    vector<int> scores(n);\n    $space1$\n    return scores;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_input"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "averageScore",
+            "type": "function",
+            "code": "double averageScore(const vector<int>& scores) {\n    int sum = 0;\n    for (int x : scores) sum += x;\n    $space1$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_average"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "countPassed",
+            "type": "function",
+            "code": "int countPassed(const vector<int>& scores) {\n    int cnt = 0;\n    for (int x : scores) {\n        $space_1$\n    }\n    return cnt;\n}",
+            "spaces": {
+                "space_1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_if"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "jabberwock",
+        "code": "#include <algorithm>\n#include <iomanip>\n#include <iostream>\n#include <vector>\nusing namespace std;\n\n//Your readScores\n$space_1$\n//Your averageScore\n$space_2$\n//Your countPassed\n$space_3$\n//Your highestScore\n$space_4$\n\nint main() {\n    int n;\n    cin >> n;\n    $clue_4$\n    return 0;\n}\n",
+        "input": "5 90 59 60 100 71",
+        "output": "76.00\n4\n100",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "readScores[block_input]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "averageScore[block_average_2]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "countPassed[block_if_1]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "highestScore[block_highest_2]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

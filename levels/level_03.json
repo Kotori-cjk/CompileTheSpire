@@ -1,0 +1,163 @@
+{
+    "map_width": 5,
+    "map_height": 5,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 5,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            "clue_1",
+            ".",
+            "chest_1"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "clue_2",
+            "chest_2"
+        ],
+        [
+            "chest_4",
+            ".",
+            ".",
+            "clue_3",
+            "monster_1"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "clue_4",
+            "monster_2",
+            ".",
+            "chest_3",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_1": "Expression evaluator\n+ - *",
+        "clue_2": "Perhaps we should handle the precedence between operators first?\n1+2*3 != (1+2)*3",
+        "clue_3": "int applyOp(int a, int b, char op) {\n    if (op == '+') return a + b;\n    if (op == '-') return a - b;\n    return a * b;\n}",
+        "clue_4": "That’s one massive function."
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_03_priority_1": "int priorityOf(char op) {\n    if (op == '+' || op == '-') return 1;\n    if (op == '*') return 2;\n    return 0;\n}\n",
+                "block_03_priority_2": "int priorityOf(char op) {\n    if (op == '+' || op == '-') return 2;\n    if (op == '*') return 1;\n    return 0;\n}"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_op_1": "int b = values.pop();\n    int a = values.pop();\n    char op = ops.pop();",
+                "block_op_2": "int b = values.top(); values.pop();\n    int a = values.top(); values.pop();\n    char op = ops.top(); ops.pop();"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 4,
+            "blocks": {
+                "block_num_1": "value = value * 10 + expr[i++] - '0';",
+                "block_num_2": "value = value * 10 + expr[++i] - '0';",
+                "block_num_3": "value = value * 10 + int(expr[i++]);",
+                "block_num_4": "value = value * 10 + int(expr[++i]);"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_while_1": "if (!ops.empty() && ops.top() != '(') reduceOnce(values, ops);",
+                "block_while_2": "while (!ops.empty() && ops.top() != '(') reduceOnce(values, ops);"
+            }
+        }
+    },
+    "monster_count": 2,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/marry_ann.png",
+            "nickname": "marry_ann",
+            "name": "reduceOnce",
+            "type": "function",
+            "code": "void reduceOnce(stack<int>& values, stack<char>& ops) {\n    $space1$\n    values.push(applyOp(a, b, op));\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_op"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "evaluate",
+            "type": "function",
+            "code": "int evaluate(const string& expr) {\n    stack<int> values;\n    stack<char> ops;\n    for (size_t i = 0; i < expr.size();) {\n        if (isspace(static_cast<unsigned char>(expr[i]))) {\n            ++i;\n        } else if (isdigit(static_cast<unsigned char>(expr[i]))) {\n            int value = 0;\n            while (i < expr.size() && isdigit(static_cast<unsigned char>(expr[i]))) {\n                $space1$\n            }\n            values.push(value);\n        } else if (expr[i] == '(') {\n            ops.push(expr[i++]);\n        } else if (expr[i] == ')') {\n            $space2$\n            ops.pop();\n            ++i;\n        } else {\n            char op = expr[i++];\n            while (!ops.empty() && priorityOf(ops.top()) >= priorityOf(op)) {\n                reduceOnce(values, ops);\n            }\n            ops.push(op);\n        }\n    }\n    while (!ops.empty()) reduceOnce(values, ops);\n    return values.top();\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_num"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_while"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Expression evaluator Boss",
+        "code": "#include <cctype>\n#include <iostream>\n#include <stack>\n#include <string>\nusing namespace std;\n\n//your priority_of_op\n$space1$\n\n$clue_3$\n\n//your reduceOnce\n$space2$\n\n//your evaluate\n$space3$\n\nint main() {\n    string expr;\n    getline(cin, expr);\n    cout << evaluate(expr) << '\\n';\n    return 0;\n}\n\n",
+        "input": "3+5*2-(4*2)",
+        "output": "5",
+        "spaces": {
+            "space1": {
+                "type": "match",
+                "val": [
+                    "block_03_priority_1"
+                ]
+            },
+            "space2": {
+                "type": "match",
+                "val": [
+                    "reduceOnce[block_op_2]"
+                ]
+            },
+            "space3": {
+                "type": "match",
+                "val": [
+                    "evaluate[block_num_1,block_while_2]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

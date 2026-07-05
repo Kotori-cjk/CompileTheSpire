@@ -1,4 +1,6 @@
 #include "leveldata.h"
+#include<QDebug>
+#include<QMessageBox>
 #include<QVector>
 #include<QString>
 #include<QMap>
@@ -6,7 +8,9 @@
 #include<QJsonObject>
 #include<QJsonArray>
 #include<QFile>
+#include<QFileInfo>
 #include<QDir>
+#include<QTextStream>
 #include<QPoint>
 
 LevelData::LevelData() {}
@@ -14,21 +18,43 @@ LevelData::LevelData() {}
 Synthesis templateBreakdown(QString codeTemplate){
     Synthesis ret;
     ret.cluecnt=ret.spacecnt=0;
+    codeTemplate.replace('\t',"    ");
     QString s=codeTemplate,ss="";
     for(int i=0;i<s.length();i++){
         if(s[i]!='$'){
             ss+=s[i];
             continue;
         }
+        if(i+1>=s.length())break;
         ret.text.append(ss);
         ss="";
         SynthesisCell tmp;
         if(s[i+1]=='c')tmp.type="clue",ret.cluecnt++;
         else tmp.type="space",ret.spacecnt++;
         while(s[++i]!='$'){
-            ss+=s[i];
+            if(i>=s.length())throw QString("unclosed template token: $%1...").arg(ss);
+            QChar ch=s[i];
+            if(!ch.isLetterOrNumber()&&ch!='_'){
+                throw QString("invalid char '%1' in template token '$%2...'").arg(ch).arg(ss);
+            }
+            ss+=ch;
+            if(ss.length()>20){
+                throw QString("template token '$%1...' too long").arg(ss);
+            }
         }
         tmp.id=ss;
+        QString pre=ret.text.isEmpty()?QString():ret.text.last();
+        int lineStart=pre.lastIndexOf('\n');
+        QString linePrefix=lineStart>=0?pre.mid(lineStart+1):pre;
+        bool soleBefore=true;
+        for(int k=0;k<linePrefix.length();k++){
+            if(linePrefix[k]!=' '&&linePrefix[k]!='\t'){soleBefore=false;break;}
+        }
+        if(soleBefore){
+            int j=i+1;
+            while(j<s.length()&&(s[j]==' '||s[j]=='\t'))j++;
+            if(j>=s.length()||s[j]=='\n')tmp.tabCount=linePrefix.length();
+        }
         ret.cell.append(tmp);
         ss="";
     }
@@ -180,24 +206,55 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
     }
     this->boss=boss;
     this->monsters[boss.monsterId]=boss;
+    QFileInfo fi(filePath);
+    this->fileName=fi.baseName();
     return true;
 }
 
-QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors){
+QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors,const QString& listFile){
     QVector<LevelData>levels;
     QDir dir(dirPath);
-    dir.setNameFilters({"*.json"});
-    dir.setSorting(QDir::Name);
-    const auto& files=dir.entryList(QDir::Files);
+    QStringList files;
+    if(!listFile.isEmpty()){
+        QFile lf(dir.absoluteFilePath(listFile));
+        if(!lf.open(QIODevice::ReadOnly|QIODevice::Text)){
+            if(errors)errors->append(QString("Cannot open list file: %1").arg(listFile));
+            return levels;
+        }
+        QTextStream in(&lf);
+        while(!in.atEnd()){
+            QString line=in.readLine().trimmed();
+            if(line.isEmpty()||line.startsWith('#'))continue;
+            if(!line.endsWith(".json")){
+                if(errors)errors->append(QString("Skipped non-JSON: %1").arg(line));
+                continue;
+            }
+            files.append(line);
+        }
+        lf.close();
+    }
+    else{
+        dir.setNameFilters({"*.json"});
+        dir.setSorting(QDir::Name);
+        files=dir.entryList(QDir::Files);
+    }
     for (const auto& file:files){
         QString filePath=dir.absoluteFilePath(file);
         QString errorMsg;
         LevelData data;
-        if(data.LoadFromJson(filePath,&errorMsg)){
-            levels.append(std::move(data));
+        try{
+            if(data.LoadFromJson(filePath,&errorMsg)){
+                levels.append(std::move(data));
+            }
+            else if(errors){
+                errors->append(QString("%1: %2").arg(file,errorMsg));
+            }
         }
-        else if(errors){
-            errors->append(QString("%1: %2").arg(file,errorMsg));
+        catch(const QString& e){
+            QString msg=QString("Failed to load %1: %2").arg(file,e);
+            qDebug()<<msg;
+            QMessageBox::warning(nullptr,"Level Load Error",msg);
+            if(errors)errors->append(msg);
         }
     }
     return levels;

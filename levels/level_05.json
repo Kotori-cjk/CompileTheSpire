@@ -1,0 +1,167 @@
+{
+    "map_width": 6,
+    "map_height": 6,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 4,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            "clue_1",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "chest_1",
+            "#",
+            "monster_1"
+        ],
+        [
+            ".",
+            ".",
+            "monster_2",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "chest_3",
+            "#",
+            "#",
+            "chest_2",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "clue_2"
+        ],
+        [
+            "#",
+            "clue_3",
+            "#",
+            "#",
+            "#",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_1": "Do you know what gcd stands for?",
+        "clue_2": "Sample input:\n1 2 1 3\n\nSample output:\n5/6\n1/6",
+        "clue_3": "Fraction x(a, b), y(c, d);\n    (x + y).print();\n    (x * y).print();"
+    },
+    "chest_count": 3,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 3,
+            "blocks": {
+                "block_05_gcdInt_ok": "while (b != 0) {\n        int t = a % b;\n        a = b;\n        b = t;\n    }\n\treturn a == 0 ? 1 : a;",
+                "block_05_gcdInt_alt1": "while (b != 0) {\n        int t = a % b;\n        a = b;\n        b = t;\n    }\n    return a == 1 ? 1 : a;",
+                "block_05_gcdInt_alt2": "while (b != 0) {\n        int t = a % b;\n        a = b;\n        b = t;\n    }\n    return b == 0 ? 1 : b;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_gz": "Fraction(int n = 0, int d = 1): numerator(n), denominator(d) {\n        normalize();\n    }"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_normalize": "void normalize() {\n        if (denominator < 0) {\n            numerator = -numerator;\n            denominator = -denominator;\n        }\n        int g = gcdInt(numerator, denominator);\n        numerator /= g;\n        denominator /= g;\n    }",
+                "block_add_t": "Fraction operator+(const Fraction& other) const {\n        return Fraction(numerator * other.denominator + other.numerator * denominator, denominator * other.denominator);\n    }",
+                "block_add_f": "Fraction operator+(const Fraction& other) const {\n        return Fraction(numerator + other.numerator, denominator + other.denominator);\n    }"
+            }
+        }
+    },
+    "monster_count": 2,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "gcdInt",
+            "type": "function",
+            "code": "int gcdInt(int a, int b) {\n    a = abs(a);\n    b = abs(b);\n\t$space1$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_05_gcdInt"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "Fraction",
+            "type": "class",
+            "code": "class Fraction {\nprivate:\n    int numerator, denominator;\n\n    $space1$\n\npublic:\n    $space2$\n\n    $space3$\n\n    Fraction operator*(const Fraction& other) const {\n        return Fraction(numerator * other.numerator, denominator * other.denominator);\n    }\n\n    void print() const {\n        cout << numerator << '/' << denominator << '\\n';\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_normalize",
+                        "block_add_t",
+                        "block_add_f"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_gz"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_add"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Fraction arithmetic Boss",
+        "code": "#include <cstdlib>\n#include <iostream>\nusing namespace std;\n\n$space_1$\n\n$space_2$\n\nint main() {\n    int a, b, c, d;\n    cin >> a >> b >> c >> d;\n    $clue_3$\n    return 0;\n}",
+        "input": "1 2 1 3",
+        "output": "5/6\n1/6",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "gcdInt[block_05_gcdInt_ok]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "Fraction[block_normalize,block_gz,block_add_t]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}
