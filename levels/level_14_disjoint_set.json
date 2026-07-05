@@ -1,0 +1,293 @@
+{
+    "map_width": 9,
+    "map_height": 9,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "clue_3",
+            "#",
+            "."
+        ],
+        [
+            "clue_1",
+            "#",
+            "chest_2",
+            ".",
+            ".",
+            "#",
+            ".",
+            "monster_3",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            "#",
+            "#",
+            "monster_1",
+            "#",
+            ".",
+            "#",
+            "chest_4"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "chest_1",
+            ".",
+            ".",
+            ".",
+            "clue_2",
+            ".",
+            ".",
+            "#",
+            "monster_4"
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "monster_2",
+            "#",
+            ".",
+            ".",
+            "chest_3",
+            "#",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "monster_5",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_3": "This is a complex algorithm. Maybe we should ask the all-knowing and all-powerful god—AI?",
+        "clue_1": "Disjoint set",
+        "clue_2": "Sample input:\n5 5\nU 1 2\nQ 1 3\nU 2 3\nQ 1 3\nQ 4 5\n\nSample output:\nNO\nYES\nNO"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_14_find_ok": "if (parent[x] != x) parent[x] = findRoot(parent[x]);",
+                "block_14_find_alt": "if (parent[x] != x) return parent[x];",
+                "block_14_return_parent": "return parent[x];",
+                "block_14_return_x": "return x;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_14_connected_ok": "return findRoot(a) == findRoot(b);",
+                "block_14_connected_alt": "return parent[a] == parent[b];"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_14_vec_ok": "parent(n + 1), rankValue(n + 1, 0)",
+                "block_14_vec_alt": "parent(n), rankValue(n, 0)",
+                "block_14_init_ok": "for (int i = 1; i <= n; ++i) parent[i] = i;",
+                "block_14_init_alt": "for (int i = 0; i < n; ++i) parent[i] = 0;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_14_roots_ok": "int ra = findRoot(a), rb = findRoot(b);",
+                "block_14_roots_alt": "int ra = a, rb = b;",
+                "block_14_merge_ok": "if (ra == rb) return;\n        if (rankValue[ra] < rankValue[rb]) parent[ra] = rb;\n        else if (rankValue[ra] > rankValue[rb]) parent[rb] = ra;\n        else {\n            parent[rb] = ra;\n            ++rankValue[ra];\n        }",
+                "block_14_merge_alt": "parent[rb] = ra;"
+            }
+        }
+    },
+    "monster_count": 5,
+    "monsters": {
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "SetMerger",
+            "type": "function",
+            "code": "void unite(int a, int b) {\n        // find representatives before merging\n        $space1$\n        // union by rank\n        $space2$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_roots"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_merge"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "DsuConstructor",
+            "type": "function",
+            "code": "DisjointSet(int n = 0): $space1$ {\n        // initialize each node as its own parent\n        $space2$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_vec"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_init"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "ConnectivityQuery",
+            "type": "function",
+            "code": "bool connected(int a, int b) {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_connected"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "RootFinder",
+            "type": "function",
+            "code": "int findRoot(int x) {\n        // compress the path while finding the root\n        $space1$\n        // return the representative\n        $space2$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_find"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_14_return"
+                    ]
+                }
+            }
+        },
+        "monster_5": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "DisjointSet",
+            "type": "class",
+            "code": "class DisjointSet {\nprivate:\n    vector<int> parent, rankValue;\n\npublic:\n    // constructor\n    $space1$\n\n    // find root\n    $space2$\n\n    // merge two sets\n    $space3$\n\n    // query connectivity\n    $space4$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "DsuConstructor[block_14_vec_ok,block_14_init_ok]"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "RootFinder[block_14_find_ok,block_14_return_parent]"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "SetMerger[block_14_roots_ok,block_14_merge_ok]"
+                    ]
+                },
+                "space4": {
+                    "type": "match",
+                    "val": [
+                        "ConnectivityQuery[block_14_connected_ok]"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Disjoint set Boss",
+        "code": "#include <iostream>\n#include <vector>\nusing namespace std;\n\n$space_1$\n\nint main() {\n    int n, m; cin >> n >> m;\n    DisjointSet ds(n);\n    for (int i = 0; i < m; ++i) { \n\t\tchar op; \n\t\tint a, b; \n\t\tcin >> op >> a >> b; \n\t\tif (op == 'U') ds.unite(a, b); \n\t\telse cout << (ds.connected(a, b) ? \"YES\" : \"NO\") << '\\n'; \n\t\t}\n    return 0;\n}\n",
+        "input": "5 5\nU 1 2\nQ 1 3\nU 2 3\nQ 1 3\nQ 4 5",
+        "output": "NO\nYES\nNO",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "DisjointSet[DsuConstructor[block_14_vec_ok,block_14_init_ok],RootFinder[block_14_find_ok,block_14_return_parent],SetMerger[block_14_roots_ok,block_14_merge_ok],ConnectivityQuery[block_14_connected_ok]]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}
