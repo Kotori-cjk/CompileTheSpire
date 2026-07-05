@@ -59,6 +59,9 @@ bool Combat::submitBlock(const Space& space,CodeBlock& block){
     filledCodesMap[space.spaceId]=block;
     return true;
 }
+bool Combat::unfill(const QString& spaceId){
+    return filledCodesMap.remove(spaceId);
+}
 bool Combat::isFilled(const QString& spaceId){
     return filledCodesMap.contains(spaceId);
 }

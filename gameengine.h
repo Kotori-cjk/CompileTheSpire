@@ -19,13 +19,16 @@ struct GameSnapshot{
     QVector<QVector<int>>cleared;
     QVector<CodeBlock>bagBlocks;
     QMap<QString,QSet<QString>>leftBlocks;
+    QMap<QString,QString>defeatedCodes;
 };
 
 struct LevelMeta{
     int levelIndex;//the id in the vector
     const LevelData* level;
     bool unlocked;
+    bool cleared;
     QString levelType;
+    QString levelName;//filename without .json
 };
 
 class GameEngine:public QObject
@@ -40,6 +43,7 @@ public:
     LevelData* m_level;
     //warn:deal with memory-related operation carefully
     QVector<GameSnapshot>snapshotStack;
+    bool m_locked=false;
 
 signals:
     void levelLoaded();
@@ -47,17 +51,18 @@ signals:
     void combatStarted(QString monsterId,Combat* combat);
     void combatEnded(CombatResult result);
     void clueRevealed(QString clueId,QString monsterId,QString text);
-    void chestEntered(QString chestId);
+    void chestEntered(QString chestId,bool m_locked);
     void forcedMove(QPoint newpos);
     //when forced move(by exit), trigger this and change physical location
     void exitLevel();
     void levelUnlocked(int levelIndex);
+    void moveBlocked(QString reason);
 
 public:
     GameSnapshot getCurrentSnapshot();
     void restoreFromSnapshot(GameSnapshot snapshot);
     GameEngine();
-    void gameInit(QString path);
+    void gameInit(QString path,const QString& listFile="");
     //for develop:look to savemanager to recall the things you should do(Init() in it)
     //call it when game start
     QVector<LevelMeta> levelList();
@@ -72,6 +77,8 @@ public:
     //call these when move by click (with mouse)
     bool fillSpace(const QString& spaceId,const QString& blockId);
     //call it when player fill the space
+    bool unfillSpace(const QString& spaceId);
+    //call it when player remove a block from space
     bool revealClue(const QString& clueId);
     //call it when player trigger a clue
     bool exitChest(const QString& chestId);
@@ -80,6 +87,8 @@ public:
     //if player skip an unforced,it seems that you don't need to call anything
     bool takeFromChest(const QString& chestId,const QString& blockId);
     //call it when player choose a block in chest
+    bool takeBundleFromChest(const QString& chestId);
+    //call it when player confirm bundle pick
     bool exitCombat();
     //for develop:aka endCombat, similar func to exitChest
     //call it when player exit a combat
@@ -88,6 +97,8 @@ public:
     //call it when player submit a combat
     QVector<CodeBlock> bagBlocks();
     //call it to get blocks in bag
+    bool discardBlock(const QString& blockId);
+    //call it when player discard a block, push snapshot
     monsterClueDetail getMonsterDetail(const QString& monsterId);
     //call it to get monster detail, struct in gamemap.h, use it with templateBreakdown() thanks meow
     //btw, when in combat, you may combine two method to deal with the esapes(another is filling state in combat.h)

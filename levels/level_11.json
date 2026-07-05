@@ -1,0 +1,292 @@
+{
+    "map_width": 9,
+    "map_height": 9,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 5,
+    "map_grid": [
+        [
+            "start",
+            "clue_1",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "chest_1",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "monster_1"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "clue_3",
+            ".",
+            ".",
+            "monster_2",
+            "clue_2",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_2"
+        ],
+        [
+            "monster_4",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "chest_4",
+            "#",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "chest_3",
+            "monster_3",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "clue_4",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_1": "Pet shop\nIt sounds like there are many pets making noises here.",
+        "clue_3": "I feel like this world is gradually expanding.",
+        "clue_2": "Sample input:\n2\nD Max\nC Luna\n\nSample output:\nMax:woof\nLuna:meow",
+        "clue_4": "for (int i = 0; i < n; ++i) {\n        char type;\n        string name;\n        cin >> type >> name;\n        if (type == 'D') animals.push_back(new Dog(name));\n        else animals.push_back(new Cat(name));\n    }"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_11_ctor": "Animal(const string& animalName): name(animalName) {}",
+                "block_11_dtor_virtual": "virtual ~Animal() {}",
+                "block_11_dtor_plain": "~Animal() {}",
+                "block_11_speak_pure": "virtual string speak() const = 0;",
+                "block_11_speak_bad": "string speak() const { return name; }"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_11_dog_ctor": "Dog(const string& animalName): Animal(animalName) {}",
+                "block_11_dog_speak_ok": "return name + \":woof\";",
+                "block_11_dog_speak_alt": "return \"dog:woof\";"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_11_speakall_sig_ok": "void speakAll(const vector<Animal*>& animals) {",
+                "block_11_speakall_sig_alt": "void speakAll(const vector<Animal>& animals) {",
+                "block_11_speakall_body_ok": "for (size_t i = 0; i < animals.size(); ++i) {\n        cout << animals[i]->speak() << '\\n';\n    }",
+                "block_11_speakall_body_alt": "for (size_t i = 0; i < animals.size(); ++i) {\n        cout << animals[i].speak() << '\\n';\n    }"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_11_cat_ctor": "Cat(const string& animalName): Animal(animalName) {}",
+                "block_11_cat_speak_ok": "return name + \":meow\";",
+                "block_11_cat_speak_alt": "return \"cat:meow\";"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "AnimalBase",
+            "type": "class",
+            "code": "class Animal {\nprotected:\n    string name;\npublic:\n\t//constructor\n    $space1$\n\t//destructor\n    $space2$\n\t//speak\n    $space3$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_11_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_dtor"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_speak"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "DogClass",
+            "type": "class",
+            "code": "class Dog: public Animal {\npublic:\n    $space1$\n    string speak() const {\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_11_dog_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_dog_speak"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "SpeakAll",
+            "type": "function",
+            "code": "$space1$\n    $space2$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_speakall_sig"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_speakall_body"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "CatClass",
+            "type": "class",
+            "code": "class Cat: public Animal {\npublic:\n    $space1$\n    string speak() const {\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_11_cat_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_11_cat_speak"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Pet shop Boss",
+        "code": "#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//your Animal\n$space_1$\n//your Dog\n$space_2$\n//your Cat\n$space_3$\n//SpeakAll\n$space_4$\n\nint main() {\n    int n;\n    cin >> n;\n    vector<Animal*> animals;\n    $clue_4$\n    speakAll(animals);\n    for (size_t i = 0; i < animals.size(); ++i) delete animals[i];\n    return 0;\n}\n",
+        "input": "2\nD Max\nC Luna",
+        "output": "Max:woof\nLuna:meow",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "AnimalBase[block_11_ctor,block_11_dtor_virtual,block_11_speak_pure]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "DogClass[block_11_dog_ctor,block_11_dog_speak_ok]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "CatClass[block_11_cat_ctor,block_11_cat_speak_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "SpeakAll[block_11_speakall_sig_ok,block_11_speakall_body_ok]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

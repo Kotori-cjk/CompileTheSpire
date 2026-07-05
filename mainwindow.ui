@@ -425,7 +425,7 @@
            <item row="2" column="1">
             <widget class="QCheckBox" name="fullscreenCheckBox">
              <property name="text">
-              <string>Enable vertical sync</string>
+              <string>Fullscreen</string>
              </property>
             </widget>
            </item>
@@ -445,41 +445,6 @@
             <number>10</number>
            </property>
            <item row="0" column="0">
-            <widget class="QLabel" name="languageLabel">
-             <property name="text">
-              <string>Language</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="languageComboBox">
-             <property name="minimumSize">
-              <size>
-               <width>180</width>
-               <height>0</height>
-              </size>
-             </property>
-             <item>
-              <property name="text">
-               <string>Simplified Chinese</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>English</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>Japanese</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="1" column="0">
             <widget class="QLabel" name="animationSpeedLabel">
              <property name="text">
               <string>Animation Speed</string>
@@ -489,7 +454,7 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="0" column="1">
             <widget class="QComboBox" name="animationSpeedComboBox">
              <property name="minimumSize">
               <size>
@@ -514,7 +479,7 @@
              </item>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="1" column="1">
             <widget class="QCheckBox" name="tutorialCheckBox">
              <property name="text">
               <string>Show beginner tips</string>

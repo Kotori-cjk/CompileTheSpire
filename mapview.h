@@ -23,6 +23,7 @@ public:
     void setCollectedClues(const QSet<QString> &collectedClues);
     void setMovePath(const QVector<QPoint> &path, int consumedCount);
     QSize minimumSizeHint() const override;
+    bool isPlayerAnimating() const;
 
 signals:
     void tileClicked(int row, int column);
@@ -38,6 +39,7 @@ private:
     QRect mapBounds() const;
     int currentTileSize() const;
     QPoint tileAtPosition(const QPoint &position) const;
+    QString spritePathForPic(const QString &pic) const;
     QString monsterSpritePath(const QString &monsterId) const;
     bool isOpenTile(int row, int column) const;
     bool wallTouchesOpenTile(int row, int column) const;

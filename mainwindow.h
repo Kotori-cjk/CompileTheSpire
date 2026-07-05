@@ -4,11 +4,14 @@
 #include "gameengine.h"
 #include "leveldata.h"
 
+#include <QAudioOutput>
 #include <QLabel>
+#include <QMediaPlayer>
 #include <QMainWindow>
 #include <QMap>
 #include <QPushButton>
 #include <QSet>
+#include <QSoundEffect>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -38,10 +41,19 @@ private:
     void setupMovementShortcuts();
     bool handleGameMoveKey(int key);
     void applyDefaultSettings();
+    void applyDisplaySettings();
+    bool beginnerTipsEnabled() const;
     void applyVisualStyle();
     void buildRuntimeGameUi();
     void positionMainMenuButtons();
     void updateMainMenuBackground();
+    QString audioFilePath(const QString &resourcePath) const;
+    void playBgm(const QString &resourcePath);
+    void playSfx(const QString &resourcePath);
+    void playSfx(const QString &resourcePath, const QString &fallbackResourcePath);
+    void syncBgmToCurrentPage();
+    void updateBgmVolume();
+    void updateSfxVolume();
     void loadLevels();
     void refreshLevelSelectUi();
     void startLevel(int levelIndex);
@@ -49,6 +61,8 @@ private:
     void changeLevelPage(int delta);
     void selectStage(int levelIndex);
     bool isLevelUnlocked(int levelIndex) const;
+    bool isLevelCleared(int levelIndex) const;
+    void showBeginnerTipsIntro();
     void resetLevel();
     void undo();
 
@@ -59,17 +73,22 @@ private:
     void showBagDialog();
     void showManualDialog();
     void showVictorySettlement();
+    void showCombatSettlement(const QString &defeatedName,
+                              const CombatResult &result,
+                              const QMap<QString, QString> &usedBlockCodes,
+                              bool bossDefeated);
 
     void movePlayer(int rowDelta, int columnDelta);
     void movePlayerTo(int targetRow, int targetColumn);
     void startMovePlayback(const QVector<QPoint> &backendPath, int targetRow, int targetColumn);
     void advanceMovePlayback();
+    int movePlaybackIntervalMs() const;
     bool moveThroughEngine(int targetRow, int targetColumn);
     void clearDisplayedMovePath();
     bool canEnter(int row, int column) const;
     QString tileAt(int row, int column) const;
     QString describeTile(const QString &tileId) const;
-    void handleChest(const QString &chestId);
+    void handleChest(const QString &chestId, bool viewOnly = false, bool lockedByChest = false);
     void handleMonster(const QString &monsterId);
 
     QString renderMonsterCode(const Monster &monster) const;
@@ -94,6 +113,7 @@ private:
     QSet<QString> defeatedMonsters;
     QSet<QString> seenMonsters;
     QSet<int> completedStageIndexes;
+    QVector<int> newlyUnlockedStageIndexes;
     int currentLevelSelectPage = 0;
     QVector<QPoint> activeMovePath;
     int activeMovePathIndex = 0;
@@ -102,13 +122,21 @@ private:
     bool movePlaybackActive = false;
     bool suppressNextMovePath = false;
     bool showingExLevels = false;
+    bool chestDetailedByDefault = false;
+    bool instantMoveMode = false;
     int selectedStageIndex = 0;
+    QString currentBgmResource;
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;
+    QPushButton *undoRunButton = nullptr;
     QPushButton *resetRunButton = nullptr;
     QPushButton *handbookButton = nullptr;
+    QPushButton *beginnerTipsButton = nullptr;
     QWidget *mainMenuButtonBar = nullptr;
+    QMediaPlayer *bgmPlayer = nullptr;
+    QAudioOutput *bgmAudioOutput = nullptr;
+    QMap<QString, QSoundEffect *> sfxEffects;
 };
 
 #endif // MAINWINDOW_H

@@ -1,0 +1,183 @@
+{
+    "map_width": 6,
+    "map_height": 6,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 4,
+    "map_grid": [
+        [
+            "start",
+            "clue_2",
+            ".",
+            ".",
+            "chest_2",
+            "."
+        ],
+        [
+            "#",
+            "monster_4",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            "chest_3",
+            ".",
+            ".",
+            "monster_2",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            "clue_3",
+            "#",
+            "clue_1",
+            "#",
+            "clue_4"
+        ],
+        [
+            "monster_3",
+            ".",
+            "chest_4",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_2": "Maybe you can follow an S-shaped path.",
+        "clue_3": "string op;\ncin >> op;\nif (op == \"D\") {\n\tint id; double money;\n\tcin >> id >> money;\n\taccounts[id].deposit(money);\n} else if (op == \"W\") {\n\tint id; double money;\n\tcin >> id >> money;\n\taccounts[id].withdraw(money);\n} else {\n\tint from, to; double money;\n\tcin >> from >> to >> money;\n\taccounts[from].transferTo(accounts[to], money);\n}",
+        "clue_1": "Bank accounts.\n\nSample input:\n3 4\n100 50 0\nD 3 20\nT 1 2 30\nW 2 10\nT 2 3 100\n\nSample output:\n70.00 70.00 20.00",
+        "clue_4": "I like this game."
+    },
+    "chest_count": 3,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_06_deposit_ok": "if (money > 0) balance += money;",
+                "block_06_deposit_alt1": "balance = money;",
+                "block_06_deposit_alt2": "if (money < 0) balance += money;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_06_withdraw_ok": "if (money <= 0 || balance < money) return false;\n        balance -= money;\n        return true;",
+                "block_06_withdraw_alt1": "if (money <= 0) return false;\n        balance -= money;\n        return true;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_tran_t": "bool transferTo(Account& other, double money) {",
+                "block_tran_f": "bool transferTo(Account other, double money) {",
+                "block_zz_f": "other.deposit(money);\n        if (!withdraw(money)) return false;",
+                "block_zz_t": "if (!withdraw(money)) return false;\n        other.deposit(money);"
+            }
+        }
+    },
+    "monster_count": 3,
+    "monsters": {
+        "monster_4": {
+            "pic": "assets/mabel.png",
+            "nickname": "mabel",
+            "name": "Account",
+            "type": "class",
+            "code": "class Account {\nprivate:\n    int id;\n    double balance;\n\npublic:\n    Account(int idValue = 0, double money = 0): id(idValue), balance(money) {}\n\n    $space1$\n\n    $space2$\n\n    $space3$\n        $space4$\n        return true;\n    }\n\n    double getBalance() const {\n        return balance;\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "find",
+                    "val": [
+                        "deposit"
+                    ]
+                },
+                "space2": {
+                    "type": "find",
+                    "val": [
+                        "withdraw"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_tran"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_zz"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "deposit",
+            "name": "deposit",
+            "type": "function",
+            "code": "void deposit(double money) {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_06_deposit"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "withdraw",
+            "type": "function",
+            "code": "bool withdraw(double money) {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_06_withdraw"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Bank accounts Boss",
+        "code": "#include <iomanip>\n#include <iostream>\n#include <vector>\nusing namespace std;\n\n$space1$\n\nint main() {\n    int n, m;\n    cin >> n >> m;\n    vector<Account> accounts(n + 1);\n    for (int i = 1; i <= n; ++i) {\n        double money;\n        cin >> money;\n        accounts[i] = Account(i, money);\n    }\n    for (int i = 0; i < m; ++i) {\n        $clue_3$\n    }\n    cout << fixed << setprecision(2);\n    for (int i = 1; i <= n; ++i) {\n        if (i > 1) cout << ' ';\n        cout << accounts[i].getBalance();\n    }\n    cout << '\\n';\n    return 0;\n}\n",
+        "input": "3 4\n100 50 0\nD 3 20\nT 1 2 30\nW 2 10\nT 2 3 100",
+        "output": "70.00 70.00 20.00",
+        "spaces": {
+            "space1": {
+                "type": "match",
+                "val": [
+                    "Account[deposit[block_06_deposit_ok],withdraw[block_06_withdraw_ok],block_tran_t,block_zz_t]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}
