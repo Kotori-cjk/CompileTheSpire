@@ -16,7 +16,7 @@ struct StageCard
     QString hint;
 };
 
-inline constexpr int stagesPerPage = 3;
+inline constexpr int stagesPerPage = 6;
 
 QVector<StageCard> stageCatalog();
 QStringList fallbackLevelPaths();

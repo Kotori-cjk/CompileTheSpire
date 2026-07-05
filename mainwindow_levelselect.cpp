@@ -37,15 +37,132 @@
 
 #include <functional>
 
+namespace {
+QString findLevelListFile(const QString &path)
+{
+    QDir dir(path);
+    const QStringList preferred = {
+        "level_list.txt",
+        "levels.txt",
+        "stage_list.txt",
+        "stages.txt",
+        "level_order.txt",
+        "order.txt",
+        "list.txt"
+    };
+
+    for (const QString &fileName : preferred) {
+        if (QFileInfo::exists(dir.absoluteFilePath(fileName))) {
+            return fileName;
+        }
+    }
+
+    const QStringList discovered = dir.entryList({"*.list", "*list*.txt", "*order*.txt"}, QDir::Files, QDir::Name);
+    return discovered.isEmpty() ? QString() : discovered.first();
+}
+
+bool isExLevelMeta(const LevelMeta &meta)
+{
+    const QString type = meta.levelType.trimmed().toLower();
+    const QString name = meta.levelName.trimmed().toLower();
+    return type == "ex" || type == "extra" || type.startsWith("ex_") || type.startsWith("ex-")
+           || name == "ex" || name.startsWith("ex_") || name.startsWith("ex-")
+           || name.startsWith("extra_") || name.startsWith("extra-");
+}
+
+QString levelSubtitle(const LevelData *level)
+{
+    if (!level) {
+        return QString();
+    }
+
+    const QString bossName = level->boss.nickname.trimmed();
+    if (!bossName.isEmpty()) {
+        return bossName;
+    }
+
+    return level->levelType.trimmed();
+}
+
+QString displayStageTitle(QString fileName)
+{
+    fileName = fileName.trimmed();
+    fileName.remove(QRegularExpression("^(level|stage)[_-]*\\d+[_-]*", QRegularExpression::CaseInsensitiveOption));
+    fileName.remove(QRegularExpression("^ex[_-]*\\d+[_-]*", QRegularExpression::CaseInsensitiveOption));
+    fileName.replace(QRegularExpression("[_-]+"), " ");
+    fileName = fileName.simplified();
+
+    const QStringList words = fileName.split(' ', Qt::SkipEmptyParts);
+    QStringList prettyWords;
+    for (QString word : words) {
+        if (word.isEmpty()) {
+            continue;
+        }
+        word = word.toLower();
+        word[0] = word[0].toUpper();
+        prettyWords.append(word);
+    }
+
+    return prettyWords.isEmpty() ? fileName : prettyWords.join(' ');
+}
+
+QString wrapStageTitle(const QString &title)
+{
+    const QStringList words = title.split(' ', Qt::SkipEmptyParts);
+    if (words.size() <= 1 || title.length() <= 16) {
+        return title;
+    }
+
+    QString first;
+    QString second;
+    for (const QString &word : words) {
+        if (second.isEmpty() && (first.length() + word.length() + 1) <= title.length() / 2 + 2) {
+            if (!first.isEmpty()) {
+                first += ' ';
+            }
+            first += word;
+        } else {
+            if (!second.isEmpty()) {
+                second += ' ';
+            }
+            second += word;
+        }
+    }
+
+    return second.isEmpty() ? title : QString("%1\n%2").arg(first, second);
+}
+
+QVector<StageCard> stagesFromLoadedLevels(GameEngine &gameEngine)
+{
+    QVector<StageCard> stages;
+    const QVector<LevelMeta> metas = gameEngine.levelList();
+    for (const LevelMeta &meta : metas) {
+        const QString title = meta.levelName.trimmed().isEmpty()
+                                  ? QString("Level %1").arg(meta.levelIndex + 1)
+                                  : displayStageTitle(meta.levelName);
+        stages.append(StageCard{
+            meta.levelIndex,
+            isExLevelMeta(meta),
+            title,
+            levelSubtitle(meta.level),
+            QString()
+        });
+    }
+    return stages;
+}
+}
+
 void MainWindow::loadLevels()
 {
     QStringList errors;
     for (const QString &path : fallbackLevelPaths()) {
         Q_UNUSED(errors);
-        gameEngine.gameInit(path);
+        const QString listFile = findLevelListFile(path);
+        gameEngine.gameInit(path, listFile);
         if (!gameEngine.levels.isEmpty()) {
             levels = gameEngine.levels;
-            statusBar()->showMessage(QString("Loaded %1 level(s) from %2").arg(levels.size()).arg(path), 3000);
+            const QString source = listFile.isEmpty() ? path : QString("%1 (%2)").arg(path, listFile);
+            statusBar()->showMessage(QString("Loaded %1 level(s) from %2").arg(levels.size()).arg(source), 3000);
             return;
         }
     }
@@ -71,7 +188,10 @@ void MainWindow::loadLevels()
 
 void MainWindow::refreshLevelSelectUi()
 {
-    const QVector<StageCard> allStages = stageCatalog();
+    QVector<StageCard> allStages = stagesFromLoadedLevels(gameEngine);
+    if (allStages.isEmpty()) {
+        allStages = stageCatalog();
+    }
     QVector<StageCard> visibleStages;
     for (const StageCard &stage : allStages) {
         if (stage.isEx == showingExLevels) {
@@ -84,7 +204,9 @@ void MainWindow::refreshLevelSelectUi()
     const int firstIndex = currentLevelSelectPage * stagesPerPage;
 
     ui->mapTitleLabel->setText(showingExLevels ? "EX Stage Select" : "Select Stage");
-    QPushButton *buttons[] = {ui->mapFightButton, ui->mapEliteButton, ui->mapBossButton};
+    if (stageNodeButtons.isEmpty()) {
+        return;
+    }
 
     QLabel *pageLabel = ui->mapFrame->findChild<QLabel *>("levelPageLabel");
     QPushButton *prevButton = ui->mapFrame->findChild<QPushButton *>("prevStageButton");
@@ -92,10 +214,6 @@ void MainWindow::refreshLevelSelectUi()
     QPushButton *normalButton = ui->mapFrame->findChild<QPushButton *>("normalStageButton");
     QPushButton *exButton = ui->mapFrame->findChild<QPushButton *>("exStageButton");
     QPushButton *startButton = ui->mapFrame->findChild<QPushButton *>("levelStartButton");
-    QLabel *bridges[] = {
-        ui->mapFrame->findChild<QLabel *>("stageBridge0"),
-        ui->mapFrame->findChild<QLabel *>("stageBridge1")
-    };
 
     if (pageLabel) {
         pageLabel->setText(QString("%1 PAGE %2 / %3")
@@ -129,14 +247,18 @@ void MainWindow::refreshLevelSelectUi()
         }
     }
     bool selectedStageVisible = false;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < stageNodeButtons.size(); ++i) {
+        QPushButton *button = stageNodeButtons.at(i);
+        if (!button) {
+            continue;
+        }
         const int stageIndex = firstIndex + i;
         const bool hasStage = stageIndex < visibleStages.size();
         const StageCard stage = hasStage ? visibleStages.at(stageIndex) : StageCard{-1, showingExLevels, "Empty", "", ""};
         const bool unlocked = hasStage && isLevelUnlocked(stage.levelIndex);
         const bool completed = hasStage && isLevelCleared(stage.levelIndex);
-        buttons[i]->setEnabled(hasStage);
-        buttons[i]->setProperty("levelIndex", stage.levelIndex);
+        button->setEnabled(hasStage);
+        button->setProperty("levelIndex", stage.levelIndex);
         const bool selected = hasStage && stage.levelIndex == selectedStageIndex;
         QString cardState = "locked";
         if (unlocked && completed) {
@@ -144,22 +266,25 @@ void MainWindow::refreshLevelSelectUi()
         } else if (unlocked) {
             cardState = selected ? "selectedUnlocked" : "true";
         }
-        buttons[i]->setProperty("levelCard", cardState);
-        buttons[i]->style()->unpolish(buttons[i]);
-        buttons[i]->style()->polish(buttons[i]);
-        buttons[i]->setText(hasStage
-                                ? (stage.isEx ? QString("EX\n%1").arg(stageIndex + 1)
-                                              : QString::number(stageIndex + 1))
-                                : "-");
+        button->setProperty("levelCard", cardState);
+        button->style()->unpolish(button);
+        button->style()->polish(button);
+        if (hasStage) {
+            const QString displayTitle = wrapStageTitle(stage.title);
+            const int compactLength = stage.title.length();
+            button->setProperty("levelNameSize", compactLength > 20 ? "tiny" : (compactLength > 15 ? "small" : "normal"));
+            button->style()->unpolish(button);
+            button->style()->polish(button);
+            button->setText(displayTitle);
+            button->setToolTip(stage.title);
+        } else {
+            button->setProperty("levelNameSize", "normal");
+            button->setText("-");
+            button->setToolTip(QString());
+        }
         if (selected) {
             selectedStageVisible = true;
         }
-    }
-    for (int i = 0; i < 2; ++i) {
-        if (!bridges[i]) {
-            continue;
-        }
-        bridges[i]->hide();
     }
     if (!selectedStageVisible && selectedStageIndex >= 0) {
         selectedStageIndex = -1;
@@ -192,7 +317,10 @@ bool MainWindow::isLevelUnlocked(int levelIndex) const
         }
     }
 
-    const QVector<StageCard> allStages = stageCatalog();
+    QVector<StageCard> allStages = stagesFromLoadedLevels(const_cast<GameEngine &>(gameEngine));
+    if (allStages.isEmpty()) {
+        allStages = stageCatalog();
+    }
     for (int i = 0; i < allStages.size(); ++i) {
         if (allStages.at(i).levelIndex != levelIndex) {
             continue;

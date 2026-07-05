@@ -1,0 +1,869 @@
+{
+    "map_width": 15,
+    "map_height": 15,
+    "level_type": "simple",
+    "special_tags": [
+        "discard_drops",
+        "no_discard",
+        "bundle_pick",
+        "friendly_boss",
+        "skip_on_full"
+    ],
+    "bag_size": 2,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "chest_RB1",
+            ".",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_G1",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            "chest_GB1",
+            ".",
+            "#",
+            "chest_RB2",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "chest_B1",
+            "monster_RB1",
+            "monster_R1",
+            "monster_GB1",
+            "chest_RB3",
+            "chest_GB2",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "chest_G2",
+            "monster_G1",
+            "monster_RB2",
+            "monster_RG1",
+            "monster_GB2",
+            "monster_GB3",
+            "chest_GB3",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "chest_R1",
+            "monster_R2",
+            "monster_RG2",
+            "boss",
+            "monster_RG3",
+            "monster_RB3",
+            "chest_GB4",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "chest_B2",
+            "monster_RG4",
+            "monster_B1",
+            "monster_RG5",
+            "monster_RB4",
+            "monster_B2",
+            "chest_GB5",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            "chest_B3",
+            "chest_B4",
+            "monster_G2",
+            "monster_GB4",
+            "monster_RB5",
+            "chest_GB6",
+            "chest_RB4",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "chest_R2",
+            "#",
+            ".",
+            "chest_B5",
+            ".",
+            "#",
+            "chest_B6",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "chest_R3",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "chest_B7",
+            ".",
+            "#",
+            "#",
+            ".",
+            ".",
+            "chest_R4",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+    ],
+    "clue_count": 0,
+    "clues": {},
+    "chest_count": 23,
+    "chests": {
+        "chest_RB1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R1": "push_back(1)",
+                "block_B1": "insert({1,2})"
+            }
+        },
+        "chest_G1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G1": "push(1)"
+            }
+        },
+        "chest_GB1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G2": "pop()",
+                "block_B2": "contains(1)"
+            }
+        },
+        "chest_RB2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R2": "reserve(10)",
+                "block_B3": "insert({1,2})"
+            }
+        },
+        "chest_B1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B4": "count(1)"
+            }
+        },
+        "chest_RB3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R3": "reserve(10)",
+                "block_B5": "contains(1)"
+            }
+        },
+        "chest_GB2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G3": "pop()",
+                "block_B6": "lower_bound(1)"
+            }
+        },
+        "chest_G2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G4": "push(1)"
+            }
+        },
+        "chest_GB3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G5": "top()",
+                "block_B7": "contains(1)"
+            }
+        },
+        "chest_R1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R4": "reserve(10)"
+            }
+        },
+        "chest_GB4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G6": "push(1)",
+                "block_B8": "insert({1,2})"
+            }
+        },
+        "chest_B2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B9": "insert({1,2})"
+            }
+        },
+        "chest_GB5": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G7": "push(1)",
+                "block_B10": "contains(1)"
+            }
+        },
+        "chest_B3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B11": "contains(1)"
+            }
+        },
+        "chest_B4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B12": "lower_bound(1)"
+            }
+        },
+        "chest_GB6": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G8": "push(1)",
+                "block_B13": "count(1)"
+            }
+        },
+        "chest_RB4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R5": "reserve(10)",
+                "block_B14": "contains(1)"
+            }
+        },
+        "chest_R2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R6": "capacity()"
+            }
+        },
+        "chest_B5": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B15": "lower_bound(1)"
+            }
+        },
+        "chest_B6": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B16": "contains(1)"
+            }
+        },
+        "chest_R3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R7": "reserve(10)"
+            }
+        },
+        "chest_B7": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B17": "contains(1)"
+            }
+        },
+        "chest_R4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R8": "push_back(1)"
+            }
+        }
+    },
+    "monster_count": 20,
+    "monsters": {
+        "monster_RB1": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB1",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_R1": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "R1",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                }
+            }
+        },
+        "monster_GB1": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "GB1",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_G1": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "G1",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RB2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB2",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG1": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "RG1",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_GB2": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "GB2",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_GB3": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "GB3",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_R2": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "R2",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                }
+            }
+        },
+        "monster_RG2": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "RG2",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RG3": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "RG3",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RB3": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB3",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG4": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "RG4",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_B1": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "B1",
+            "type": "function",
+            "code": "#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG5": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "RG5",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RB4": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB4",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_B2": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "B2",
+            "type": "function",
+            "code": "#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_G2": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "G2",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_GB4": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "GB4",
+            "type": "function",
+            "code": "#include <stack>\nvoid stk() {\n    std::stack<int> s;\n    s.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RB5": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "RB5",
+            "type": "function",
+            "code": "#include <vector>\nvoid vec() {\n    std::vector<int> v;\n    v.$space1$;\n}\n#include <map>\nvoid mp() {\n    std::map<int,int> m;\n    m.$space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "",
+        "input": "",
+        "output": "",
+        "spaces": {}
+    },
+    "start": [
+        2,
+        2
+    ],
+    "end_text": ""
+}

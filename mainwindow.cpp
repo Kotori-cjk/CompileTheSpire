@@ -14,9 +14,11 @@
 #include <QDrag>
 #include <QComboBox>
 #include <QEvent>
+#include <QFile>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QKeyEvent>
@@ -250,18 +252,6 @@ MainWindow::MainWindow(QWidget *parent)
         ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
         mainMenuButtonBar->show();
         positionMainMenuButtons();
-    });
-
-    connect(ui->mapFightButton, &QPushButton::clicked, this, [this]() {
-        selectStage(ui->mapFightButton->property("levelIndex").toInt());
-    });
-
-    connect(ui->mapEliteButton, &QPushButton::clicked, this, [this]() {
-        selectStage(ui->mapEliteButton->property("levelIndex").toInt());
-    });
-
-    connect(ui->mapBossButton, &QPushButton::clicked, this, [this]() {
-        selectStage(ui->mapBossButton->property("levelIndex").toInt());
     });
 
     connect(ui->nextChallengeButton, &QPushButton::clicked, this, [this]() {
@@ -522,6 +512,69 @@ bool MainWindow::beginnerTipsEnabled() const
     return ui && ui->tutorialCheckBox && ui->tutorialCheckBox->isChecked();
 }
 
+void MainWindow::unlockAllStagesForTesting()
+{
+    if (levels.isEmpty()) {
+        statusBar()->showMessage("No levels loaded.", 2500);
+        return;
+    }
+
+    if (!testUnlockBackupCaptured) {
+        QFile saveFile(SaveManager::SAVE_PATH);
+        testUnlockBackupHadSave = saveFile.exists();
+        testUnlockSaveBackup.clear();
+        if (testUnlockBackupHadSave) {
+            if (!saveFile.open(QIODevice::ReadOnly)) {
+                statusBar()->showMessage("Failed to back up current save.", 2500);
+                return;
+            }
+            testUnlockSaveBackup = saveFile.readAll();
+            saveFile.close();
+        }
+        testUnlockBackupCaptured = true;
+    }
+
+    for (int i = 0; i < levels.size(); ++i) {
+        gameEngine.m_save.Unlock(i);
+    }
+    gameEngine.m_save.Save();
+    selectedStageIndex = 0;
+    refreshLevelSelectUi();
+    statusBar()->showMessage("Test mode: all stages unlocked. Use Restore Locks when done.", 3500);
+}
+
+void MainWindow::restoreStageLocksAfterTesting()
+{
+    if (!testUnlockBackupCaptured) {
+        statusBar()->showMessage("No temporary unlock snapshot to restore.", 2500);
+        return;
+    }
+
+    if (testUnlockBackupHadSave) {
+        QDir().mkpath(QFileInfo(SaveManager::SAVE_PATH).absolutePath());
+        QFile saveFile(SaveManager::SAVE_PATH);
+        if (!saveFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            statusBar()->showMessage("Failed to restore previous save.", 2500);
+            return;
+        }
+        saveFile.write(testUnlockSaveBackup);
+        saveFile.close();
+    } else {
+        QFile::remove(SaveManager::SAVE_PATH);
+    }
+
+    gameEngine.m_save.Init(levels.size());
+    gameEngine.m_save.Load(levels.size());
+    completedStageIndexes.clear();
+    newlyUnlockedStageIndexes.clear();
+    selectedStageIndex = 0;
+    testUnlockSaveBackup.clear();
+    testUnlockBackupCaptured = false;
+    testUnlockBackupHadSave = false;
+    refreshLevelSelectUi();
+    statusBar()->showMessage("Stage locks restored to the previous state.", 2500);
+}
+
 void MainWindow::applyVisualStyle()
 {
     setStyleSheet(R"(
@@ -549,6 +602,11 @@ void MainWindow::applyVisualStyle()
         QWidget#settingsPage {
             background-color: #15161a;
             border-image: url(:/images/assets/interface_background_fitted.png) 0 0 0 0 stretch stretch;
+        }
+
+        QScrollArea#settingsScrollArea, QWidget#settingsScrollBody {
+            background: transparent;
+            border: none;
         }
 
         QPushButton#startGameButton, QPushButton#settingsButton, QPushButton#beginnerTipsButton, QPushButton#exitButton {
@@ -732,17 +790,14 @@ void MainWindow::applyVisualStyle()
         }
 
         QPushButton[levelCard="true"] {
-            background: qradialgradient(cx:0.5, cy:0.42, radius:0.72,
-                                        fx:0.38, fy:0.30,
-                                        stop:0 rgba(140, 255, 255, 245),
-                                        stop:0.18 rgba(40, 183, 212, 238),
-                                        stop:0.54 rgba(8, 45, 64, 245),
-                                        stop:1 rgba(1, 8, 14, 255));
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                        stop:0 rgba(18, 48, 62, 238),
+                                        stop:1 rgba(4, 13, 22, 250));
             color: #eaffff;
             border: 4px solid rgba(80, 240, 255, 225);
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 30px;
+            font-size: 20px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -766,9 +821,9 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(2, 15, 24, 255));
             color: #ffffff;
             border: 5px solid #f7d75b;
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 34px;
+            font-size: 21px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -782,9 +837,9 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(3, 17, 13, 255));
             color: #f6fff7;
             border: 5px solid #62ffa0;
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 34px;
+            font-size: 21px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -798,9 +853,9 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(7, 15, 10, 255));
             color: #f8fff1;
             border: 5px solid #74ff82;
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 34px;
+            font-size: 21px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -814,9 +869,9 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(8, 9, 12, 255));
             color: #ffe89b;
             border: 4px solid #ffca55;
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 30px;
+            font-size: 20px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
@@ -829,12 +884,20 @@ void MainWindow::applyVisualStyle()
                                         stop:1 rgba(4, 5, 7, 255));
             color: #b6aa92;
             border: 4px solid #5b5144;
-            border-radius: 42px;
+            border-radius: 8px;
             font-family: "Georgia", "Times New Roman", "Microsoft YaHei UI";
-            font-size: 28px;
+            font-size: 20px;
             font-weight: 900;
             padding: 4px;
             text-align: center;
+        }
+
+        QPushButton[levelNameSize="small"] {
+            font-size: 17px;
+        }
+
+        QPushButton[levelNameSize="tiny"] {
+            font-size: 15px;
         }
 
         QPushButton[levelNav="true"], QPushButton#levelStartButton {
@@ -1138,6 +1201,69 @@ void MainWindow::buildRuntimeGameUi()
         );
         ui->settingsLayout->insertWidget(1, controlsGuide);
     }
+    if (!ui->settingsPage->findChild<QGroupBox *>("testingGroupBox")) {
+        QGroupBox *testingGroup = new QGroupBox("Testing", ui->settingsPage);
+        testingGroup->setObjectName("testingGroupBox");
+        QHBoxLayout *testingLayout = new QHBoxLayout(testingGroup);
+        testingLayout->setContentsMargins(12, 18, 12, 12);
+        testingLayout->setSpacing(12);
+
+        unlockAllStagesButton = new QPushButton("Unlock All Stages", testingGroup);
+        restoreStageLocksButton = new QPushButton("Restore Locks", testingGroup);
+        unlockAllStagesButton->setMinimumHeight(34);
+        restoreStageLocksButton->setMinimumHeight(34);
+        testingLayout->addStretch();
+        testingLayout->addWidget(unlockAllStagesButton);
+        testingLayout->addWidget(restoreStageLocksButton);
+        testingLayout->addStretch();
+
+        connect(unlockAllStagesButton, &QPushButton::clicked, this, &MainWindow::unlockAllStagesForTesting);
+        connect(restoreStageLocksButton, &QPushButton::clicked, this, &MainWindow::restoreStageLocksAfterTesting);
+
+        const int insertIndex = qMax(0, ui->settingsLayout->count() - 2);
+        ui->settingsLayout->insertWidget(insertIndex, testingGroup);
+    }
+    if (!ui->settingsPage->findChild<QScrollArea *>("settingsScrollArea")) {
+        QScrollArea *settingsScrollArea = new QScrollArea(ui->settingsPage);
+        settingsScrollArea->setObjectName("settingsScrollArea");
+        settingsScrollArea->setWidgetResizable(true);
+        settingsScrollArea->setFrameShape(QFrame::NoFrame);
+        settingsScrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+        QWidget *settingsBody = new QWidget(settingsScrollArea);
+        settingsBody->setObjectName("settingsScrollBody");
+        QVBoxLayout *settingsBodyLayout = new QVBoxLayout(settingsBody);
+        settingsBodyLayout->setContentsMargins(0, 0, 0, 0);
+        settingsBodyLayout->setSpacing(10);
+
+        const QList<QWidget *> scrollWidgets = {
+            ui->audioGroupBox,
+            ui->displayGroupBox,
+            ui->gameplayGroupBox,
+            ui->settingsPage->findChild<QGroupBox *>("testingGroupBox")
+        };
+        for (QWidget *widget : scrollWidgets) {
+            if (!widget) {
+                continue;
+            }
+            ui->settingsLayout->removeWidget(widget);
+            widget->setParent(settingsBody);
+            settingsBodyLayout->addWidget(widget);
+        }
+        settingsBodyLayout->addStretch(1);
+        settingsScrollArea->setWidget(settingsBody);
+
+        int buttonIndex = -1;
+        for (int i = 0; i < ui->settingsLayout->count(); ++i) {
+            QLayoutItem *item = ui->settingsLayout->itemAt(i);
+            if (item && item->layout() == ui->settingsButtonLayout) {
+                buttonIndex = i;
+                break;
+            }
+        }
+        const int insertIndex = buttonIndex >= 0 ? qMax(0, buttonIndex - 1) : ui->settingsLayout->count();
+        ui->settingsLayout->insertWidget(insertIndex, settingsScrollArea, 1);
+    }
 
     ui->hpLabel->setText("Mode: Explore");
     ui->deckButton->setText("Bag");
@@ -1223,49 +1349,32 @@ void MainWindow::buildRuntimeGameUi()
     });
     prevButton->setObjectName("prevStageButton");
     nextButton->setObjectName("nextStageButton");
-    ui->mapFightButton->setObjectName("stageNodeButton0");
-    ui->mapEliteButton->setObjectName("stageNodeButton1");
-    ui->mapBossButton->setObjectName("stageNodeButton2");
-    ui->mapFightButton->setFixedSize(84, 84);
-    ui->mapEliteButton->setFixedSize(84, 84);
-    ui->mapBossButton->setFixedSize(84, 84);
-
     QWidget *nodeCanvas = new QWidget(ui->mapFrame);
     nodeCanvas->setObjectName("stageNodeCanvas");
-    nodeCanvas->setFixedSize(650, 250);
+    nodeCanvas->setFixedSize(760, 280);
     nodeCanvas->setStyleSheet("QWidget#stageNodeCanvas { background: transparent; border: none; }");
-    QLabel *bridge01 = new QLabel(nodeCanvas);
-    QLabel *bridge12 = new QLabel(nodeCanvas);
-    bridge01->setObjectName("stageBridge0");
-    bridge12->setObjectName("stageBridge1");
-    bridge01->setProperty("levelBridge", "true");
-    bridge12->setProperty("levelBridge", "true");
-    bridge01->setAlignment(Qt::AlignCenter);
-    bridge12->setAlignment(Qt::AlignCenter);
-    bridge01->setPixmap(QPixmap(":/images/assets/stage_bridge_up.png"));
-    bridge12->setPixmap(QPixmap(":/images/assets/stage_bridge_up2.png"));
-    bridge01->setScaledContents(true);
-    bridge12->setScaledContents(true);
-    bridge01->setGeometry(158, 112, 250, 108);
-    bridge12->setGeometry(366, 38, 250, 108);
-    bridge01->hide();
-    bridge12->hide();
-    ui->mapFightButton->setParent(nodeCanvas);
-    ui->mapEliteButton->setParent(nodeCanvas);
-    ui->mapBossButton->setParent(nodeCanvas);
-    ui->mapFightButton->setGeometry(92, 160, 84, 84);
-    ui->mapEliteButton->setGeometry(300, 92, 84, 84);
-    ui->mapBossButton->setGeometry(512, 18, 84, 84);
-    ui->mapFightButton->installEventFilter(this);
-    ui->mapEliteButton->installEventFilter(this);
-    ui->mapBossButton->installEventFilter(this);
-    bridge01->lower();
-    bridge12->lower();
-    bridge01->setStyleSheet("background: transparent; border: none;");
-    bridge12->setStyleSheet("background: transparent; border: none;");
-    ui->mapFightButton->show();
-    ui->mapEliteButton->show();
-    ui->mapBossButton->show();
+    QGridLayout *stageGrid = new QGridLayout(nodeCanvas);
+    stageGrid->setContentsMargins(18, 18, 18, 18);
+    stageGrid->setHorizontalSpacing(28);
+    stageGrid->setVerticalSpacing(26);
+
+    stageNodeButtons.clear();
+    QVector<QPushButton *> baseButtons = {ui->mapFightButton, ui->mapEliteButton, ui->mapBossButton};
+    for (int i = 0; i < stagesPerPage; ++i) {
+        QPushButton *button = i < baseButtons.size() ? baseButtons.at(i) : new QPushButton(nodeCanvas);
+        button->setParent(nodeCanvas);
+        button->setObjectName(QString("stageNodeButton%1").arg(i));
+        button->setProperty("levelCard", "true");
+        button->setFixedSize(220, 104);
+        button->installEventFilter(this);
+        connect(button, &QPushButton::clicked, this, [this, button]() {
+            selectStage(button->property("levelIndex").toInt());
+        });
+        stageGrid->addWidget(button, i / 3, i % 3, Qt::AlignCenter);
+        stageNodeButtons.append(button);
+        button->show();
+    }
+
     stageLayout->addWidget(prevButton, 0, Qt::AlignVCenter);
     stageLayout->addStretch(1);
     stageLayout->addWidget(nodeCanvas, 0, Qt::AlignCenter);
