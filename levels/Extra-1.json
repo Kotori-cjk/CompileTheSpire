@@ -264,7 +264,7 @@
             "nickname": "Jabberwock",
             "name": "BC",
             "type": "function",
-            "code": "void MR(){\n    $space1$\n    $space2$\n\tMarisa = !Marisa;\n\tReimu = Marisa;\n}",
+            "code": "void MR(){\n    $space1$\n\tMarisa = !Marisa;\n    $space2$\n\tReimu = Marisa;\n}",
             "spaces": {
                 "space1": {
                     "type": "regex",

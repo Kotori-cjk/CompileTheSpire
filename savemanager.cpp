@@ -15,6 +15,7 @@ void SaveManager::Init(int totalLevels){
     if (totalLevels>0){
         totalLevelCount=totalLevels;
         unlockState[0]=1;
+        if(totalLevels>=19)unlockState[18]=1;
     }
 }
 
@@ -69,6 +70,8 @@ bool SaveManager::Load(int currentLevelCount){
     for(int i=clearedState.size();i<currentLevelCount;i++){
         clearedState.push_back(0);
     }
+    if(unlockState.size()>0)unlockState[0]=1;
+    if(unlockState.size()>=19)unlockState[18]=1;
     return true;
 }
 
