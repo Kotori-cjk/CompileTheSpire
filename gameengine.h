@@ -20,6 +20,7 @@ struct GameSnapshot{
     QVector<CodeBlock>bagBlocks;
     QMap<QString,QSet<QString>>leftBlocks;
     QMap<QString,QString>defeatedCodes;
+    QSet<QPoint>blocked;
 };
 
 struct LevelMeta{

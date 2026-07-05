@@ -3,6 +3,7 @@
 #include<QString>
 #include<QVector>
 #include<QQueue>
+#include<QSet>
 #include"leveldata.h"
 
 struct MoveResult{
@@ -36,6 +37,7 @@ public:
     GameMap(const LevelData* ptr);
     QVector<QVector<int>>cleared;
     QMap<QString,QString>defeatedCodes;
+    QSet<QPoint>blocked;
 
     QString currentId(int tarX,int tarY);
     QString currentId(QPoint target);
