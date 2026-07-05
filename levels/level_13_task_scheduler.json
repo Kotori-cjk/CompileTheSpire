@@ -1,0 +1,293 @@
+{
+    "map_width": 9,
+    "map_height": 9,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "clue_3",
+            ".",
+            "#",
+            ".",
+            "monster_3",
+            "."
+        ],
+        [
+            "clue_1",
+            "#",
+            "chest_2",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            "#",
+            "chest_4"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "chest_1",
+            ".",
+            ".",
+            ".",
+            "clue_2",
+            ".",
+            ".",
+            "#",
+            "monster_4"
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "monster_2",
+            ".",
+            ".",
+            ".",
+            "chest_3",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            "clue_4",
+            ".",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_3": "We need to manage our tasks. Let’s prioritize the ones with higher weights, and if the weights are the same, do the ones with earlier times first. How about using a heap to store them?",
+        "clue_1": "Task scheduler",
+        "clue_2": "Sample input:\n4\nclean 2 5\nbuild 5 3\ntest 5 1\ndeploy 3 2\n\nSample output:\ntest build deploy clean",
+        "clue_4": "Hello!"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_13_cmp_priority_ok": "if (a.priority != b.priority) return a.priority < b.priority;",
+                "block_13_cmp_priority_alt": "if (a.priority != b.priority) return a.priority > b.priority;",
+                "block_13_cmp_time_ok": "return a.time > b.time;",
+                "block_13_cmp_time_alt": "return a.time < b.time;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_13_top_ok": "Task task = pq.top();\n        pq.pop();",
+                "block_13_top_alt": "Task task = pq.front();\n        pq.pop();",
+                "block_13_print_ok": "cout << task.name;\n        if (!pq.empty()) cout << ' ';",
+                "block_13_print_alt": "cout << task.priority;"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_13_field_name": "string name;",
+                "block_13_field_priority": "int priority;",
+                "block_13_field_time": "int time;",
+                "block_13_field_rank": "int rank;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_13_queue_ok": "priority_queue<Task, vector<Task>, TaskCompare> pq;",
+                "block_13_queue_alt": "queue<Task> pq;",
+                "block_13_read_ok": "Task task;\n        cin >> task.name >> task.priority >> task.time;\n        pq.push(task);",
+                "block_13_read_alt": "Task task;\n        cin >> task.name >> task.priority >> task.time;"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "SchedulerLoader",
+            "type": "function",
+            "code": "void loadTasks(int n, priority_queue<Task, vector<Task>, TaskCompare>& pq) {\n    for (int i = 0; i < n; ++i) {\n        // read one task and push it into pq\n        $space1$\n    }\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_13_read"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "TaskRecord",
+            "type": "class",
+            "code": "struct Task {\n    // task name\n    $space1$\n    // higher value means higher priority\n    $space2$\n    // earlier time wins when priority ties\n    $space3$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_13_field_name"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_13_field_priority"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_13_field_time"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "SchedulerRunner",
+            "type": "function",
+            "code": "void runTasks(priority_queue<Task, vector<Task>, TaskCompare>& pq) {\n    while (!pq.empty()) {\n        // take the scheduled task\n        $space1$\n        // print its name and spacing\n        $space2$\n    }\n    cout << '\\n';\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_13_top"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_13_print"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "TaskCompareRule",
+            "type": "class",
+            "code": "struct TaskCompare {\n    bool operator()(const Task& a, const Task& b) const {\n        // compare priority first\n        $space1$\n        // tie-break by earlier time\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_13_cmp_priority"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_13_cmp_time"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Task scheduler Boss",
+        "code": "#include <iostream>\n#include <queue>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//your task\n$space_1$\n\n//task_compare\n$space_2$\n\n//SchedulerLoader\n$space_3$\n\n//SchedulerRunner\n$space_4$\n\nint main() {\n    int n; cin >> n;\n    $space_5$\n    loadTasks(n, pq);\n    runTasks(pq);\n    return 0;\n}\n",
+        "input": "4\nclean 2 5\nbuild 5 3\ntest 5 1\ndeploy 3 2",
+        "output": "test build deploy clean",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "TaskRecord[block_13_field_name,block_13_field_priority,block_13_field_time]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "TaskCompareRule[block_13_cmp_priority_ok,block_13_cmp_time_ok]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "SchedulerLoader[block_13_read_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "SchedulerRunner[block_13_top_ok,block_13_print_ok]"
+                ]
+            },
+            "space_5": {
+                "type": "match",
+                "val": [
+                    "block_13_queue_ok"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

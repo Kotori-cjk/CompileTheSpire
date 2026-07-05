@@ -1,0 +1,265 @@
+{
+    "map_width": 7,
+    "map_height": 7,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 7,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            "clue_1",
+            ".",
+            ".",
+            "clue_3",
+            "#"
+        ],
+        [
+            "clue_2",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_1",
+            "#"
+        ],
+        [
+            "monster_1",
+            ".",
+            ".",
+            "chest_2",
+            "#",
+            "clue_4",
+            "#"
+        ],
+        [
+            "chest_4",
+            "chest_3",
+            ".",
+            ".",
+            "#",
+            ".",
+            "monster_3"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "monster_5",
+            ".",
+            ".",
+            "monster_2",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_1": "Sample input:\n3\n1 2 3\n\nSample output:\n1 2 3\n999 2 3",
+        "clue_3": "We need to double the capacity allocated by our VectorLite.",
+        "clue_2": "Look, there’s even a room here.",
+        "clue_4": "This is by far the biggest box I’ve ever seen."
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 7,
+            "blocks": {
+                "block_08_cap_ok": "int newCapacity = capacityValue == 0 ? 1 : capacityValue * 2;",
+                "block_08_cap_alt": "int newCapacity = capacityValue + 1;",
+                "block_08_alloc": "int* newData = new int[newCapacity];",
+                "block_08_copy_ok": "for (int i = 0; i < sizeValue; ++i) newData[i] = data[i];",
+                "block_08_copy_alt": "for (int i = 0; i < sizeValue; ++i) newData[i] = 0;",
+                "block_08_delete_arr": "delete[] data;",
+                "block_08_delete_one": "delete data;"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_08_copy_header": "VectorLite(const VectorLite& other): data(nullptr), sizeValue(other.sizeValue), capacityValue(other.capacityValue) {",
+                "block_08_copy_alloc_ok": "if (capacityValue > 0) {\n            data = new int[capacityValue];\n            for (int i = 0; i < sizeValue; ++i) data[i] = other.data[i];\n        }",
+                "block_08_copy_alloc_alt": "data = other.data;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_08_dtor_ok": "~VectorLite() {\n        delete[] data;\n    }",
+                "block_08_dtor_alt": "~VectorLite() {\n        delete data;\n    }",
+                "block_08_push_ok": "void pushBack(int value) {\n        if (sizeValue == capacityValue) grow();\n        data[sizeValue++] = value;\n    }",
+                "block_08_push_alt": "void pushBack(int value) {\n        data[sizeValue++] = value;\n    }"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_08_self_ok": "if (this == &other) return *this;",
+                "block_08_self_alt": "if (this != &other) return *this;",
+                "block_08_assign_body_ok": "delete[] data;\n        sizeValue = other.sizeValue;\n        capacityValue = other.capacityValue;\n        data = capacityValue > 0 ? new int[capacityValue] : nullptr;\n        for (int i = 0; i < sizeValue; ++i) data[i] = other.data[i];\n        return *this;",
+                "block_08_assign_body_alt": "data = other.data;\n        sizeValue = other.sizeValue;\n        capacityValue = other.capacityValue;\n        return *this;"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "VectorGrow",
+            "type": "function",
+            "code": "void grow() {\n        $space1$\n        $space2$\n        $space3$\n        $space4$\n        data = newData;\n        capacityValue = newCapacity;\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_cap"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_08_alloc"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_copy"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_delete"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "VectorAssign",
+            "type": "function",
+            "code": "VectorLite& operator=(const VectorLite& other) {\n        $space1$\n        $space2$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_self"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_assign_body"
+                    ]
+                }
+            }
+        },
+        "monster_5": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "VectorLite",
+            "type": "class",
+            "code": "class VectorLite {\nprivate:\n    int* data;\n    int sizeValue;\n    int capacityValue;\n\n    $space1$\n\npublic:\n    $space2$\n\n    //your =\n\t$space3$\n\n    //your ~VectorLite()\n\t$space4$\n\n    //your pushback()\n\t$space5$\n\n    void set(int index, int value) {\n        if (0 <= index && index < sizeValue) data[index] = value;\n    }\n\n    void print() const {\n        for (int i = 0; i < sizeValue; ++i) {\n            if (i) cout << ' ';\n            cout << data[i];\n        }\n        cout << '\\n';\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "VectorGrow[block_08_cap_ok,block_08_alloc,block_08_copy_ok,block_08_delete_arr]"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "VectorCopy[block_08_copy_header,block_08_copy_alloc_ok]"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "VectorAssign[block_08_self_ok,block_08_assign_body_ok]"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_dtor"
+                    ]
+                },
+                "space5": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_push"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "VectorCopy",
+            "type": "function",
+            "code": "VectorLite(): data(nullptr), sizeValue(0), capacityValue(0) {}\n\n\t// deepcopy\n    $space2$\n        $space3$\n    }",
+            "spaces": {
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_08_copy_header"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_08_copy_alloc"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "VectorLite Boss",
+        "code": "#include <iostream>\nusing namespace std;\n\n$space1$\n\nint main() {\n    int n; cin >> n;\n    VectorLite a;\n    for (int i = 0; i < n; ++i) { int x; cin >> x; a.pushBack(x); }\n    VectorLite b = a;\n    if (n > 0) a.set(0, 999);\n    b.print();\n    a.print();\n    return 0;\n}\n",
+        "input": "3\n1 2 3",
+        "output": "1 2 3\n999 2 3",
+        "spaces": {
+            "space1": {
+                "type": "match",
+                "val": [
+                    "VectorLite[VectorGrow[block_08_cap_ok,block_08_alloc,block_08_copy_ok,block_08_delete_arr],VectorCopy[block_08_copy_header,block_08_copy_alloc_ok],VectorAssign[block_08_self_ok,block_08_assign_body_ok],block_08_dtor_ok,block_08_push_ok]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

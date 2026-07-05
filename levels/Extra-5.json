@@ -1,0 +1,815 @@
+{
+    "map_width": 15,
+    "map_height": 15,
+    "level_type": "simple",
+    "special_tags": [
+        "discard_drops",
+        "no_discard",
+        "bundle_pick",
+        "friendly_boss",
+        "skip_on_full"
+    ],
+    "bag_size": 2,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            "chest_R1",
+            "chest_GB1",
+            "monster_R1",
+            "chest_B1",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            "monster_B1",
+            "monster_GB1",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "chest_RB1",
+            "#",
+            "#",
+            "monster_GB2",
+            "#",
+            "chest_B2",
+            "chest_G1",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "chest_GB2",
+            "monster_G1",
+            "chest_RB2",
+            "monster_B2",
+            "chest_G2",
+            "#",
+            "chest_RG1",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "chest_B3",
+            "#",
+            "chest_B4",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "chest_G3",
+            "monster_G2",
+            "chest_B5",
+            "monster_R2",
+            "#",
+            "chest_RB3",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "#",
+            "chest_B6",
+            "monster_GB3",
+            ".",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "monster_RB1",
+            "monster_GB4",
+            "chest_R2",
+            "chest_G4",
+            "#",
+            "monster_RG1",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "monster_B3",
+            "#",
+            "monster_RB2",
+            "#",
+            "chest_R3",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "chest_RG2",
+            "monster_RG2",
+            "#",
+            "monster_RB3",
+            "#",
+            "monster_RG3",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "monster_RG4",
+            ".",
+            "monster_RB4",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "boss",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+    ],
+    "clue_count": 0,
+    "clues": {},
+    "chest_count": 20,
+    "chests": {
+        "chest_R1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R1": "int x"
+            }
+        },
+        "chest_GB1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G1": "a + b",
+                "block_B1": "return a;"
+            }
+        },
+        "chest_B1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B2": "return 0;"
+            }
+        },
+        "chest_RB1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R2": "int x",
+                "block_B3": "continue;"
+            }
+        },
+        "chest_B2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B4": "continue;"
+            }
+        },
+        "chest_G1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G2": "a > b"
+            }
+        },
+        "chest_GB2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_G3": "a * b",
+                "block_B5": "continue;"
+            }
+        },
+        "chest_RB2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R3": "size_t n",
+                "block_B6": "continue;"
+            }
+        },
+        "chest_G2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G4": "a - b"
+            }
+        },
+        "chest_RG1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R4": "size_t n",
+                "block_G5": "a + b"
+            }
+        },
+        "chest_B3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B7": "return 0;"
+            }
+        },
+        "chest_B4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B8": "break;"
+            }
+        },
+        "chest_G3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G6": "a > b"
+            }
+        },
+        "chest_B5": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B9": "continue;"
+            }
+        },
+        "chest_RB3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R5": "int x",
+                "block_B10": "break;"
+            }
+        },
+        "chest_B6": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_B11": "return a;"
+            }
+        },
+        "chest_R2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R6": "size_t n"
+            }
+        },
+        "chest_G4": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_G7": "a + b"
+            }
+        },
+        "chest_R3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_R7": "int x"
+            }
+        },
+        "chest_RG2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_R8": "auto it",
+                "block_G8": "a - b"
+            }
+        }
+    },
+    "monster_count": 19,
+    "monsters": {
+        "monster_R1": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "R1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                }
+            }
+        },
+        "monster_B1": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "B1",
+            "type": "function",
+            "code": "int loop() {\n    int a = 1;\n    while (a--) {\n        $space1$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_GB1": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "GB1",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_GB2": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "GB2",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_G1": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "G1",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_B2": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "B2",
+            "type": "function",
+            "code": "int loop() {\n    int a = 1;\n    while (a--) {\n        $space1$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_G2": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "G2",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_R2": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "R2",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                }
+            }
+        },
+        "monster_GB3": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "GB3",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RB1": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "RB1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_GB4": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "GB4",
+            "type": "function",
+            "code": "int eval() {\n    int a = 1, b = 2;\n    return $space1$;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG1": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "RG1",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint eval() {\n    int a = 1, b = 2;\n    return $space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_B3": {
+            "pic": "assets/node.png",
+            "nickname": "Node",
+            "name": "B3",
+            "type": "function",
+            "code": "int loop() {\n    int a = 1;\n    while (a--) {\n        $space1$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RB2": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "RB2",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG2": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "RG2",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint eval() {\n    int a = 1, b = 2;\n    return $space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RB3": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "RB3",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        },
+        "monster_RG3": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "RG3",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint eval() {\n    int a = 1, b = 2;\n    return $space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RG4": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "RG4",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint eval() {\n    int a = 1, b = 2;\n    return $space2$;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "G"
+                    ]
+                }
+            }
+        },
+        "monster_RB4": {
+            "pic": "assets/mabel.png",
+            "nickname": "Mabel",
+            "name": "RB4",
+            "type": "function",
+            "code": "void step() {\n    int a = 1, b = 2;\n    $space1$ = 0;\n}\nint loop() {\n    int a = 1;\n    while (a--) {\n        $space2$\n    }\n    return a;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "R"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "",
+        "input": "",
+        "output": "",
+        "spaces": {}
+    },
+    "start": [
+        2,
+        2
+    ],
+    "end_text": ""
+}

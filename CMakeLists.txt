@@ -9,14 +9,36 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Multimedia)
 
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
+        mainwindow_levelselect.cpp
+        mainwindow_gameplay.cpp
+        mainwindow_dialogs.cpp
         mainwindow.h
         mainwindow.ui
+        codeblockui.cpp
+        codeblockui.h
+        stagecatalog.cpp
+        stagecatalog.h
+        resources.qrc
+        leveldata.cpp
+        leveldata.h
+        inventory.cpp
+        inventory.h
+        gamemap.cpp
+        gamemap.h
+        combat.cpp
+        combat.h
+        gameengine.cpp
+        gameengine.h
+        savemanager.cpp
+        savemanager.h
+        mapview.cpp
+        mapview.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -42,7 +64,57 @@ else()
     endif()
 endif()
 
-target_link_libraries(CompileTheSpire PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(CompileTheSpire PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Multimedia)
+
+file(GLOB_RECURSE RUNTIME_LEVEL_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/levels/*")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/levels")
+    add_custom_target(copy_runtime_levels ALL
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "$<TARGET_FILE_DIR:CompileTheSpire>/levels"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/levels"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/levels"
+        DEPENDS ${RUNTIME_LEVEL_FILES}
+        COMMENT "Copying levels to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_levels)
+endif()
+
+foreach(runtime_data_dir IN ITEMS savedata assets/audio)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_data_dir}")
+        add_custom_command(TARGET CompileTheSpire POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_data_dir}"
+                    "$<TARGET_FILE_DIR:CompileTheSpire>/${runtime_data_dir}"
+            COMMENT "Copying ${runtime_data_dir} to runtime output directory"
+        )
+    endif()
+endforeach()
+
+file(GLOB_RECURSE RUNTIME_AUDIO_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio/*")
+if(RUNTIME_AUDIO_FILES)
+    add_custom_target(copy_runtime_audio ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/assets/audio"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets/audio"
+        DEPENDS ${RUNTIME_AUDIO_FILES}
+        COMMENT "Copying audio assets to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_audio)
+endif()
+
+set(BEGINNER_TUTORIAL_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/assets/beginner_tips_intro.png")
+if(EXISTS "${BEGINNER_TUTORIAL_IMAGE}")
+    add_custom_target(copy_runtime_beginner_tutorial ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${BEGINNER_TUTORIAL_IMAGE}"
+                "$<TARGET_FILE_DIR:CompileTheSpire>/assets/beginner_tips_intro.png"
+        DEPENDS "${BEGINNER_TUTORIAL_IMAGE}"
+        COMMENT "Copying beginner tutorial image to runtime output directory"
+    )
+    add_dependencies(CompileTheSpire copy_runtime_beginner_tutorial)
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

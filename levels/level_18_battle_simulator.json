@@ -1,0 +1,349 @@
+{
+    "map_width": 10,
+    "map_height": 10,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 10,
+    "map_grid": [
+        [
+            "boss",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            "clue_5",
+            "#",
+            "chest_2",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "monster_4",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "chest_3",
+            ".",
+            "."
+        ],
+        [
+            "chest_1",
+            ".",
+            ".",
+            ".",
+            "clue_2",
+            ".",
+            ".",
+            "#",
+            "monster_2",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            "monster_3",
+            ".",
+            ".",
+            ".",
+            "chest_4",
+            "#",
+            ".",
+            "clue_1"
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            ".",
+            "clue_4",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            "clue_3",
+            "start"
+        ]
+    ],
+    "clue_count": 5,
+    "clues": {
+        "clue_5": "Actually, I did think about whether we should make a World of Warcraft fill-in-the-blank version.\n\nObviously, no.\n",
+        "clue_2": "Sample input:\n100 20 90 15 5\n\nSample output:\nPLAYER\n50 0",
+        "clue_1": "Battle simulator",
+        "clue_4": "Our attack power doubles every three rounds, while the enemy’s attack power increases by five every two rounds. The advantage is ours!\n",
+        "clue_3": "Time and space have already reversed. I guess this game is about to end.\n"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_18_player_ctor": "Player(string fighterName, int health, int attack): Fighter(fighterName, health, attack) {}",
+                "block_18_player_rule_ok": "return round % 3 == 0 ? attackValue * 2 : attackValue;",
+                "block_18_player_rule_alt": "return attackValue * 2;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_18_monster_ctor": "Monster(string fighterName, int health, int attack): Fighter(fighterName, health, attack) {}",
+                "block_18_monster_rule_ok": "return round % 2 == 0 ? attackValue + 5 : attackValue;",
+                "block_18_monster_rule_alt": "return attackValue + 5;"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 8,
+            "blocks": {
+                "block_18_ctor": "Fighter(string fighterName, int health, int attack): name(fighterName), hp(health), attackValue(attack) {}",
+                "block_18_dtor": "virtual ~Fighter() {}",
+                "block_18_alive": "return hp > 0;",
+                "block_18_damage_ok": "hp -= value;\n        if (hp < 0) hp = 0;",
+                "block_18_damage_alt": "hp -= value;",
+                "block_18_getters": "int getHp() const { return hp; }\n\n    string getName() const { return name; }",
+                "block_18_virtual_ok": "virtual int damageOnRound(int round) const {\n        return attackValue;\n    }",
+                "block_18_virtual_alt": "int damageOnRound(int round) const {\n        return attackValue;\n    }"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 6,
+            "blocks": {
+                "block_18_loop_ok": "for (int round = 1; round <= maxRound && player.alive() && monster.alive(); ++round) {",
+                "block_18_loop_alt": "for (int round = 1; round <= maxRound; ++round) {",
+                "block_18_player_hit": "monster.takeDamage(player.damageOnRound(round));",
+                "block_18_if_alive_ok": "if (monster.alive()) {",
+                "block_18_if_alive_alt": "if (true) {",
+                "block_18_monster_hit": "player.takeDamage(monster.damageOnRound(round));"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "FightLoop",
+            "type": "function",
+            "code": "void fight(Fighter& player, Fighter& monster, int maxRound) {\n    // round loop condition\n    $space1$\n        // player attacks first\n        $space2$\n        // monster retaliates only if alive\n        $space3$\n            // monster attack\n            $space4$\n        }\n    }\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_loop"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_18_player_hit"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_if_alive"
+                    ]
+                },
+                "space4": {
+                    "type": "match",
+                    "val": [
+                        "block_18_monster_hit"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "FighterBase",
+            "type": "class",
+            "code": "class Fighter {\nprotected:\n    string name;\n    int hp;\n    int attackValue;\n\npublic:\n    // constructor\n    $space1$\n    // virtual destructor\n    $space2$\n\n    bool alive() const {\n        // alive when hp is positive\n        $space3$\n    }\n\n    void takeDamage(int value) {\n        // subtract damage and clamp hp\n        $space4$\n    }\n\n    // getters\n    $space5$\n\n    // base damage rule\n    $space6$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_18_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_18_dtor"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_18_alive"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_damage"
+                    ]
+                },
+                "space5": {
+                    "type": "match",
+                    "val": [
+                        "block_18_getters"
+                    ]
+                },
+                "space6": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_virtual"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "PlayerClass",
+            "type": "class",
+            "code": "class Player: public Fighter {\npublic:\n    // constructor\n    $space1$\n    int damageOnRound(int round) const {\n        // player critical rule\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_18_player_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_player_rule"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "MonsterClass",
+            "type": "class",
+            "code": "class Monster: public Fighter {\npublic:\n    // constructor\n    $space1$\n    int damageOnRound(int round) const {\n        // monster bonus rule\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_18_monster_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_18_monster_rule"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Battle simulator Boss",
+        "code": "#include <algorithm>\n#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//FighterBase\n$space_1$\n\n//player\n$space_2$\n\n//monster\n$space_3$\n\n//fight\n$space_4$\n\nint main() {\n    int playerHp, playerAtk, monsterHp, monsterAtk, rounds;\n    cin >> playerHp >> playerAtk >> monsterHp >> monsterAtk >> rounds;\n    Player player(\"hero\", playerHp, playerAtk);\n    Monster monster(\"boss\", monsterHp, monsterAtk);\n    fight(player, monster, rounds);\n    if (player.alive() && !monster.alive()) cout << \"PLAYER\\n\";\n    else if (!player.alive() && monster.alive()) cout << \"MONSTER\\n\";\n    else if (!player.alive() && !monster.alive()) cout << \"DRAW\\n\";\n    else cout << \"UNFINISHED\\n\";\n    cout << player.getHp() << ' ' << monster.getHp() << '\\n';\n    return 0;\n}\n",
+        "input": "100 20 90 15 5",
+        "output": "PLAYER\n50 0",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "FighterBase[block_18_ctor,block_18_dtor,block_18_alive,block_18_damage_ok,block_18_getters,block_18_virtual_ok]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "PlayerClass[block_18_player_ctor,block_18_player_rule_ok]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "MonsterClass[block_18_monster_ctor,block_18_monster_rule_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "FightLoop[block_18_loop_ok,block_18_player_hit,block_18_if_alive_ok,block_18_monster_hit]"
+                ]
+            }
+        }
+    },
+    "start": [
+        9,
+        9
+    ],
+    "end_text": ""
+}

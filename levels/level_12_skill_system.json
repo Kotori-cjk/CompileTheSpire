@@ -1,0 +1,280 @@
+{
+    "map_width": 8,
+    "map_height": 8,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            "clue_1",
+            ".",
+            "clue_2",
+            ".",
+            "#",
+            "#",
+            "clue_4"
+        ],
+        [
+            "#",
+            "#",
+            "chest_1",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "clue_5",
+            "#",
+            "."
+        ],
+        [
+            "chest_2",
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "monster_4"
+        ],
+        [
+            ".",
+            "#",
+            "chest_3",
+            "clue_3",
+            "#",
+            ".",
+            "chest_4",
+            "#"
+        ],
+        [
+            "monster_3",
+            "monster_2",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 5,
+    "clues": {
+        "clue_1": "Skill system\nCharacters in RPG games have several skills.",
+        "clue_2": "Sample input:\n3\nfire heal fire\n\nSample output:\n120 40",
+        "clue_4": "You learned a new skill: Heal.",
+        "clue_5": "Character hero(\"hero\", 100), enemy(\"enemy\", 100);\n    int n; cin >> n;\n    vector<Skill*> skills;\n    for (int i = 0; i < n; ++i) {\n\t\tstring type;\n\t\tcin >> type;\n\t\tif (type == \"fire\") skills.push_back(new FireSkill());\n\t\telse skills.push_back(new HealSkill()); }\n    for (size_t i = 0; i < skills.size(); ++i) skills[i]->cast(hero, enemy);\n    cout << hero.getHp() << ' ' << enemy.getHp() << '\\n';\n    for (size_t i = 0; i < skills.size(); ++i) delete skills[i];",
+        "clue_3": "You learned a new skill: Fire."
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_12_ctor": "Character(string characterName = \"\", int health = 0): name(characterName), hp(health) {}",
+                "block_12_damage_ok": "hp -= value;\n        if (hp < 0) hp = 0;",
+                "block_12_damage_alt": "hp -= value;",
+                "block_12_heal": "hp += value;",
+                "block_12_getters": "int getHp() const { return hp; }\n\n    string getName() const { return name; }"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_12_dtor": "virtual ~Skill() {}",
+                "block_12_cast_pure": "virtual void cast(Character& self, Character& target) const = 0;",
+                "block_12_cast_bad": "void cast(Character& self, Character& target) const {}",
+                "block_12_dtor_false": "~Skill() {}"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_12_fire_sig": "void cast(Character& self, Character& target) const {\n\t//fire!",
+                "block_12_fire_ok": "target.damage(30);",
+                "block_12_fire_alt": "self.damage(30);"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_12_heal_sig": "void cast(Character& self, Character& target) const {\n\t//heal!",
+                "block_12_heal_ok": "self.heal(20);",
+                "block_12_heal_alt": "target.heal(20);"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "CharacterState",
+            "type": "class",
+            "code": "class Character {\nprivate:\n    string name;\n    int hp;\n\npublic:\n\t//your constructor\n    $space1$\n\n    void damage(int value) {\n        $space2$\n    }\n\n    void heal(int value) {\n        $space3$\n    }\n\t\n\t//getName\n    $space4$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_12_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_12_damage"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_12_heal"
+                    ]
+                },
+                "space4": {
+                    "type": "match",
+                    "val": [
+                        "block_12_getters"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "HealSkillClass",
+            "type": "class",
+            "code": "class HealSkill: public Skill {\npublic:\n    $space1$\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_12_heal_sig"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_12_heal"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "FireSkillClass",
+            "type": "class",
+            "code": "class FireSkill: public Skill {\npublic:\n    $space1$\n        $space2$\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_12_fire_sig"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_12_fire"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "SkillBase",
+            "type": "class",
+            "code": "class Skill {\npublic:\n\t//your destructor\n    $space1$\n\n\t//use skill\n    $space2$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_12_dtor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_12_cast"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Skill system Boss",
+        "code": "#include <iostream>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//class Charactor\n$space_1$\n\n//class Skill\n$space_2$\n\n//class Fire\n$space_3$\n\n//class Heal\n$space_4$\n\nint main() {\n    $clue_5$\n    return 0;\n}\n",
+        "input": "3\nfire heal fire",
+        "output": "120 40",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "CharacterState[block_12_ctor,block_12_damage_ok,block_12_heal,block_12_getters]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "SkillBase[block_12_dtor,block_12_cast_pure]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "FireSkillClass[block_12_fire_sig,block_12_fire_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "HealSkillClass[block_12_heal_sig,block_12_heal_ok]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

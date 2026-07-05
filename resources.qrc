@@ -1,0 +1,38 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>assets/cover.png</file>
+        <file>assets/cover_cpp.png</file>
+        <file>assets/title_cover_16_9.png</file>
+        <file>assets/title_clean_bg.png</file>
+        <file>assets/stage_select_bg.png</file>
+        <file>assets/stage_bridge_up.png</file>
+        <file>assets/stage_bridge_up2.png</file>
+        <file>assets/interface_background.png</file>
+        <file>assets/interface_background_fitted.png</file>
+        <file>assets/bag_background.png</file>
+        <file>assets/manul_background.png</file>
+        <file>assets/victory_settlement.png</file>
+        <file>assets/wall_image.jpg</file>
+        <file>assets/alternative_1.jpg</file>
+        <file>assets/alternative_2.jpg</file>
+        <file>assets/alice.png</file>
+        <file>assets/cheshire_cat.png</file>
+        <file>assets/chtholly.png</file>
+        <file>assets/forced_chest.png</file>
+        <file>assets/unforce_chest.png</file>
+        <file>assets/clue.png</file>
+        <file>assets/class.png</file>
+        <file>assets/function.png</file>
+        <file>assets/natural.png</file>
+        <file>assets/dodo.png</file>
+        <file>assets/example_map.png</file>
+        <file>assets/gerda.png</file>
+        <file>assets/jabberwock.png</file>
+        <file>assets/jibao.png</file>
+        <file>assets/jibao_walk_sheet.png</file>
+        <file>assets/mabel.png</file>
+        <file>assets/marry_ann.png</file>
+        <file>assets/node.png</file>
+        <file>assets/red_hood.png</file>
+    </qresource>
+</RCC>

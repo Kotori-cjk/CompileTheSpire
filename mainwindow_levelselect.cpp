@@ -1,0 +1,456 @@
+#include "mainwindow.h"
+#include "./ui_mainwindow.h"
+#include "mapview.h"
+#include "codeblockui.h"
+#include "stagecatalog.h"
+
+#include <QAbstractItemView>
+#include <QApplication>
+#include <QCoreApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QDrag>
+#include <QEvent>
+#include <QFileInfo>
+#include <QFrame>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QKeyEvent>
+#include <QListWidgetItem>
+#include <QMessageBox>
+#include <QMimeData>
+#include <QMouseEvent>
+#include <QPixmap>
+#include <QRegularExpression>
+#include <QScrollArea>
+#include <QSlider>
+#include <QStyle>
+#include <QStackedWidget>
+#include <QTextEdit>
+#include <QTextBrowser>
+#include <QTimer>
+#include <QToolButton>
+#include <QUrl>
+#include <QVBoxLayout>
+
+#include <functional>
+
+namespace {
+QString findLevelListFile(const QString &path)
+{
+    QDir dir(path);
+    const QStringList preferred = {
+        "level_list.txt",
+        "levels.txt",
+        "stage_list.txt",
+        "stages.txt",
+        "level_order.txt",
+        "order.txt",
+        "list.txt"
+    };
+
+    for (const QString &fileName : preferred) {
+        if (QFileInfo::exists(dir.absoluteFilePath(fileName))) {
+            return fileName;
+        }
+    }
+
+    const QStringList discovered = dir.entryList({"*.list", "*list*.txt", "*order*.txt"}, QDir::Files, QDir::Name);
+    return discovered.isEmpty() ? QString() : discovered.first();
+}
+
+bool isExLevelMeta(const LevelMeta &meta)
+{
+    const QString type = meta.levelType.trimmed().toLower();
+    const QString name = meta.levelName.trimmed().toLower();
+    return type == "ex" || type == "extra" || type.startsWith("ex_") || type.startsWith("ex-")
+           || name == "ex" || name.startsWith("ex_") || name.startsWith("ex-")
+           || name.startsWith("extra_") || name.startsWith("extra-");
+}
+
+QString levelSubtitle(const LevelData *level)
+{
+    if (!level) {
+        return QString();
+    }
+
+    const QString bossName = level->boss.nickname.trimmed();
+    if (!bossName.isEmpty()) {
+        return bossName;
+    }
+
+    return level->levelType.trimmed();
+}
+
+QString displayStageTitle(QString fileName)
+{
+    fileName = fileName.trimmed();
+    fileName.remove(QRegularExpression("^(level|stage)[_-]*\\d+[_-]*", QRegularExpression::CaseInsensitiveOption));
+    fileName.remove(QRegularExpression("^ex[_-]*\\d+[_-]*", QRegularExpression::CaseInsensitiveOption));
+    fileName.replace(QRegularExpression("[_-]+"), " ");
+    fileName = fileName.simplified();
+
+    const QStringList words = fileName.split(' ', Qt::SkipEmptyParts);
+    QStringList prettyWords;
+    for (QString word : words) {
+        if (word.isEmpty()) {
+            continue;
+        }
+        word = word.toLower();
+        word[0] = word[0].toUpper();
+        prettyWords.append(word);
+    }
+
+    return prettyWords.isEmpty() ? fileName : prettyWords.join(' ');
+}
+
+QString wrapStageTitle(const QString &title)
+{
+    const QStringList words = title.split(' ', Qt::SkipEmptyParts);
+    if (words.size() <= 1 || title.length() <= 16) {
+        return title;
+    }
+
+    QString first;
+    QString second;
+    for (const QString &word : words) {
+        if (second.isEmpty() && (first.length() + word.length() + 1) <= title.length() / 2 + 2) {
+            if (!first.isEmpty()) {
+                first += ' ';
+            }
+            first += word;
+        } else {
+            if (!second.isEmpty()) {
+                second += ' ';
+            }
+            second += word;
+        }
+    }
+
+    return second.isEmpty() ? title : QString("%1\n%2").arg(first, second);
+}
+
+QVector<StageCard> stagesFromLoadedLevels(GameEngine &gameEngine)
+{
+    QVector<StageCard> stages;
+    const QVector<LevelMeta> metas = gameEngine.levelList();
+    for (const LevelMeta &meta : metas) {
+        const QString title = meta.levelName.trimmed().isEmpty()
+                                  ? QString("Level %1").arg(meta.levelIndex + 1)
+                                  : displayStageTitle(meta.levelName);
+        stages.append(StageCard{
+            meta.levelIndex,
+            isExLevelMeta(meta),
+            title,
+            levelSubtitle(meta.level),
+            QString()
+        });
+    }
+    return stages;
+}
+}
+
+void MainWindow::loadLevels()
+{
+    QStringList errors;
+    for (const QString &path : fallbackLevelPaths()) {
+        Q_UNUSED(errors);
+        const QString listFile = findLevelListFile(path);
+        gameEngine.gameInit(path, listFile);
+        if (!gameEngine.levels.isEmpty()) {
+            levels = gameEngine.levels;
+            const QString source = listFile.isEmpty() ? path : QString("%1 (%2)").arg(path, listFile);
+            statusBar()->showMessage(QString("Loaded %1 level(s) from %2").arg(levels.size()).arg(source), 3000);
+            return;
+        }
+    }
+
+    LevelData single;
+    QString error;
+    const QString examplePath = QDir::current().filePath("example.json");
+    if (single.LoadFromJson(examplePath, &error)) {
+        levels.append(single);
+        gameEngine.levels = levels;
+        gameEngine.m_save.Init(levels.size());
+        gameEngine.m_save.Load(levels.size());
+        statusBar()->showMessage("Loaded example.json.", 3000);
+        return;
+    }
+
+    levels.append(createPreviewLevel());
+    gameEngine.levels = levels;
+    gameEngine.m_save.Init(levels.size());
+    gameEngine.m_save.Load(levels.size());
+    statusBar()->showMessage("No valid level JSON was found. Loaded preview map for UI testing.", 5000);
+}
+
+void MainWindow::refreshLevelSelectUi()
+{
+    QVector<StageCard> allStages = stagesFromLoadedLevels(gameEngine);
+    if (allStages.isEmpty()) {
+        allStages = stageCatalog();
+    }
+    QVector<StageCard> visibleStages;
+    for (const StageCard &stage : allStages) {
+        if (stage.isEx == showingExLevels) {
+            visibleStages.append(stage);
+        }
+    }
+
+    const int pageCount = qMax(1, (visibleStages.size() + stagesPerPage - 1) / stagesPerPage);
+    currentLevelSelectPage = qBound(0, currentLevelSelectPage, pageCount - 1);
+    const int firstIndex = currentLevelSelectPage * stagesPerPage;
+
+    ui->mapTitleLabel->setText(showingExLevels ? "EX Stage Select" : "Select Stage");
+    if (stageNodeButtons.isEmpty()) {
+        return;
+    }
+
+    QLabel *pageLabel = ui->mapFrame->findChild<QLabel *>("levelPageLabel");
+    QPushButton *prevButton = ui->mapFrame->findChild<QPushButton *>("prevStageButton");
+    QPushButton *nextButton = ui->mapFrame->findChild<QPushButton *>("nextStageButton");
+    QPushButton *normalButton = ui->mapFrame->findChild<QPushButton *>("normalStageButton");
+    QPushButton *exButton = ui->mapFrame->findChild<QPushButton *>("exStageButton");
+    QPushButton *startButton = ui->mapFrame->findChild<QPushButton *>("levelStartButton");
+
+    if (pageLabel) {
+        pageLabel->setText(QString("%1 PAGE %2 / %3")
+                               .arg(showingExLevels ? "EX STAGE" : "SELECT STAGE")
+                               .arg(currentLevelSelectPage + 1)
+                               .arg(pageCount));
+    }
+    if (prevButton) {
+        prevButton->setEnabled(currentLevelSelectPage > 0);
+    }
+    if (nextButton) {
+        nextButton->setEnabled(currentLevelSelectPage + 1 < pageCount);
+    }
+    if (normalButton && exButton) {
+        normalButton->setProperty("levelMode", showingExLevels ? "true" : "active");
+        exButton->setProperty("levelMode", showingExLevels ? "active" : "true");
+        normalButton->style()->unpolish(normalButton);
+        normalButton->style()->polish(normalButton);
+        exButton->style()->unpolish(exButton);
+        exButton->style()->polish(exButton);
+    }
+
+    if (selectedStageIndex < 0 || !isLevelUnlocked(selectedStageIndex)) {
+        selectedStageIndex = -1;
+        for (int i = 0; i < stagesPerPage; ++i) {
+            const int stageIndex = firstIndex + i;
+            if (stageIndex < visibleStages.size() && isLevelUnlocked(visibleStages.at(stageIndex).levelIndex)) {
+                selectedStageIndex = visibleStages.at(stageIndex).levelIndex;
+                break;
+            }
+        }
+    }
+    bool selectedStageVisible = false;
+    for (int i = 0; i < stageNodeButtons.size(); ++i) {
+        QPushButton *button = stageNodeButtons.at(i);
+        if (!button) {
+            continue;
+        }
+        const int stageIndex = firstIndex + i;
+        const bool hasStage = stageIndex < visibleStages.size();
+        const StageCard stage = hasStage ? visibleStages.at(stageIndex) : StageCard{-1, showingExLevels, "Empty", "", ""};
+        const bool unlocked = hasStage && isLevelUnlocked(stage.levelIndex);
+        const bool completed = hasStage && isLevelCleared(stage.levelIndex);
+        button->setEnabled(hasStage);
+        button->setProperty("levelIndex", stage.levelIndex);
+        const bool selected = hasStage && stage.levelIndex == selectedStageIndex;
+        QString cardState = "locked";
+        if (unlocked && completed) {
+            cardState = selected ? "selectedCleared" : "cleared";
+        } else if (unlocked) {
+            cardState = selected ? "selectedUnlocked" : "true";
+        }
+        button->setProperty("levelCard", cardState);
+        button->style()->unpolish(button);
+        button->style()->polish(button);
+        if (hasStage) {
+            const QString displayTitle = wrapStageTitle(stage.title);
+            const int compactLength = stage.title.length();
+            button->setProperty("levelNameSize", compactLength > 20 ? "tiny" : (compactLength > 15 ? "small" : "normal"));
+            button->style()->unpolish(button);
+            button->style()->polish(button);
+            button->setText(displayTitle);
+            button->setToolTip(stage.title);
+        } else {
+            button->setProperty("levelNameSize", "normal");
+            button->setText("-");
+            button->setToolTip(QString());
+        }
+        if (selected) {
+            selectedStageVisible = true;
+        }
+    }
+    if (!selectedStageVisible && selectedStageIndex >= 0) {
+        selectedStageIndex = -1;
+        refreshLevelSelectUi();
+        return;
+    }
+    if (startButton) {
+        startButton->setEnabled(selectedStageIndex >= 0
+                                && selectedStageIndex < levels.size()
+                                && isLevelUnlocked(selectedStageIndex));
+    }
+    ui->mapBackButton->setText("Back");
+}
+
+bool MainWindow::isLevelUnlocked(int levelIndex) const
+{
+    if (levelIndex < 0 || levelIndex >= levels.size()) {
+        return false;
+    }
+
+    if (levelIndex == 0 && !showingExLevels) {
+        return true;
+    }
+
+    if (levelIndex >= 0 && levelIndex < levels.size()) {
+        for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
+            if (meta.levelIndex == levelIndex) {
+                return meta.unlocked;
+            }
+        }
+    }
+
+    QVector<StageCard> allStages = stagesFromLoadedLevels(const_cast<GameEngine &>(gameEngine));
+    if (allStages.isEmpty()) {
+        allStages = stageCatalog();
+    }
+    for (int i = 0; i < allStages.size(); ++i) {
+        if (allStages.at(i).levelIndex != levelIndex) {
+            continue;
+        }
+        for (int previous = i - 1; previous >= 0; --previous) {
+            if (allStages.at(previous).isEx != allStages.at(i).isEx) {
+                break;
+            }
+            return completedStageIndexes.contains(allStages.at(previous).levelIndex);
+        }
+        return true;
+    }
+    return false;
+}
+
+bool MainWindow::isLevelCleared(int levelIndex) const
+{
+    if (levelIndex >= 0 && levelIndex < levels.size()) {
+        for (const LevelMeta &meta : const_cast<GameEngine &>(gameEngine).levelList()) {
+            if (meta.levelIndex == levelIndex) {
+                return meta.cleared;
+            }
+        }
+    }
+
+    return completedStageIndexes.contains(levelIndex);
+}
+
+void MainWindow::setLevelSelectMode(bool exMode)
+{
+    showingExLevels = exMode;
+    currentLevelSelectPage = 0;
+    selectedStageIndex = -1;
+    refreshLevelSelectUi();
+}
+
+void MainWindow::changeLevelPage(int delta)
+{
+    currentLevelSelectPage += delta;
+    selectedStageIndex = -1;
+    refreshLevelSelectUi();
+}
+
+void MainWindow::selectStage(int levelIndex)
+{
+    if (!isLevelUnlocked(levelIndex)) {
+        statusBar()->showMessage("Clear the previous connected stage first.", 2500);
+        return;
+    }
+    selectedStageIndex = levelIndex;
+    refreshLevelSelectUi();
+}
+
+void MainWindow::showBeginnerTipsIntro()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Beginner Tips");
+    dialog.setModal(true);
+    dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dialog.setStyleSheet("QDialog { background: #05080d; } QPushButton { border: none; background: transparent; }");
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    const QString imagePath = audioFilePath("assets/beginner_tips_intro.png");
+    if (imagePath.isEmpty()) {
+        statusBar()->showMessage("Missing beginner tutorial image.", 2500);
+        return;
+    }
+
+    const QPixmap source(imagePath);
+    if (source.isNull()) {
+        statusBar()->showMessage("Failed to load beginner tutorial image.", 2500);
+        return;
+    }
+
+    const QSize targetSize = source.size().scaled(QSize(1100, 620), Qt::KeepAspectRatio);
+    QPushButton *imageButton = new QPushButton(&dialog);
+    imageButton->setCursor(Qt::PointingHandCursor);
+    imageButton->setIcon(QIcon(source.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+    imageButton->setIconSize(targetSize);
+    imageButton->setFixedSize(targetSize);
+    imageButton->setToolTip("Click to continue.");
+    layout->addWidget(imageButton);
+
+    connect(imageButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    QTimer::singleShot(60000, &dialog, &QDialog::accept);
+    dialog.exec();
+}
+
+void MainWindow::startLevel(int levelIndex)
+{
+    if (levelIndex < 0) {
+        levelIndex = 0;
+    }
+
+    if (!isLevelUnlocked(levelIndex)) {
+        statusBar()->showMessage("This stage is locked by the path order.", 2500);
+        return;
+    }
+    if (levels.isEmpty()) {
+        statusBar()->showMessage("This level is not available yet.", 2500);
+        return;
+    }
+
+    if (levelIndex < 0 || levelIndex >= levels.size()) {
+        statusBar()->showMessage("This stage has no JSON yet. Opening the preview map.", 2500);
+        levelIndex = 0;
+    }
+
+    newlyUnlockedStageIndexes.clear();
+    gameEngine.levels = levels;
+    bool started = gameEngine.startLevel(levelIndex);
+    if (!started && levelIndex == 0) {
+        gameEngine.m_save.Unlock(0);
+        gameEngine.m_save.Save();
+        started = gameEngine.startLevel(levelIndex);
+    }
+
+    if (!started) {
+        statusBar()->showMessage("Backend refused to start this level.", 2500);
+        return;
+    }
+    currentLevelIndex = levelIndex;
+    syncFromEngineState();
+    ui->stackedWidget->setCurrentWidget(ui->gamePage);
+    syncBgmToCurrentPage();
+    refreshGameUi();
+    if (mapView) {
+        mapView->setFocus(Qt::OtherFocusReason);
+    }
+}

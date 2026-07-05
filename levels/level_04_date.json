@@ -1,0 +1,173 @@
+{
+    "map_width": 6,
+    "map_height": 6,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 3,
+    "map_grid": [
+        [
+            "#",
+            "clue_1",
+            ".",
+            ".",
+            "chest_1",
+            "monster_1"
+        ],
+        [
+            "#",
+            "start",
+            "#",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "clue_2",
+            "monster_2",
+            ".",
+            ".",
+            ".",
+            "chest_2"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            "clue_3",
+            "#",
+            "#"
+        ],
+        [
+            "chest_3",
+            ".",
+            "monster_3",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_1": "I’ve been in this maze world for three days now. Maybe I need to write down today’s date.\n",
+        "clue_2": "int main() {\n    int y, m, d, n;\n    cin >> y >> m >> d >> n;\n    Date date(y, m, d);\n    date.addDays(n);\n    date.print();\n    return 0;\n}",
+        "clue_3": "Sample input:\n2024 2 27 3\n\nSample output:\n2024-03-01"
+    },
+    "chest_count": 3,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_leap_f": "return (y % 400 == 0 || y % 4 == 0) && y % 100 != 0;",
+                "block_leap_t": "return (y % 400 == 0) || (y % 4 == 0 && y % 100 != 0);"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_print": "void print() const {\n        cout << year << '-' << setw(2) << setfill('0') << month\n             << '-' << setw(2) << setfill('0') << day << '\\n';\n    }",
+                "block_useless": "~Date() {}"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 2,
+            "blocks": {
+                "block_month_t": "static int days[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};",
+                "block_month_f": "static int days[] = {31,28,31,30,31,30,31,31,30,31,30,31};"
+            }
+        }
+    },
+    "monster_count": 3,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/node.png",
+            "nickname": "node",
+            "name": "useless",
+            "type": "function",
+            "code": "void useless(){\n\t$space1$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/red_hood.png",
+            "nickname": "red_hood",
+            "name": "isLeapYear",
+            "type": "function",
+            "code": "bool isLeapYear(int y) const {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_leap"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "Date",
+            "type": "class",
+            "code": "class Date {\nprivate:\n    int year, month, day;\n\n    $space1$\n\n    int daysInMonth(int y, int m) const {\n        $space2$\n        if (m == 2 && isLeapYear(y)) return 29;\n        return days[m];\n    }\n\npublic:\n    Date(int y, int m, int d): year(y), month(m), day(d) {}\n\n    void addOneDay() {\n        ++day;\n        if (day > daysInMonth(year, month)) {\n            day = 1;\n            ++month;\n            if (month > 12) {\n                month = 1;\n                ++year;\n            }\n        }\n    }\n\n    void addDays(int n) {\n        for (int i = 0; i < n; ++i) addOneDay();\n    }\n\n    $space3$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "isLeapYear[block_leap_t]"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_month"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_print"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Date calculator Boss",
+        "code": "#include <iomanip>\n#include <iostream>\nusing namespace std;\n\n$space_1$\n\n$clue_2$\n",
+        "input": "2024 2 27 3",
+        "output": "2024-03-01",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "Date[isLeapYear[block_leap_t],block_month_t,block_print]"
+                ]
+            }
+        }
+    },
+    "start": [
+        1,
+        1
+    ],
+    "end_text": ""
+}

@@ -1,0 +1,433 @@
+{
+    "map_width": 10,
+    "map_height": 10,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 9,
+    "map_grid": [
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "boss"
+        ],
+        [
+            ".",
+            "#",
+            "chest_2",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            "monster_4",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            ".",
+            "#",
+            "chest_5"
+        ],
+        [
+            "#",
+            "clue_2",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "monster_2",
+            ".",
+            "."
+        ],
+        [
+            "chest_1",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "chest_3",
+            "."
+        ],
+        [
+            "clue_1",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "monster_3",
+            ".",
+            ".",
+            ".",
+            "chest_4",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            "monster_5",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            "chest_6",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "monster_6"
+        ],
+        [
+            "start",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "."
+        ]
+    ],
+    "clue_count": 2,
+    "clues": {
+        "clue_2": "Sample input:\n4\nlet x=2+3*4\nlet y = x*2-5\nprint y\nprint x+y\n\nSample output:\n23\n37",
+        "clue_1": "Mini interpreter\nGood news! The calculator we built at the beginning now supports variables.\n"
+    },
+    "chest_count": 6,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_17_pri_add": "if (op == '+' || op == '-') return 1;",
+                "block_17_pri_mul_ok": "if (op == '*') return 2;",
+                "block_17_pri_mul_alt": "if (op == '*') return 1;",
+                "block_17_apply_ok": "if (op == '+') return a + b;\n    if (op == '-') return a - b;\n    return a * b;",
+                "block_17_apply_alt": "if (op == '+') return a + b;\n    if (op == '-') return b - a;\n    return a * b;"
+            }
+        },
+        "chest_5": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_17_let_name_ok": "string name = trim(line.substr(3, eq - 3));",
+                "block_17_let_name_alt": "string name = line.substr(4, eq - 5);",
+                "block_17_let_store": "string expr = line.substr(eq + 1);\n            vars[name] = evaluate(expr, vars);",
+                "block_17_print": "string expr = line.substr(6);\n            cout << evaluate(expr, vars) << '\\n';"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_17_left": "size_t left = 0, right = s.size();",
+                "block_17_trim_left": "while (left < right && isspace(static_cast<unsigned char>(s[left]))) ++left;",
+                "block_17_trim_right": "while (right > left && isspace(static_cast<unsigned char>(s[right - 1]))) --right;",
+                "block_17_trim_return_ok": "return s.substr(left, right - left);",
+                "block_17_trim_return_alt": "return s;"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_17_digit_loop": "int value = 0;\n        while (i < expr.size() && isdigit(static_cast<unsigned char>(expr[i]))) {\n            value = value * 10 + expr[i] - '0';\n            ++i;\n        }\n        return value;",
+                "block_17_name_loop": "string name;\n    while (i < expr.size() && isalpha(static_cast<unsigned char>(expr[i]))) {\n        name += expr[i++];\n    }",
+                "block_17_lookup_ok": "map<string, int>::const_iterator it = vars.find(name);\n    return it == vars.end() ? 0 : it->second;",
+                "block_17_lookup_alt": "return atoi(name.c_str());"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_17_reduce_body": "int b = values.top(); values.pop();\n    int a = values.top(); values.pop();\n    char op = ops.top(); ops.pop();\n    values.push(applyOp(a, b, op));",
+                "block_17_eval_value": "values.push(readValue(expr, i, vars));",
+                "block_17_eval_reduce_ok": "while (!ops.empty() && priorityOf(ops.top()) >= priorityOf(op)) reduceOnce(values, ops);\n            ops.push(op);",
+                "block_17_eval_reduce_alt": "while (!ops.empty()) reduceOnce(values, ops);\n            ops.push(op);",
+                "block_17_eval_finish": "while (!ops.empty()) reduceOnce(values, ops);\n    return values.top();"
+            }
+        },
+        "chest_6": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_17_getline": "getline(cin, line);",
+                "block_17_vars": "map<string, int> vars;",
+                "block_17_loop": "for (int i = 0; i < n; ++i) {",
+                "block_17_iflet": "if (line.substr(0, 3) == \"let\") {"
+            }
+        }
+    },
+    "monster_count": 6,
+    "monsters": {
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "ExpressionEvaluator",
+            "type": "function",
+            "code": "void reduceOnce(stack<int>& values, stack<char>& ops) {\n    // pop two operands and one operator\n    $space1$\n}\n\nint evaluate(string expr, const map<string, int>& vars) {\n    stack<int> values;\n    stack<char> ops;\n    for (size_t i = 0; i < expr.size();) {\n        if (isspace(static_cast<unsigned char>(expr[i]))) {\n            ++i;\n        } else if (isalnum(static_cast<unsigned char>(expr[i]))) {\n            // push next value\n            $space2$\n        } else {\n            char op = expr[i++];\n            // reduce by operator priority, then push op\n            $space3$\n        }\n    }\n    // finish remaining operations\n    $space4$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_17_reduce_body"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_17_eval_value"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_eval_reduce"
+                    ]
+                },
+                "space4": {
+                    "type": "match",
+                    "val": [
+                        "block_17_eval_finish"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "StringTrim",
+            "type": "function",
+            "code": "string trim(const string& s) {\n    // initial boundaries\n    $space1$\n    // skip leading spaces\n    $space2$\n    // skip trailing spaces\n    $space3$\n    // return trimmed slice\n    $space4$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_17_left"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_17_trim_left"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_17_trim_right"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_trim_return"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "OperatorRules",
+            "type": "function",
+            "code": "int priorityOf(char op) {\n    // + and - priority\n    $space1$\n    // * priority\n    $space2$\n    return 0;\n}\n\nint applyOp(int a, int b, char op) {\n    // apply binary operator in a op b order\n    $space3$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_17_pri_add"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_pri_mul"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_apply"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "ValueReader",
+            "type": "function",
+            "code": "int readValue(const string& expr, size_t& i, const map<string, int>& vars) {\n    if (isdigit(static_cast<unsigned char>(expr[i]))) {\n        // read integer literal\n        $space1$\n    }\n    // read variable name\n    $space2$\n    // look up variable value\n    $space3$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_17_digit_loop"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_17_name_loop"
+                    ]
+                },
+                "space3": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_lookup"
+                    ]
+                }
+            }
+        },
+        "monster_5": {
+            "pic": "assets/mabel.png",
+            "nickname": "mabel",
+            "name": "StatementExecutor",
+            "type": "function",
+            "code": "void executeLine(const string& line, map<string, int>& vars) {\n    if (line.substr(0, 3) == \"let\") {\n        size_t eq = line.find('=');\n        // parse variable name\n        $space1$\n        // evaluate and store expression\n        $space2$\n    } else {\n        // print expression value\n        $space3$\n    }\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_17_let_name"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_17_let_store"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_17_print"
+                    ]
+                }
+            }
+        },
+        "monster_6": {
+            "pic": "assets/red_hood.png",
+            "nickname": "red_hood",
+            "name": "InterpreterMain",
+            "type": "function",
+            "code": "int main() {\n    int n;\n    cin >> n;\n    string line;\n    // consume endline after n\n    $space1$\n    // variable table\n    $space2$\n    // execute n lines\n    $space3$\n        getline(cin, line);\n        executeLine(line, vars);\n    }\n    return 0;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_17_getline"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_17_vars"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_17_loop"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Mini interpreter Boss",
+        "code": "#include <cctype>\n#include <cstdlib>\n#include <iostream>\n#include <map>\n#include <sstream>\n#include <stack>\n#include <string>\nusing namespace std;\n\n//trim\n$space_1$\n\n//operatorRules\n$space_2$\n\n//valueReader\n$space_3$\n\n//expression\n$space_4$\n\n//statementExecutor\n$space_5$\n\n//main\n$space_6$\n",
+        "input": "4\nlet x=2+3*4\nlet y = x*2-5\nprint y\nprint x+y",
+        "output": "23\n37",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "StringTrim[block_17_left,block_17_trim_left,block_17_trim_right,block_17_trim_return_ok]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "OperatorRules[block_17_pri_add,block_17_pri_mul_ok,block_17_apply_ok]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "ValueReader[block_17_digit_loop,block_17_name_loop,block_17_lookup_ok]"
+                ]
+            },
+            "space_4": {
+                "type": "match",
+                "val": [
+                    "ExpressionEvaluator[block_17_reduce_body,block_17_eval_value,block_17_eval_reduce_ok,block_17_eval_finish]"
+                ]
+            },
+            "space_5": {
+                "type": "match",
+                "val": [
+                    "StatementExecutor[block_17_let_name_ok,block_17_let_store,block_17_print]"
+                ]
+            },
+            "space_6": {
+                "type": "match",
+                "val": [
+                    "InterpreterMain[block_17_getline,block_17_vars,block_17_loop]"
+                ]
+            }
+        }
+    },
+    "start": [
+        9,
+        0
+    ],
+    "end_text": ""
+}

@@ -68,5 +68,12 @@ vcpkg_installed/
 Testing/
 .cache/
 
-# Claude Code
-CLAUDE.md
+# Qt Creator user settings
+*.user
+*.user.*
+.qtcreator/
+
+# Build folders
+build/
+build-*/
+cmake-build-*/

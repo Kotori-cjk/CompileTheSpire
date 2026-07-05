@@ -1,0 +1,310 @@
+{
+    "map_width": 8,
+    "map_height": 8,
+    "level_type": "simple",
+    "special_tags": [
+        "no_natural_discard"
+    ],
+    "bag_size": 3,
+    "map_grid": [
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "clue_3",
+            "#",
+            "#",
+            "#"
+        ],
+        [
+            "monster_helper",
+            "start",
+            "chest_A1",
+            ".",
+            "monster_gate",
+            "monster_del2",
+            "chest_F",
+            "chest_A2"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "clue_1",
+            "#",
+            "chest_D",
+            "#",
+            "monster_del"
+        ],
+        [
+            "#",
+            ".",
+            "chest_Bhind",
+            ".",
+            ".",
+            "chest_E",
+            ".",
+            "monster_gate2"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            "monster_C",
+            "#",
+            ".",
+            "#",
+            "clue_4"
+        ],
+        [
+            "#",
+            "chest_key",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "chest_C1",
+            ".",
+            "monster_BC",
+            ".",
+            "clue_2",
+            "boss"
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#"
+        ]
+    ],
+    "clue_count": 4,
+    "clues": {
+        "clue_3": "You can't read another clue, though it's useless.\nI love Remilia and Satori.",
+        "clue_1": "Alice is important, you must defeat her (for once).",
+        "clue_4": "You can't read another clue, though it is useless.\nI love Flandre and Koishi.",
+        "clue_2": "Who you like most in Touhou Project?\nIf you know what it is."
+    },
+    "chest_count": 8,
+    "chests": {
+        "chest_A1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_A2": "int a1 = 0;"
+            }
+        },
+        "chest_F": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_F1": "Koishi = 1;",
+                "block_F2": "Satori = 1;"
+            }
+        },
+        "chest_A2": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_A1": "int a2 = 0;"
+            }
+        },
+        "chest_D": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_D1": "Flandre = 1;",
+                "block_D2": "Remilia = 1;"
+            }
+        },
+        "chest_Bhind": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_B1": "bool Marisa = false;",
+                "block_B2": "bool Marisa = true;"
+            }
+        },
+        "chest_E": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_T1": "Flandre = 0;",
+                "block_T2": "Remilia = 0;",
+                "block_T3": "Koishi = 0;",
+                "block_T4": "Satori = 0;"
+            }
+        },
+        "chest_key": {
+            "forced_pick": false,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_key": "int key = 0;"
+            }
+        },
+        "chest_C1": {
+            "forced_pick": true,
+            "repeat": false,
+            "block_count": 1,
+            "blocks": {
+                "block_C1": "char c = 'x';"
+            }
+        }
+    },
+    "monster_count": 7,
+    "monsters": {
+        "monster_helper": {
+            "pic": "assets/red_hood.png",
+            "nickname": "Red Hood",
+            "name": "Helper",
+            "type": "function",
+            "code": "I'm the helper for you in extra levels.\nExtra levels is more weird than previous level.\nYou can't drop the blocks you get from chest in this level.\n$clue_1$\n$clue_2$",
+            "spaces": {}
+        },
+        "monster_gate": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "gate",
+            "type": "function",
+            "code": "int gate() {\n    $space1$\n\treturn key;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "key"
+                    ]
+                }
+            }
+        },
+        "monster_del2": {
+            "pic": "assets/dodo.png",
+            "nickname": "Dodo",
+            "name": "del2",
+            "type": "function",
+            "code": "void del() {\n\tint Remilia,Flandre,Koishi,Satori;\n    $space1$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        ".*"
+                    ]
+                }
+            }
+        },
+        "monster_del": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "Cheshire Cat",
+            "name": "del",
+            "type": "function",
+            "code": "void del2() {\n\tint Remilia,Flandre,Koishi,Satori;\n    $space1$\n    $space2$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        ".*"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        ".*"
+                    ]
+                }
+            }
+        },
+        "monster_gate2": {
+            "pic": "assets/alice.png",
+            "nickname": "Alice",
+            "name": "gate2",
+            "type": "function",
+            "code": "int gate() {\n    $space1$\n\treturn key;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "key"
+                    ]
+                }
+            }
+        },
+        "monster_C": {
+            "pic": "assets/gerda.png",
+            "nickname": "Gerda",
+            "name": "C1",
+            "type": "function",
+            "code": "void R() {\n    $space1$\n\tReimu = 1;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "C"
+                    ]
+                }
+            }
+        },
+        "monster_BC": {
+            "pic": "assets/jabberwock.png",
+            "nickname": "Jabberwock",
+            "name": "BC",
+            "type": "function",
+            "code": "void MR(){\n    $space1$\n\tMarisa = !Marisa;\n    $space2$\n\tReimu = Marisa;\n}",
+            "spaces": {
+                "space1": {
+                    "type": "regex",
+                    "val": [
+                        "B"
+                    ]
+                },
+                "space2": {
+                    "type": "regex",
+                    "val": [
+                        "C"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/marry_ann.png",
+        "nickname": "Marry Ann",
+        "code": "void boss() {\n    $space1$\n    $space2$\n\treturn a1 + a2;\n}",
+        "input": "",
+        "output": "",
+        "spaces": {
+            "space1": {
+                "type": "regex",
+                "val": [
+                    "A"
+                ]
+            },
+            "space2": {
+                "type": "regex",
+                "val": [
+                    "A"
+                ]
+            }
+        }
+    },
+    "start": [
+        1,
+        1
+    ],
+    "end_text": "Congrats!"
+}

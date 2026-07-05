@@ -1,0 +1,219 @@
+{
+    "map_width": 7,
+    "map_height": 7,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            "clue_1",
+            ".",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            "chest_1",
+            "#"
+        ],
+        [
+            "chest_3",
+            ".",
+            ".",
+            "chest_2",
+            "#",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            ".",
+            "#",
+            "monster_1",
+            "monster_2"
+        ],
+        [
+            "clue_2",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#",
+            "monster_5"
+        ],
+        [
+            ".",
+            "#",
+            "chest_4",
+            "#",
+            "monster_3",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "clue_3",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_1": "Complex again.",
+        "clue_2": "Sample input:\n1 2 3 4 *\n\nSample output:\n-5+10i",
+        "clue_3": "cin >> ar >> ai >> br >> bi >> op;\n    Complex a(ar, ai), b(br, bi);\n    if (op == '+') cout << (a + b) << '\\n';\n    else cout << (a * b) << '\\n';"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_07_ctor_ok": "realPart(r), imagPart(i)",
+                "block_07_ctor_alt1": "realPart(i), imagPart(r)"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_07_mul_ok": "return Complex(realPart * other.realPart - imagPart * other.imagPart,\n                       realPart * other.imagPart + imagPart * other.realPart);",
+                "block_07_mul_alt1": "return Complex(realPart * other.realPart, imagPart * other.imagPart);",
+                "block_07_mul_alt2": "return Complex(realPart * other.realPart + imagPart * other.imagPart,\n                       realPart * other.imagPart + imagPart * other.realPart);"
+            }
+        },
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_07_add_t": "return Complex(realPart + other.realPart, imagPart + other.imagPart);",
+                "block_07_add_f": "return Complex(self.realPart + other.realPart, self.imagPart + other.imagPart);"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 2,
+            "blocks": {
+                "block_out_t": "friend ostream& operator<<(ostream& out, const Complex& value) {",
+                "block_out_f": "friend ostream operator<<(ostream out, const Complex& value) {"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "constructor",
+            "type": "function",
+            "code": "Complex(int r = 0, int i = 0): $space1$ {}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_07_ctor"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "ComplexAdd",
+            "type": "function",
+            "code": "Complex operator+(const Complex& other) const {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_07_add"
+                    ]
+                }
+            }
+        },
+        "monster_5": {
+            "pic": "assets/marry_ann.png",
+            "nickname": "marry_ann.png",
+            "name": "Complex",
+            "type": "class",
+            "code": "class Complex {\nprivate:\n    int realPart, imagPart;\n\npublic:\n    $space1$\n\n    $space2$\n\n    $space3$\n\n    $space4$\n        out << value.realPart;\n        if (value.imagPart >= 0) out << '+';\n        out << value.imagPart << 'i';\n        return out;\n    }\n};",
+            "spaces": {
+                "space1": {
+                    "type": "find",
+                    "val": [
+                        "constructor"
+                    ]
+                },
+                "space2": {
+                    "type": "find",
+                    "val": [
+                        "ComplexAdd"
+                    ]
+                },
+                "space3": {
+                    "type": "find",
+                    "val": [
+                        "ComplexMultiply"
+                    ]
+                },
+                "space4": {
+                    "type": "prefix",
+                    "val": [
+                        "block_out"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "ComplexMultiply",
+            "type": "function",
+            "code": "Complex operator*(const Complex& other) const {\n        $space1$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_07_mul"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Complex number operators Boss",
+        "code": "#include <iostream>\nusing namespace std;\n\n$space1$\n\nint main() {\n    int ar, ai, br, bi;\n    char op;\n    $clue_3$\n    return 0;\n}\n",
+        "input": "1 2 3 4 *",
+        "output": "-5+10i",
+        "spaces": {
+            "space1": {
+                "type": "match",
+                "val": [
+                    "Complex[constructor[block_07_ctor_ok],ComplexAdd[block_07_add_t],ComplexMultiply[block_07_mul_ok],block_out_t]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}
