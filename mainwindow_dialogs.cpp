@@ -73,6 +73,50 @@ private:
     QDialog *m_dialog = nullptr;
 };
 
+static bool settlementIsExLevel(const LevelMeta &meta)
+{
+    const QString type = meta.levelType.trimmed().toLower();
+    const QString name = meta.levelName.trimmed().toLower();
+    return type == "ex" || type == "extra" || type.startsWith("ex_") || type.startsWith("ex-")
+           || name == "ex" || name.startsWith("ex_") || name.startsWith("ex-")
+           || name.startsWith("extra_") || name.startsWith("extra-");
+}
+
+static QString settlementStageLabel(const QVector<LevelMeta> &metas, int levelIndex)
+{
+    if (levelIndex < 0) {
+        return QString();
+    }
+
+    const auto targetIt = std::find_if(metas.cbegin(), metas.cend(), [levelIndex](const LevelMeta &meta) {
+        return meta.levelIndex == levelIndex;
+    });
+
+    if (targetIt == metas.cend()) {
+        return QString("Stage %1").arg(levelIndex + 1);
+    }
+
+    const bool targetIsEx = settlementIsExLevel(*targetIt);
+    int visibleIndex = 0;
+    for (const LevelMeta &meta : metas) {
+        if (settlementIsExLevel(meta) == targetIsEx) {
+            ++visibleIndex;
+        }
+        if (meta.levelIndex == levelIndex) {
+            break;
+        }
+    }
+
+    return targetIsEx ? QString("EX-%1").arg(visibleIndex)
+                      : QString("Stage %1").arg(visibleIndex);
+}
+
+static QString settlementStageBadgeLabel(const QVector<LevelMeta> &metas, int levelIndex)
+{
+    const QString label = settlementStageLabel(metas, levelIndex);
+    return label.startsWith("Stage ") ? label.mid(QString("Stage ").size()) : label;
+}
+
 void MainWindow::showBagDialog()
 {
     QDialog dialog(this);
@@ -495,7 +539,8 @@ void MainWindow::showVictorySettlement()
     summaryLayout->setSpacing(10);
 
     const LevelData &level = levels.at(currentLevelIndex);
-    QLabel *stageLine = new QLabel(QString("Stage %1 Cleared").arg(currentLevelIndex + 1), summaryPanel);
+    const QVector<LevelMeta> levelMetas = gameEngine.levelList();
+    QLabel *stageLine = new QLabel(QString("%1 Cleared").arg(settlementStageLabel(levelMetas, currentLevelIndex)), summaryPanel);
     stageLine->setAlignment(Qt::AlignCenter);
     stageLine->setStyleSheet("QLabel { color: #4feaff; font-size: 26px; font-weight: 900; background: transparent; }");
     summaryLayout->addWidget(stageLine);
@@ -546,14 +591,8 @@ void MainWindow::showVictorySettlement()
         QHBoxLayout *unlockRow = new QHBoxLayout();
         unlockRow->setSpacing(12);
         unlockRow->addStretch();
-        const QVector<StageCard> stages = stageCatalog();
         for (int levelIndex : unlockedThisClear) {
-            const auto stageIt = std::find_if(stages.cbegin(), stages.cend(), [levelIndex](const StageCard &stage) {
-                return stage.levelIndex == levelIndex;
-            });
-            const QString stageId = stageIt != stages.cend()
-                                        ? (stageIt->isEx ? QString("EX-%1").arg(levelIndex - 8) : QString::number(levelIndex + 1))
-                                        : QString::number(levelIndex + 1);
+            const QString stageId = settlementStageBadgeLabel(levelMetas, levelIndex);
             QFrame *badge = new QFrame(unlockPanel);
             badge->setFixedSize(92, 92);
             badge->setStyleSheet(
@@ -918,7 +957,7 @@ void MainWindow::handleChest(const QString &chestId, bool viewOnly, bool lockedB
     refreshGameUi();
 }
 
-void MainWindow::handleMonster(const QString &monsterId)
+void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
 {
     seenMonsters.insert(monsterId);
     if (defeatedMonsters.contains(monsterId)) {
@@ -929,9 +968,11 @@ void MainWindow::handleMonster(const QString &monsterId)
 
     const Monster monster = monsterByTile(monsterId);
     const bool friendlyEncounter = monster.spaces.isEmpty()&&!(monsterId=="boss"&&gameEngine.m_level->specialTags.contains("friendly_boss"));
-    playBgm(monsterId == "boss" ? "assets/audio/bgm_boss.mp3" : "assets/audio/bgm_combat.wav");
+    if (!viewOnly) {
+        playBgm(monsterId == "boss" ? "assets/audio/bgm_boss.mp3" : "assets/audio/bgm_combat.wav");
+    }
     QDialog dialog(this);
-    dialog.setWindowTitle(monsterId == "boss" ? "Boss Encounter" : "Monster Encounter");
+    dialog.setWindowTitle(viewOnly ? "Encounter Preview" : (monsterId == "boss" ? "Boss Encounter" : "Monster Encounter"));
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
     QString encounterName = monster.nickname.isEmpty() ? monster.name : monster.nickname;
     bool capitalizeNext = true;
@@ -988,6 +1029,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     bagScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     bagScroll->setFixedHeight(100);
     bagScroll->setStyleSheet("QScrollArea { background: rgba(9, 13, 18, 230); border: 1px solid #354255; border-radius: 7px; }");
+    bagScroll->setVisible(!viewOnly);
     QWidget *bagStrip = new QWidget(bagScroll);
     QHBoxLayout *bagIconRow = new QHBoxLayout(bagStrip);
     bagIconRow->setContentsMargins(12, 10, 12, 10);
@@ -1053,6 +1095,7 @@ void MainWindow::handleMonster(const QString &monsterId)
     combatCodeFont.setPointSize(16);
     QFontMetrics combatCodeMetrics(combatCodeFont);
     const int combatLineHeight = qMax(28, combatCodeMetrics.height() + 7);
+    QVector<std::function<void()>> slotGeometryUpdaters;
 
     int templateCellIndex = 0;
     int displayBraceDepth = 0;
@@ -1135,7 +1178,10 @@ void MainWindow::handleMonster(const QString &monsterId)
                     maxVisualX = qMax(maxVisualX, visualX);
                 }
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
-                slot->setToolTip(beginnerTipsEnabled() ? "Double-click a filled blank to undo it." : QString());
+                slot->setAcceptDrops(!viewOnly);
+                slot->setToolTip(viewOnly
+                                     ? "Preview only."
+                                     : (beginnerTipsEnabled() ? "Double-click a filled blank to undo it." : QString()));
                 slot->setProperty("visualX", visualX);
                 slot->setTextProvider([this, slot, &combatCodeMetrics](const QString &blockId) {
                     const QString formatted = formatCodeBlockForDisplay(codeForBlock(blockId));
@@ -1146,48 +1192,53 @@ void MainWindow::handleMonster(const QString &monsterId)
                     const int availableWidth = codeScroll->viewport()
                                                    ? codeScroll->viewport()->width() - slot->property("visualX").toInt() - 36
                                                    : 520;
-                    slot->setContentWidthLimit(qBound(220, availableWidth, 760));
-                    const QSize slotSize = slot->sizeHint();
+                    const int slotWidth = qMax(220, availableWidth);
+                    slot->setContentWidthLimit(slotWidth);
+                    const QSize slotSize = slot->sizeForContentWidth(slotWidth);
                     const int slotHeight = qMax(combatLineHeight, slotSize.height());
                     slot->setGeometry(slot->property("visualX").toInt(), 0, slotSize.width(), slotHeight);
                     lineWidget->setMinimumHeight(qMax(combatLineHeight, slotHeight));
+                    lineWidget->setMinimumWidth(slot->property("visualX").toInt() + slotSize.width() + 8);
                     lineWidget->updateGeometry();
                 };
-                slot->setOnRemoveRequested([this, slot, tokenId, refreshCombatBag, updateSlotGeometry]() {
-                    if (!gameEngine.unfillSpace(tokenId)) {
-                        playSfx("assets/audio/sfx_error.wav");
-                        return;
-                    }
-                    slot->clearBlock();
-                    updateSlotGeometry();
-                    syncFromEngineState();
-                    refreshCombatBag();
-                    playSfx("assets/audio/sfx_combat.wav");
-                });
-                slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag, updateSlotGeometry, &combatCodeMetrics]() {
-                    const QString blockId = slot->property("blockId").toString();
-                    const QString previousBlockId = slot->property("previousBlockId").toString();
-                    if (blockId == previousBlockId) {
-                        return;
-                    }
-                    if (!gameEngine.fillSpace(tokenId, blockId)) {
-                        if (previousBlockId.isEmpty()) {
-                            slot->clearBlock();
-                        } else {
-                            const int indentColumns = qMax(0, slot->property("visualX").toInt() / qMax(1, combatCodeMetrics.horizontalAdvance(QStringLiteral(" "))));
-                            slot->setBlock(previousBlockId,
-                                           indentContinuationLines(formatCodeBlockForDisplay(codeForBlock(previousBlockId)),
-                                                                  QString(indentColumns, QLatin1Char(' '))));
+                slotGeometryUpdaters.append(updateSlotGeometry);
+                if (!viewOnly) {
+                    slot->setOnRemoveRequested([this, slot, tokenId, refreshCombatBag, updateSlotGeometry]() {
+                        if (!gameEngine.unfillSpace(tokenId)) {
+                            playSfx("assets/audio/sfx_error.wav");
+                            return;
                         }
-                        playSfx("assets/audio/sfx_error.wav");
-                        QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
-                        return;
-                    }
-                    updateSlotGeometry();
-                    syncFromEngineState();
-                    refreshCombatBag();
-                    playSfx("assets/audio/sfx_combat.wav");
-                });
+                        slot->clearBlock();
+                        updateSlotGeometry();
+                        syncFromEngineState();
+                        refreshCombatBag();
+                        playSfx("assets/audio/sfx_combat.wav");
+                    });
+                    slot->setOnChanged([this, slot, tokenId, &dialog, refreshCombatBag, updateSlotGeometry, &combatCodeMetrics]() {
+                        const QString blockId = slot->property("blockId").toString();
+                        const QString previousBlockId = slot->property("previousBlockId").toString();
+                        if (blockId == previousBlockId) {
+                            return;
+                        }
+                        if (!gameEngine.fillSpace(tokenId, blockId)) {
+                            if (previousBlockId.isEmpty()) {
+                                slot->clearBlock();
+                            } else {
+                                const int indentColumns = qMax(0, slot->property("visualX").toInt() / qMax(1, combatCodeMetrics.horizontalAdvance(QStringLiteral(" "))));
+                                slot->setBlock(previousBlockId,
+                                               indentContinuationLines(formatCodeBlockForDisplay(codeForBlock(previousBlockId)),
+                                                                      QString(indentColumns, QLatin1Char(' '))));
+                            }
+                            playSfx("assets/audio/sfx_error.wav");
+                            QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
+                            return;
+                        }
+                        updateSlotGeometry();
+                        syncFromEngineState();
+                        refreshCombatBag();
+                        playSfx("assets/audio/sfx_combat.wav");
+                    });
+                }
                 updateSlotGeometry();
                 lineVisualHeight = qMax(lineVisualHeight, slot->height());
                 visualX += slot->width();
@@ -1229,10 +1280,17 @@ void MainWindow::handleMonster(const QString &monsterId)
     }
     codeLayout->addStretch(1);
     codeScroll->setWidget(codePanel);
+    QTimer::singleShot(0, &dialog, [slotGeometryUpdaters]() {
+        for (const auto &updateSlotGeometry : slotGeometryUpdaters) {
+            updateSlotGeometry();
+        }
+    });
 
     QDialogButtonBox *buttons = new QDialogButtonBox(&dialog);
-    QPushButton *submitButton = buttons->addButton("Submit Fill", QDialogButtonBox::ActionRole);
-    if (friendlyEncounter) {
+    QPushButton *submitButton = buttons->addButton(viewOnly ? "Close" : "Submit Fill", viewOnly ? QDialogButtonBox::RejectRole : QDialogButtonBox::ActionRole);
+    if (viewOnly) {
+        submitButton->setToolTip("This encounter is out of reach.");
+    } else if (friendlyEncounter) {
         submitButton->setEnabled(false);
         submitButton->setText("Friendly");
         submitButton->setToolTip("This encounter has no fill space.");
@@ -1241,85 +1299,97 @@ void MainWindow::handleMonster(const QString &monsterId)
         submitButton->setText("Clues Missing");
         submitButton->setToolTip("Reveal every clue linked to this encounter before submitting.");
     }
-    buttons->addButton("Exit", QDialogButtonBox::RejectRole);
+    if (!viewOnly) {
+        buttons->addButton("Exit", QDialogButtonBox::RejectRole);
+    }
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     bool wonBoss = false;
     bool hasCombatSettlement = false;
     CombatResult combatSettlementResult;
     QMap<QString, QString> combatSettlementUsedCodes;
     QString combatSettlementName;
-    connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, &hasCombatSettlement, &combatSettlementResult, &combatSettlementUsedCodes, &combatSettlementName, monsterId]() {
-        playSfx("assets/audio/sfx_combat.wav");
-        if (!gameEngine.m_combat) {
-            playSfx("assets/audio/sfx_error.wav");
-            QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
-            return;
-        }
-        const bool isBossCombat = gameEngine.m_combat->isBoss();
-        combatSettlementUsedCodes.clear();
-        for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
-            combatSettlementUsedCodes.insert(block.blockId, block.code);
-        }
-        const CombatResult result = gameEngine.submitCombat();
-        if (result.resultType == "count_error") {
-            playSfx("assets/audio/sfx_error.wav");
-            QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
-            return;
-        }
-        if (result.resultType == "space_error") {
-            playSfx("assets/audio/sfx_error.wav");
-            QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
-            return;
-        }
-        if (result.resultType != "success") {
-            playSfx("assets/audio/sfx_error.wav");
-            QMessageBox::warning(&dialog, "Wrong Fill", "Combat submit failed.");
-            return;
-        }
-        playSfx("assets/audio/sfx_success.wav");
-        wonBoss = isBossCombat;
-        if (wonBoss) {
-            completedStageIndexes.insert(currentLevelIndex);
-            gameEngine.m_save.Clear(currentLevelIndex);
-            gameEngine.m_save.Save();
-        }
-        syncFromEngineState();
-        refreshGameUi();
-        const Monster clearedMonster = monsterByTile(monsterId);
-        const QString clearedName = clearedMonster.nickname.isEmpty() ? clearedMonster.name : clearedMonster.nickname;
-        combatSettlementResult = result;
-        combatSettlementName = clearedName;
-        hasCombatSettlement = true;
-        ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(clearedName));
-        dialog.accept();
-    });
+    if (!viewOnly) {
+        connect(submitButton, &QPushButton::clicked, this, [this, &dialog, &wonBoss, &hasCombatSettlement, &combatSettlementResult, &combatSettlementUsedCodes, &combatSettlementName, monsterId]() {
+            playSfx("assets/audio/sfx_combat.wav");
+            if (!gameEngine.m_combat) {
+                playSfx("assets/audio/sfx_error.wav");
+                QMessageBox::warning(&dialog, "Wrong Fill", "No active combat.");
+                return;
+            }
+            const bool isBossCombat = gameEngine.m_combat->isBoss();
+            combatSettlementUsedCodes.clear();
+            for (const CodeBlock &block : gameEngine.m_combat->filledCodes()) {
+                combatSettlementUsedCodes.insert(block.blockId, block.code);
+            }
+            const CombatResult result = gameEngine.submitCombat();
+            if (result.resultType == "count_error") {
+                playSfx("assets/audio/sfx_error.wav");
+                QMessageBox::warning(&dialog, "Wrong Fill", "Fill every blank before submitting.");
+                return;
+            }
+            if (result.resultType == "space_error") {
+                playSfx("assets/audio/sfx_error.wav");
+                QMessageBox::warning(&dialog, "Wrong Fill", "Can't fill space with this block.");
+                return;
+            }
+            if (result.resultType != "success") {
+                playSfx("assets/audio/sfx_error.wav");
+                QMessageBox::warning(&dialog, "Wrong Fill", "Combat submit failed.");
+                return;
+            }
+            playSfx("assets/audio/sfx_success.wav");
+            wonBoss = isBossCombat;
+            if (wonBoss) {
+                completedStageIndexes.insert(currentLevelIndex);
+                gameEngine.m_save.Clear(currentLevelIndex);
+                gameEngine.m_save.Save();
+            }
+            syncFromEngineState();
+            refreshGameUi();
+            const Monster clearedMonster = monsterByTile(monsterId);
+            const QString clearedName = clearedMonster.nickname.isEmpty() ? clearedMonster.name : clearedMonster.nickname;
+            combatSettlementResult = result;
+            combatSettlementName = clearedName;
+            hasCombatSettlement = true;
+            ui->combatLogLabel->setText(wonBoss ? levels.at(currentLevelIndex).endText : QString("%1 defeated.").arg(clearedName));
+            dialog.accept();
+        });
+    }
     QHBoxLayout *combatTop = new QHBoxLayout();
     combatTop->addWidget(hero);
     combatTop->addWidget(codeScroll, 1);
     combatTop->addWidget(enemy);
-    QLabel *combatHint = new QLabel("Drag blocks into blanks. Double-click a filled blank to undo it.", &dialog);
+    QLabel *combatHint = new QLabel(viewOnly
+                                        ? "Preview only. Move closer to start this encounter."
+                                        : "Drag blocks into blanks. Double-click a filled blank to undo it.",
+                                    &dialog);
     combatHint->setAlignment(Qt::AlignCenter);
     combatHint->setWordWrap(true);
-    combatHint->setVisible(beginnerTipsEnabled());
+    combatHint->setVisible(viewOnly || beginnerTipsEnabled());
     combatHint->setStyleSheet("QLabel { color: #fff1c2; background: rgba(9, 13, 18, 210); border: 1px solid rgba(215, 176, 106, 150); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 800; }");
     layout->addWidget(title);
     layout->addLayout(combatTop);
 
     layout->addWidget(combatHint);
-    layout->addWidget(bagScroll);
+    if (!viewOnly) {
+        layout->addWidget(bagScroll);
+    }
     layout->addWidget(buttons);
-    dialog.resize(1060, 660);
+    dialog.resize(1060, viewOnly ? 560 : 660);
     dialog.exec();
-    if (gameEngine.m_combat) {
+    if (!viewOnly && gameEngine.m_combat) {
         gameEngine.exitCombat();
     }
     const bool skipCombatSettlement = currentLevelIndex >= 0
                                       && currentLevelIndex < levels.size()
                                       && levels.at(currentLevelIndex).specialTags.contains("discard_drops");
-    if (hasCombatSettlement && !skipCombatSettlement) {
+    if (!viewOnly && hasCombatSettlement && !skipCombatSettlement) {
         showCombatSettlement(combatSettlementName, combatSettlementResult, combatSettlementUsedCodes, wonBoss);
     }
-    if (wonBoss) {
+    if (viewOnly) {
+        ui->combatLogLabel->setText("Enemy is out of reach.");
+        refreshGameUi();
+    } else if (wonBoss) {
         showVictorySettlement();
     } else {
         syncBgmToCurrentPage();
