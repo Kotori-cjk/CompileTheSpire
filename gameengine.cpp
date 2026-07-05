@@ -263,9 +263,23 @@ CombatResult GameEngine::submitCombat(){
             m_bag=nullptr;
             snapshotStack.clear();
             m_save.Clear(m_level->levelIndex);
-            if(m_save.Unlock(m_level->levelIndex+1)){
+            int idx=m_level->levelIndex;
+            QVector<int>unlocked;
+            if(idx==18){//EX-1->EX-2,EX-3
+                if(m_save.Unlock(19))unlocked.append(19);
+                if(m_save.Unlock(20))unlocked.append(20);
+            }
+            else if(idx==20){//EX-3->all EX
+                for(int i=21;i<levels.size();i++)
+                    if(m_save.Unlock(i))unlocked.append(i);
+            }
+            else if(idx<18){//normal: window of 3
+                for(int i=idx+1;i<=idx+3&&i<18;i++)
+                    if(m_save.Unlock(i))unlocked.append(i);
+            }
+            if(!unlocked.isEmpty()){
                 m_save.Save();
-                emit levelUnlocked(m_level->levelIndex+1);
+                for(int lv:unlocked)emit levelUnlocked(lv);
             }
             emit exitLevel();
             return result;
