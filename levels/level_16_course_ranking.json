@@ -1,0 +1,311 @@
+{
+    "map_width": 10,
+    "map_height": 10,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 6,
+    "map_grid": [
+        [
+            "start",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "chest_2",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            "monster_4",
+            "."
+        ],
+        [
+            ".",
+            "clue_1",
+            ".",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "chest_3",
+            ".",
+            "."
+        ],
+        [
+            "chest_1",
+            ".",
+            ".",
+            ".",
+            "clue_2",
+            ".",
+            ".",
+            "#",
+            "monster_2",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            "monster_3",
+            ".",
+            ".",
+            ".",
+            "chest_4",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            "clue_3",
+            "#",
+            ".",
+            ".",
+            "#",
+            "#",
+            ".",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#"
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            ".",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_1": "Course ranking",
+        "clue_2": "Sample input:\n4\nAlice math 90\nBob math 95\nCindy math 95\nDan cpp 88\nmath\n\nSample output:\n1 Bob 95\n2 Cindy 95\n3 Alice 90",
+        "clue_3": "Do you still remember where we started? Our story began with grade statistics.\n\nNow, after so many levels, we have gone from being teachers to becoming principals, and we have started managing the grades of many courses."
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_16_ctor": "Course(string courseName = \"\"): name(courseName) {}",
+                "block_16_add_ok": "records.push_back(Record{student, score});",
+                "block_16_add_alt": "records.clear();\n        records.push_back(Record{student, score});"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_16_copy": "vector<Record> result = records;",
+                "block_16_sort_ok": "sort(result.begin(), result.end(), [](const Record& a, const Record& b) {\n            if (a.score != b.score) return a.score > b.score;\n            return a.student < b.student;\n        });",
+                "block_16_sort_alt": "sort(result.begin(), result.end(), [](const Record& a, const Record& b) { return a.score < b.score; });",
+                "block_16_return": "return result;"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 3,
+            "blocks": {
+                "block_16_student": "string student;",
+                "block_16_score": "int score;",
+                "block_16_rank": "int rank;"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_16_create_ok": "if (courses.find(course) == courses.end()) courses[course] = Course(course);",
+                "block_16_create_alt": "courses[course] = Course(course);",
+                "block_16_route_ok": "courses[course].addScore(student, score);",
+                "block_16_route_alt": "courses[target].addScore(student, score);"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "CourseTable",
+            "type": "function",
+            "code": "void addRecord(map<string, Course>& courses, const string& student, const string& course, int score) {\n    // create course if needed\n    $space1$\n    // add score to selected course\n    $space2$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_16_create"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_16_route"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "RecordStruct",
+            "type": "class",
+            "code": "struct Record {\n    // student name\n    $space1$\n    // course score\n    $space2$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_16_student"
+                    ]
+                },
+                "space2": {
+                    "type": "match",
+                    "val": [
+                        "block_16_score"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "Course",
+            "type": "class",
+            "code": "class Course {\nprivate:\n    string name;\n    vector<Record> records;\n\npublic:\n    // constructor\n    $space1$\n\n    void addScore(const string& student, int score) {\n        // append a score record\n        $space2$\n    }\n\n    // ranking function\n    $space3$\n};",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_16_ctor"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_16_add"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "RankSorter[block_16_copy,block_16_sort_ok,block_16_return]"
+                    ]
+                }
+            }
+        },
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "RankSorter",
+            "type": "function",
+            "code": "vector<Record> ranking() const {\n        // copy records before sorting\n        $space1$\n        // sort by score desc, then name asc\n        $space2$\n        // return sorted copy\n        $space3$\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_16_copy"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_16_sort"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_16_return"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Course ranking Boss",
+        "code": "#include <algorithm>\n#include <iostream>\n#include <map>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//recordstruct\n$space_1$\n\n//course\n$space_2$\n\n//addRecord\n$space_3$\n\nint main() {\n    int n; cin >> n;\n    map<string, Course> courses;\n    for (int i = 0; i < n; ++i) { \n\t\tstring student, course; \n\t\tint score; \n\t\tcin >> student >> course >> score; \n\t\taddRecord(courses, student, course, score); \n\t\t}\n    string target; \n\tcin >> target;\n    vector<Record> rank = courses[target].ranking();\n    for (size_t i = 0; i < rank.size(); ++i) cout << i + 1 << ' ' << rank[i].student << ' ' << rank[i].score << '\\n';\n    return 0;\n}\n",
+        "input": "4\nAlice math 90\nBob math 95\nCindy math 95\nDan cpp 88\nmath",
+        "output": "1 Bob 95\n2 Cindy 95\n3 Alice 90",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "RecordStruct[block_16_student,block_16_score]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "Course[block_16_ctor,block_16_add_ok,RankSorter[block_16_copy,block_16_sort_ok,block_16_return]]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "CourseTable[block_16_create_ok,block_16_route_ok]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        0
+    ],
+    "end_text": ""
+}

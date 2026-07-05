@@ -1,0 +1,306 @@
+{
+    "map_width": 9,
+    "map_height": 9,
+    "level_type": "simple",
+    "special_tags": [],
+    "bag_size": 8,
+    "map_grid": [
+        [
+            "chest_2",
+            ".",
+            ".",
+            "#",
+            ".",
+            ".",
+            "clue_1",
+            ".",
+            "start"
+        ],
+        [
+            "#",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "monster_3",
+            "#"
+        ],
+        [
+            "clue_3",
+            ".",
+            ".",
+            "#",
+            "monster_1",
+            ".",
+            ".",
+            ".",
+            "chest_4"
+        ],
+        [
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            ".",
+            ".",
+            "clue_2",
+            ".",
+            ".",
+            "#",
+            "monster_4"
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            "#",
+            "#",
+            "#",
+            ".",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            ".",
+            "monster_2",
+            ".",
+            ".",
+            ".",
+            "chest_3",
+            "#",
+            "."
+        ],
+        [
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "#",
+            ".",
+            "."
+        ],
+        [
+            ".",
+            "chest_1",
+            ".",
+            "#",
+            ".",
+            ".",
+            "#",
+            ".",
+            "boss"
+        ]
+    ],
+    "clue_count": 3,
+    "clues": {
+        "clue_1": "Maze BFS",
+        "clue_3": "You mean we’ve encountered a “nested doll” maze?\n",
+        "clue_2": "Sample input:\n4 5\nS...#\n.#.#.\n.#...\n...#T\n\nSample output:\n7"
+    },
+    "chest_count": 4,
+    "chests": {
+        "chest_2": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_15_start_push": "q.push(start);",
+                "block_15_dist_ok": "dist[start.row][start.col] = 0;",
+                "block_15_dist_alt": "dist[start.col][start.row] = 0;",
+                "block_15_dirs": "int dr[] = {-1, 1, 0, 0};\n    int dc[] = {0, 0, -1, 1};"
+            }
+        },
+        "chest_4": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_15_read_row": "cin >> grid[i];",
+                "block_15_find_start": "if (grid[i][j] == 'S') start = Point{i, j};",
+                "block_15_find_target": "if (grid[i][j] == 'T') target = Point{i, j};",
+                "block_15_swap_start": "if (grid[i][j] == 'S') target = Point{i, j};"
+            }
+        },
+        "chest_3": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 5,
+            "blocks": {
+                "block_15_wall_ok": "inside(nr, nc, n, m) && grid[nr][nc] != '#' && dist[nr][nc] == -1",
+                "block_15_wall_alt": "inside(nr, nc, n, m) && dist[nr][nc] == -1",
+                "block_15_step_ok": "dist[nr][nc] = dist[cur.row][cur.col] + 1;\n                q.push(Point{nr, nc});",
+                "block_15_step_alt": "dist[nr][nc] = dist[cur.row][cur.col];\n                q.push(Point{nr, nc});",
+                "block_15_unreachable": "return -1;"
+            }
+        },
+        "chest_1": {
+            "forced_pick": true,
+            "repeat": true,
+            "block_count": 4,
+            "blocks": {
+                "block_15_point_row": "int row, col;",
+                "block_15_point_xy": "int x, y;",
+                "block_15_inside_ok": "return 0 <= r && r < n && 0 <= c && c < m;",
+                "block_15_inside_alt": "return 0 <= c && c < n && 0 <= r && r < m;"
+            }
+        }
+    },
+    "monster_count": 4,
+    "monsters": {
+        "monster_3": {
+            "pic": "assets/dodo.png",
+            "nickname": "dodo",
+            "name": "BfsExpand",
+            "type": "function",
+            "code": "for (int k = 0; k < 4; ++k) {\n            int nr = cur.row + dr[k], nc = cur.col + dc[k];\n            // can step onto this cell?\n            if ($space1$) {\n                // record distance and push\n                $space2$\n            }\n        }",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_wall"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_step"
+                    ]
+                }
+            }
+        },
+        "monster_1": {
+            "pic": "assets/alice.png",
+            "nickname": "alice",
+            "name": "PointAndInside",
+            "type": "function",
+            "code": "struct Point {\n    // row and column\n    $space1$\n};\n\nbool inside(int r, int c, int n, int m) {\n    // check grid bounds\n    $space2$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_point"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_inside"
+                    ]
+                }
+            }
+        },
+        "monster_4": {
+            "pic": "assets/gerda.png",
+            "nickname": "gerda",
+            "name": "TargetFinder",
+            "type": "function",
+            "code": "for (int i = 0; i < n; ++i) {\n        // read one map row\n        $space1$\n        for (int j = 0; j < m; ++j) {\n            // locate S\n            $space2$\n            // locate T\n            $space3$\n        }\n    }",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_15_read_row"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_find_start",
+                        "block_15_swap_start"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_15_find_target"
+                    ]
+                }
+            }
+        },
+        "monster_2": {
+            "pic": "assets/cheshire_cat.png",
+            "nickname": "cheshire_cat",
+            "name": "BfsStart",
+            "type": "function",
+            "code": "int shortestPath(const vector<string>& grid, Point start, Point target) {\n    int n = grid.size(), m = grid[0].size();\n    vector<vector<int> > dist(n, vector<int>(m, -1));\n    queue<Point> q;\n    // enqueue start\n    $space1$\n    // mark start distance\n    $space2$\n    // four movement directions\n    $space3$\n    while (!q.empty()) {\n        Point cur = q.front();\n        q.pop();\n        if (cur.row == target.row && cur.col == target.col) return dist[cur.row][cur.col];\n        // expand neighbors\n        $space4$\n    }\n    // unreachable case\n    $space5$\n}",
+            "spaces": {
+                "space1": {
+                    "type": "match",
+                    "val": [
+                        "block_15_start_push"
+                    ]
+                },
+                "space2": {
+                    "type": "prefix",
+                    "val": [
+                        "block_15_dist"
+                    ]
+                },
+                "space3": {
+                    "type": "match",
+                    "val": [
+                        "block_15_dirs"
+                    ]
+                },
+                "space4": {
+                    "type": "match",
+                    "val": [
+                        "BfsExpand[block_15_wall_ok,block_15_step_ok]"
+                    ]
+                },
+                "space5": {
+                    "type": "match",
+                    "val": [
+                        "block_15_unreachable"
+                    ]
+                }
+            }
+        }
+    },
+    "boss": {
+        "pic": "assets/jabberwock.png",
+        "nickname": "Maze BFS Boss",
+        "code": "#include <iostream>\n#include <queue>\n#include <string>\n#include <vector>\nusing namespace std;\n\n//Point and Inside\n$space_1$\n\n//BfsStart\n$space_2$\n\nint main() {\n    int n, m; cin >> n >> m;\n    vector<string> grid(n);\n    Point start{-1, -1}, target{-1, -1};\n    $space_3$\n    cout << shortestPath(grid, start, target) << '\\n';\n    return 0;\n}\n",
+        "input": "4 5\nS...#\n.#.#.\n.#...\n...#T",
+        "output": "7",
+        "spaces": {
+            "space_1": {
+                "type": "match",
+                "val": [
+                    "PointAndInside[block_15_point_row,block_15_inside_ok]"
+                ]
+            },
+            "space_2": {
+                "type": "match",
+                "val": [
+                    "BfsStart[block_15_start_push,block_15_dist_ok,block_15_dirs,BfsExpand[block_15_wall_ok,block_15_step_ok],block_15_unreachable]"
+                ]
+            },
+            "space_3": {
+                "type": "match",
+                "val": [
+                    "TargetFinder[block_15_read_row,block_15_find_start,block_15_find_target]"
+                ]
+            }
+        }
+    },
+    "start": [
+        0,
+        8
+    ],
+    "end_text": ""
+}
