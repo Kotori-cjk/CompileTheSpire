@@ -87,6 +87,7 @@ public:
     QPoint startpos;
     QString levelType;
     QString fileName;
+    QMap<QString,QVector<QPoint>>collapse;//chestId/clueId/"*"->coords to wall
     bool LoadFromJson(const QString& filePath,QString* errorMessage=nullptr);
     //从Json中读入，filePath为读取路径，errorMessage为可选的传出报错信息的指针
 };
