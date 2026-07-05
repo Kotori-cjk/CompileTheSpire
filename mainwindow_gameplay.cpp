@@ -258,6 +258,11 @@ void MainWindow::movePlayerTo(int targetRow, int targetColumn)
             handleChest(tileId, true);
             return;
         }
+        if ((tileId.startsWith("monster") || tileId == "boss") && !defeatedMonsters.contains(tileId)) {
+            ui->combatLogLabel->setText("Enemy is out of reach.");
+            handleMonster(tileId, true);
+            return;
+        }
         ui->combatLogLabel->setText("No path to that tile.");
         playSfx("assets/audio/sfx_error.wav");
         return;

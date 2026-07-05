@@ -95,8 +95,8 @@ public:
         setAcceptDrops(true);
         setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         setMinimumSize(220, 28);
-        setMaximumWidth(520);
-        setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+        setMaximumWidth(QWIDGETSIZE_MAX);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setWordWrap(true);
         setProperty("blockId", QString());
         setText(QString());
@@ -107,6 +107,17 @@ public:
     void setContentWidthLimit(int width)
     {
         setMaximumWidth(qMax(220, width));
+    }
+
+    QSize sizeForContentWidth(int width) const
+    {
+        const int slotWidth = qMax(220, width);
+        QSize size = sizeHint();
+        size.setWidth(slotWidth);
+        if (wordWrap()) {
+            size.setHeight(qMax(size.height(), heightForWidth(slotWidth)));
+        }
+        return size;
     }
 
     void setOnChanged(std::function<void()> callback)
@@ -138,8 +149,7 @@ public:
     {
         setProperty("blockId", blockId);
         setText(displayText);
-        const bool multiline = displayText.contains('\n');
-        setWordWrap(multiline);
+        setWordWrap(true);
         QFont codeFont("Consolas");
         codeFont.setPointSize(16);
         codeFont.setBold(true);
@@ -148,7 +158,7 @@ public:
         for (const QString &line : displayText.split('\n')) {
             contentWidth = qMax(contentWidth, metrics.horizontalAdvance(line));
         }
-        setMinimumWidth(multiline ? qMin(360, maximumWidth()) : qMin(maximumWidth(), qMax(72, contentWidth + 10)));
+        setMinimumWidth(qMin(maximumWidth(), qMax(220, qMin(360, contentWidth + 10))));
         refreshStyle(false);
     }
 

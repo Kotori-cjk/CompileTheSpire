@@ -92,7 +92,7 @@ private:
     QString tileAt(int row, int column) const;
     QString describeTile(const QString &tileId) const;
     void handleChest(const QString &chestId, bool viewOnly = false, bool lockedByChest = false);
-    void handleMonster(const QString &monsterId);
+    void handleMonster(const QString &monsterId, bool viewOnly = false);
 
     QString renderMonsterCode(const Monster &monster) const;
     QString renderMonsterCodeHtml(const Monster &monster) const;
@@ -130,6 +130,7 @@ private:
     bool instantMoveMode = false;
     int selectedStageIndex = 0;
     QString currentBgmResource;
+    QWidget *settingsReturnPage = nullptr;
 
     MapView *mapView = nullptr;
     QLabel *tileInfoLabel = nullptr;

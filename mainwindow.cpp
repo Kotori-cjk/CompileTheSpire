@@ -206,6 +206,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->settingsButton, &QPushButton::clicked, this, [this]() {
+        settingsReturnPage = ui->mainMenuPage;
         mainMenuButtonBar->hide();
         ui->stackedWidget->setCurrentWidget(ui->settingsPage);
     });
@@ -223,6 +224,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->pauseSettingsButton, &QPushButton::clicked, this, [this]() {
+        settingsReturnPage = ui->gamePage;
         ui->stackedWidget->setCurrentWidget(ui->settingsPage);
     });
 
@@ -233,13 +235,14 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     connect(ui->backToMenuButton, &QPushButton::clicked, this, [this]() {
-        if (gameEngine.m_map && currentLevelIndex >= 0) {
-            ui->stackedWidget->setCurrentWidget(ui->gamePage);
-            mainMenuButtonBar->hide();
-        } else {
-            ui->stackedWidget->setCurrentWidget(ui->mainMenuPage);
+        QWidget *returnPage = settingsReturnPage ? settingsReturnPage : ui->mainMenuPage;
+        settingsReturnPage = nullptr;
+        ui->stackedWidget->setCurrentWidget(returnPage);
+        if (returnPage == ui->mainMenuPage) {
             mainMenuButtonBar->show();
             positionMainMenuButtons();
+        } else {
+            mainMenuButtonBar->hide();
         }
     });
 
