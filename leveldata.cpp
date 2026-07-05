@@ -8,7 +8,9 @@
 #include<QJsonObject>
 #include<QJsonArray>
 #include<QFile>
+#include<QFileInfo>
 #include<QDir>
+#include<QTextStream>
 #include<QPoint>
 
 LevelData::LevelData() {}
@@ -204,15 +206,38 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
     }
     this->boss=boss;
     this->monsters[boss.monsterId]=boss;
+    QFileInfo fi(filePath);
+    this->fileName=fi.baseName();
     return true;
 }
 
-QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors){
+QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors,const QString& listFile){
     QVector<LevelData>levels;
     QDir dir(dirPath);
-    dir.setNameFilters({"*.json"});
-    dir.setSorting(QDir::Name);
-    const auto& files=dir.entryList(QDir::Files);
+    QStringList files;
+    if(!listFile.isEmpty()){
+        QFile lf(dir.absoluteFilePath(listFile));
+        if(!lf.open(QIODevice::ReadOnly|QIODevice::Text)){
+            if(errors)errors->append(QString("Cannot open list file: %1").arg(listFile));
+            return levels;
+        }
+        QTextStream in(&lf);
+        while(!in.atEnd()){
+            QString line=in.readLine().trimmed();
+            if(line.isEmpty()||line.startsWith('#'))continue;
+            if(!line.endsWith(".json")){
+                if(errors)errors->append(QString("Skipped non-JSON: %1").arg(line));
+                continue;
+            }
+            files.append(line);
+        }
+        lf.close();
+    }
+    else{
+        dir.setNameFilters({"*.json"});
+        dir.setSorting(QDir::Name);
+        files=dir.entryList(QDir::Files);
+    }
     for (const auto& file:files){
         QString filePath=dir.absoluteFilePath(file);
         QString errorMsg;

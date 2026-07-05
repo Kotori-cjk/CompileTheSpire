@@ -28,6 +28,7 @@ struct LevelMeta{
     bool unlocked;
     bool cleared;
     QString levelType;
+    QString levelName;//filename without .json
 };
 
 class GameEngine:public QObject
@@ -61,7 +62,7 @@ public:
     GameSnapshot getCurrentSnapshot();
     void restoreFromSnapshot(GameSnapshot snapshot);
     GameEngine();
-    void gameInit(QString path);
+    void gameInit(QString path,const QString& listFile="");
     //for develop:look to savemanager to recall the things you should do(Init() in it)
     //call it when game start
     QVector<LevelMeta> levelList();

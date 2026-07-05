@@ -86,12 +86,12 @@ public:
     QString endText;
     QPoint startpos;
     QString levelType;
+    QString fileName;
     bool LoadFromJson(const QString& filePath,QString* errorMessage=nullptr);
     //从Json中读入，filePath为读取路径，errorMessage为可选的传出报错信息的指针
 };
 
-QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors=nullptr);
-//参数1:string形式的文件夹路径 参数2:errorMsg指针
-//从文件夹中读入若干个json,输出一个关卡列表
+QVector<LevelData> LoadDirectory(const QString& dirPath,QStringList* errors=nullptr,const QString& listFile="");
+//参数1:文件夹路径 参数2:errorMsg指针 参数3:关卡列表文件名(空则扫描目录)
 
 #endif // LEVELDATA_H
