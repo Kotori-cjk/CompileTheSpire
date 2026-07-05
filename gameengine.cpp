@@ -32,9 +32,10 @@ void GameEngine::restoreFromSnapshot(GameSnapshot snapshot){
     m_bag->bagBlocks=snapshot.bagBlocks;
     m_map->defeatedCodes=snapshot.defeatedCodes;
 }
-void GameEngine::gameInit(QString path){
+void GameEngine::gameInit(QString path,const QString& listFile){
     QStringList errors;
-    levels=LoadDirectory(path,&errors);
+    if(listFile=="")levels=LoadDirectory(path,&errors);
+    else levels=LoadDirectory(path,&errors,listFile);
     m_save.Init(levels.size());
     m_save.Load(levels.size());
 }
@@ -47,6 +48,7 @@ QVector<LevelMeta> GameEngine::levelList(){
         now.unlocked=m_save.isUnlocked(i);
         now.cleared=m_save.isCleared(i);
         now.levelType=cur.levelType;
+        now.levelName=cur.fileName;
         now.level=&cur;
         ret.append(now);
     }
