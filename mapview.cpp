@@ -308,6 +308,12 @@ void MapView::setCollectedClues(const QSet<QString> &collectedClues)
     update();
 }
 
+void MapView::setBlockedTiles(const QSet<QPoint> &blocked)
+{
+    m_blockedTiles = blocked;
+    update();
+}
+
 void MapView::setMovePath(const QVector<QPoint> &path, int consumedCount)
 {
     m_movePath = path;
@@ -354,12 +360,14 @@ void MapView::paintEvent(QPaintEvent *event)
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
             const QRect rect = tileRect(row, column);
-            drawTile(painter, row, column, rect, m_level->mapGrid.at(row).at(column));
+            const bool blocked=m_blockedTiles.contains(QPoint(row,column));
+            drawTile(painter, row, column, rect, blocked?"#":m_level->mapGrid.at(row).at(column));
         }
     }
 
     for (int row = 0; row < m_level->mapGrid.size(); ++row) {
         for (int column = 0; column < m_level->mapGrid.at(row).size(); ++column) {
+            if(m_blockedTiles.contains(QPoint(row,column)))continue;
             const QRect rect = tileRect(row, column);
             drawObject(painter, rect, m_level->mapGrid.at(row).at(column));
         }

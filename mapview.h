@@ -21,6 +21,7 @@ public:
     void setPlayerPosition(const QPoint &position);
     void setClearedObjects(const QSet<QString> &openedChests, const QSet<QString> &defeatedMonsters);
     void setCollectedClues(const QSet<QString> &collectedClues);
+    void setBlockedTiles(const QSet<QPoint> &blocked);
     void setMovePath(const QVector<QPoint> &path, int consumedCount);
     QSize minimumSizeHint() const override;
     bool isPlayerAnimating() const;
@@ -60,6 +61,7 @@ private:
     QSet<QString> m_openedChests;
     QSet<QString> m_defeatedMonsters;
     QSet<QString> m_collectedClues;
+    QSet<QPoint> m_blockedTiles;
     QVector<QPoint> m_movePath;
     int m_consumedPathCount = 0;
     QTimer m_playerAnimationTimer;

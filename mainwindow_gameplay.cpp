@@ -159,6 +159,10 @@ void MainWindow::refreshMapGrid()
     mapView->setPlayerPosition(QPoint(playerColumn, playerRow));
     mapView->setClearedObjects(openedChests, defeatedMonsters);
     mapView->setCollectedClues(collectedClues);
+    if(gameEngine.m_map)
+        mapView->setBlockedTiles(gameEngine.m_map->blocked);
+    else
+        mapView->setBlockedTiles({});
     mapView->setMovePath(activeMovePath, activeMovePathIndex);
 }
 

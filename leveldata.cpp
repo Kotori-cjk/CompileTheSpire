@@ -149,6 +149,16 @@ bool LevelData::LoadFromJson(const QString& filePath,QString* errorMessage){
     for(const auto& s:root["special_tags"].toArray()){
         this->specialTags.append(s.toString());
     }
+    QJsonObject cobj=root["collapse"].toObject();
+    for(const auto& key:cobj.keys()){
+        QJsonArray outer=cobj[key].toArray();
+        QVector<QPoint>pts;
+        for(const auto& item:outer){
+            QJsonArray inner=item.toArray();
+            pts.append(QPoint(inner[0].toInt(),inner[1].toInt()));
+        }
+        collapse[key]=pts;
+    }
     for(const auto& key:root["clues"].toObject().keys()){
         Clue tmp;
         tmp.val=root["clues"].toObject()[key].toString();

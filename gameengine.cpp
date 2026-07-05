@@ -18,6 +18,7 @@ GameSnapshot GameEngine::getCurrentSnapshot(){
     ret.bagBlocks=m_bag->bag();
     ret.leftBlocks=m_bag->leftBlocks;
     ret.defeatedCodes=m_map->defeatedCodes;
+    ret.blocked=m_map->blocked;
     return ret;
 }
 void GameEngine::restoreFromSnapshot(GameSnapshot snapshot){
@@ -31,6 +32,7 @@ void GameEngine::restoreFromSnapshot(GameSnapshot snapshot){
     m_bag->leftBlocks=snapshot.leftBlocks;
     m_bag->bagBlocks=snapshot.bagBlocks;
     m_map->defeatedCodes=snapshot.defeatedCodes;
+    m_map->blocked=snapshot.blocked;
 }
 void GameEngine::gameInit(QString path,const QString& listFile){
     QStringList errors;
@@ -178,6 +180,10 @@ bool GameEngine::revealClue(const QString& clueId){
     QPoint cpos=m_level->clues[clueId].pos;
     m_map->Clear(cpos);
     snapshotStack.append(getCurrentSnapshot());
+    QVector<QPoint>tars;
+    if(m_level->collapse.contains(clueId))tars=m_level->collapse[clueId];
+    else if(m_level->collapse.contains("*"))tars=m_level->collapse["*"];
+    for(const auto& t:tars)m_map->blocked.insert(t);
     Monster tmonster;
     for(const auto& monster:m_level->monsters.values()){
         if(monster.referencedClues.contains(clueId)){
@@ -200,6 +206,10 @@ bool GameEngine::takeBundleFromChest(const QString& chestId){
     m_locked=false;
     m_map->Clear(chest.pos);
     snapshotStack.append(getCurrentSnapshot());
+    QVector<QPoint>tars;
+    if(m_level->collapse.contains(chestId))tars=m_level->collapse[chestId];
+    else if(m_level->collapse.contains("*"))tars=m_level->collapse["*"];
+    for(const auto& t:tars)m_map->blocked.insert(t);
     return true;
 }
 bool GameEngine::exitChest(const QString& chestId){
@@ -220,6 +230,10 @@ bool GameEngine::takeFromChest(const QString& chestId,const QString& blockId){
         m_map->Clear(m_level->chests[chestId].pos);
     }
     snapshotStack.append(getCurrentSnapshot());
+    QVector<QPoint>tars;
+    if(m_level->collapse.contains(chestId))tars=m_level->collapse[chestId];
+    else if(m_level->collapse.contains("*"))tars=m_level->collapse["*"];
+    for(const auto& t:tars)m_map->blocked.insert(t);
     return true;
 }
 bool GameEngine::exitCombat(){
