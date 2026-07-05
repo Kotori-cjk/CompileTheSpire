@@ -13,18 +13,21 @@ GameMap::GameMap(const LevelData* ptr){
 }
 QString GameMap::currentId(int tarX,int tarY){
     if(cleared[tarX][tarY])return ".";
+    if(blocked.contains(QPoint(tarX,tarY)))return "#";
     return levelData->mapGrid[tarX][tarY];
 }
 QString GameMap::currentId(QPoint target){
     return currentId(target.x(),target.y());
 }
 bool GameMap::canGoIn(int tarX,int tarY){
+    if(blocked.contains(QPoint(tarX,tarY)))return false;
     return levelData->mapGrid[tarX][tarY]!="#";
 }
 bool GameMap::canGoIn(QPoint target){
     return canGoIn(target.x(),target.y());
 }
 bool GameMap::moveAccessibility(int tarX,int tarY){
+    if(blocked.contains(QPoint(tarX,tarY)))return false;
     QString s=levelData->mapGrid[tarX][tarY];
     if(s=="#"){
         return false;
@@ -56,6 +59,7 @@ bool GameMap::moveAccessibility(QPoint target){
     return moveAccessibility(target.x(),target.y());
 }
 QString GameMap::getEvent(int tarX,int tarY){
+    if(blocked.contains(QPoint(tarX,tarY)))return "empty";
     QString s=levelData->mapGrid[tarX][tarY];
     int stat=cleared[tarX][tarY];
     if(stat||s=="."||s=="#"||s=="start")return "empty";
