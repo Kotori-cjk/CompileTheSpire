@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 class DialogCloseInputFilter : public QObject
 {
@@ -1096,6 +1097,12 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
     QFontMetrics combatCodeMetrics(combatCodeFont);
     const int combatLineHeight = qMax(28, combatCodeMetrics.height() + 7);
     QVector<std::function<void()>> slotGeometryUpdaters;
+    struct CombatLineItem {
+        QWidget *widget = nullptr;
+        CodeDropSlot *slot = nullptr;
+        int width = 0;
+        int height = 0;
+    };
 
     int templateCellIndex = 0;
     int displayBraceDepth = 0;
@@ -1108,6 +1115,54 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
         int visualX = 0;
         int maxVisualX = 0;
         int lineVisualHeight = combatLineHeight;
+        auto lineItems = std::make_shared<QVector<CombatLineItem>>();
+        auto relayoutLine = [lineItems, lineWidget, codeScroll, combatLineHeight]() {
+            int x = 0;
+            int lineHeight = combatLineHeight;
+            for (int i = 0; i < lineItems->size(); ++i) {
+                CombatLineItem &item = (*lineItems)[i];
+                if (!item.widget) {
+                    x += item.width;
+                    continue;
+                }
+                if (item.slot) {
+                    int trailingWidth = 0;
+                    for (int j = i + 1; j < lineItems->size(); ++j) {
+                        const CombatLineItem &tail = (*lineItems)[j];
+                        trailingWidth += tail.slot ? 220 : tail.width;
+                    }
+                    const int availableWidth = codeScroll->viewport()
+                                                   ? codeScroll->viewport()->width() - x - trailingWidth - 36
+                                                   : 520;
+                    const int slotWidth = qMax(220, availableWidth);
+                    item.slot->setProperty("visualX", x);
+                    item.slot->setContentWidthLimit(slotWidth);
+                    const QSize slotSize = item.slot->sizeForContentWidth(slotWidth);
+                    const int slotHeight = qMax(combatLineHeight, slotSize.height());
+                    item.slot->setGeometry(x, 0, slotSize.width(), slotHeight);
+                    x += slotSize.width();
+                    lineHeight = qMax(lineHeight, slotHeight);
+                } else {
+                    item.widget->setGeometry(x, 0, qMax(1, item.width), qMax(combatLineHeight, item.height));
+                    x += item.width;
+                    lineHeight = qMax(lineHeight, item.height);
+                }
+            }
+            lineWidget->setMinimumHeight(lineHeight);
+            lineWidget->setMinimumWidth(x + 8);
+            lineWidget->updateGeometry();
+        };
+        auto addSpacing = [&](int width) {
+            if (width <= 0) {
+                return;
+            }
+            CombatLineItem item;
+            item.width = width;
+            item.height = combatLineHeight;
+            lineItems->append(item);
+            visualX += width;
+            maxVisualX = qMax(maxVisualX, visualX);
+        };
         auto advanceTextSegment = [&](const QString &segment) {
             if (segment.isEmpty()) {
                 return;
@@ -1117,7 +1172,7 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
                 ++visibleStart;
             }
             if (visibleStart > 0) {
-                visualX += combatCodeMetrics.horizontalAdvance(segment.left(visibleStart));
+                addSpacing(combatCodeMetrics.horizontalAdvance(segment.left(visibleStart)));
             }
             const QString visibleText = segment.mid(visibleStart);
             if (visibleText.isEmpty()) {
@@ -1129,7 +1184,11 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
             text->setFont(combatCodeFont);
             text->setStyleSheet("QLabel { color: #f9f1d0; background: transparent; border: none; padding: 0; }");
             const int width = combatCodeMetrics.horizontalAdvance(visibleText);
-            text->setGeometry(visualX, 0, qMax(1, width), combatLineHeight);
+            CombatLineItem item;
+            item.widget = text;
+            item.width = width;
+            item.height = combatLineHeight;
+            lineItems->append(item);
             visualX += width;
             maxVisualX = qMax(maxVisualX, visualX);
         };
@@ -1167,15 +1226,13 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
             if (start > cursor && !clueOwnsLine) {
                 advanceTextSegment(line.mid(cursor, start - cursor));
             } else if (clueOwnsLine && visualX == 0 && clueOwnsLineIndentColumns > 0) {
-                visualX = combatCodeMetrics.horizontalAdvance(QString(clueOwnsLineIndentColumns, QLatin1Char(' ')));
-                maxVisualX = qMax(maxVisualX, visualX);
+                addSpacing(combatCodeMetrics.horizontalAdvance(QString(clueOwnsLineIndentColumns, QLatin1Char(' '))));
             }
 
             if (isSpace) {
                 if (visualX == 0 && start == 0 && autoIndentColumns > 0) {
                     const QString autoIndent(autoIndentColumns, QLatin1Char(' '));
-                    visualX = combatCodeMetrics.horizontalAdvance(autoIndent);
-                    maxVisualX = qMax(maxVisualX, visualX);
+                    addSpacing(combatCodeMetrics.horizontalAdvance(autoIndent));
                 }
                 CodeDropSlot *slot = new CodeDropSlot(lineWidget);
                 slot->setAcceptDrops(!viewOnly);
@@ -1188,20 +1245,13 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
                     const int indentColumns = qMax(0, slot->property("visualX").toInt() / qMax(1, combatCodeMetrics.horizontalAdvance(QStringLiteral(" "))));
                     return indentContinuationLines(formatted, QString(indentColumns, QLatin1Char(' ')));
                 });
-                auto updateSlotGeometry = [slot, lineWidget, codeScroll, combatLineHeight]() {
-                    const int availableWidth = codeScroll->viewport()
-                                                   ? codeScroll->viewport()->width() - slot->property("visualX").toInt() - 36
-                                                   : 520;
-                    const int slotWidth = qMax(220, availableWidth);
-                    slot->setContentWidthLimit(slotWidth);
-                    const QSize slotSize = slot->sizeForContentWidth(slotWidth);
-                    const int slotHeight = qMax(combatLineHeight, slotSize.height());
-                    slot->setGeometry(slot->property("visualX").toInt(), 0, slotSize.width(), slotHeight);
-                    lineWidget->setMinimumHeight(qMax(combatLineHeight, slotHeight));
-                    lineWidget->setMinimumWidth(slot->property("visualX").toInt() + slotSize.width() + 8);
-                    lineWidget->updateGeometry();
-                };
-                slotGeometryUpdaters.append(updateSlotGeometry);
+                CombatLineItem item;
+                item.widget = slot;
+                item.slot = slot;
+                item.width = 220;
+                item.height = combatLineHeight;
+                lineItems->append(item);
+                auto updateSlotGeometry = relayoutLine;
                 if (!viewOnly) {
                     slot->setOnRemoveRequested([this, slot, tokenId, refreshCombatBag, updateSlotGeometry]() {
                         if (!gameEngine.unfillSpace(tokenId)) {
@@ -1239,9 +1289,7 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
                         playSfx("assets/audio/sfx_combat.wav");
                     });
                 }
-                updateSlotGeometry();
-                lineVisualHeight = qMax(lineVisualHeight, slot->height());
-                visualX += slot->width();
+                visualX += 220;
                 maxVisualX = qMax(maxVisualX, visualX);
             } else {
                 const bool unlocked = collectedClues.contains(tokenId);
@@ -1254,7 +1302,11 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
                                         ? "QLabel { color: #a8f4bf; background: rgba(10, 38, 47, 150); border-radius: 5px; padding: 2px 8px; }"
                                         : "QLabel { color: rgba(249, 241, 208, 80); background: rgba(26, 29, 38, 210); border: 1px solid rgba(120, 130, 145, 120); border-radius: 5px; padding: 2px 8px; }");
                 clue->adjustSize();
-                clue->setGeometry(visualX, 0, clue->width(), qMax(combatLineHeight, clue->height()));
+                CombatLineItem item;
+                item.widget = clue;
+                item.width = clue->width();
+                item.height = qMax(combatLineHeight, clue->height());
+                lineItems->append(item);
                 lineVisualHeight = qMax(lineVisualHeight, clue->height());
                 visualX += clue->width();
                 maxVisualX = qMax(maxVisualX, visualX);
@@ -1264,8 +1316,8 @@ void MainWindow::handleMonster(const QString &monsterId, bool viewOnly)
         if (cursor < line.size()) {
             advanceTextSegment(line.mid(cursor));
         }
-        lineWidget->setMinimumHeight(lineVisualHeight);
-        lineWidget->setMinimumWidth(maxVisualX + 8);
+        relayoutLine();
+        slotGeometryUpdaters.append(relayoutLine);
         codeLayout->addWidget(lineWidget);
 
         QString structuralLine = line;
