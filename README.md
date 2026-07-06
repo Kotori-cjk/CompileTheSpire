@@ -1,4 +1,6 @@
-# CompileTheSPire：故障机器人大冒险
+# CompileTheSpire：故障机器人大冒险
+
+![CompileTheSpire 宣传海报](assets/readme_poster.png)
 
 ## 项目简介
 
