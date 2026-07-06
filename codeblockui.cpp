@@ -75,6 +75,9 @@ QString formatCodeBlockForDisplay(QString code)
     for (QString line : code.split('\n')) {
         line = line.trimmed();
         if (line.isEmpty()) {
+            if (alreadyMultiline) {
+                formatted << QString();
+            }
             continue;
         }
         if (line.startsWith('}')) {

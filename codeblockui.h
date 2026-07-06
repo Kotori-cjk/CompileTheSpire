@@ -111,7 +111,21 @@ public:
 
     QSize sizeForContentWidth(int width) const
     {
-        const int slotWidth = qMax(220, width);
+        const int widthLimit = qMax(220, width);
+        const QString content = text();
+        const bool filled = !property("blockId").toString().isEmpty() && !content.isEmpty();
+        int preferredWidth = filled ? 220 : 360;
+        if (filled) {
+            QFont codeFont("Consolas");
+            codeFont.setPointSize(16);
+            codeFont.setBold(true);
+            const QFontMetrics metrics(codeFont);
+            for (const QString &line : content.split('\n')) {
+                preferredWidth = qMax(preferredWidth, metrics.horizontalAdvance(line) + 18);
+            }
+        }
+
+        const int slotWidth = qBound(220, preferredWidth, widthLimit);
         QSize size = sizeHint();
         size.setWidth(slotWidth);
         if (wordWrap()) {

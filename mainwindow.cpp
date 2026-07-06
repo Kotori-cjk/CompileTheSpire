@@ -125,15 +125,24 @@ MainWindow::MainWindow(QWidget *parent)
                         QLabel *text = new QLabel(clueText.isEmpty() ? QString("Clue recorded.") : clueText, panel);
                         text->setWordWrap(true);
                         text->setAlignment(Qt::AlignCenter);
+                        text->setMinimumWidth(560);
+                        text->setMaximumWidth(720);
+                        QScrollArea *textScroll = new QScrollArea(panel);
+                        textScroll->setWidgetResizable(true);
+                        textScroll->setFrameShape(QFrame::NoFrame);
+                        textScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+                        textScroll->setMaximumHeight(620);
+                        textScroll->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+                        textScroll->setWidget(text);
                         QPushButton *ok = new QPushButton("OK", panel);
                         ok->setMinimumSize(120, 36);
                         ok->setStyleSheet("QPushButton { color: #fff1c2; background: #34495f; border: 1px solid #8fa8c4; border-radius: 6px; }"
                                           "QPushButton:hover { background: #42617d; }");
                         connect(ok, &QPushButton::clicked, &clueDialog, &QDialog::accept);
-                        panelLayout->addWidget(text);
+                        panelLayout->addWidget(textScroll);
                         panelLayout->addWidget(ok, 0, Qt::AlignCenter);
                         clueLayout->addWidget(panel);
-                        clueDialog.resize(360, 160);
+                        clueDialog.resize(680, 520);
                         clueDialog.exec();
                     }
                 }
